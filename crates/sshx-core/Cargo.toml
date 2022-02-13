@@ -1,0 +1,11 @@
+[package]
+name = "sshx-core"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+prost = "0.9.0"
+tonic = "0.6.2"
+
+[build-dependencies]
+tonic-build = "0.6.2"

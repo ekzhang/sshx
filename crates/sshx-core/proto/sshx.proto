@@ -1,0 +1,19 @@
+syntax = "proto3";
+package sshx;
+
+service Greeter {
+  // Our SayHello rpc accepts HelloRequests and returns HelloReplies
+  rpc SayHello(HelloRequest) returns (HelloReply);
+}
+
+// A request for the SayHello rpc.
+message HelloRequest {
+  // Request message contains the name to be greeted
+  string name = 1;
+}
+
+// A reply for the SayHello rpc.
+message HelloReply {
+  // Reply contains the greeting message
+  string message = 1;
+}

@@ -1,0 +1,10 @@
+[*]
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.rs]
+tab_width = 4
+
+[*.{js,jsx,ts,tsx,html,css,svelte,proto}]
+tab_width = 2

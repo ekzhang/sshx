@@ -15,7 +15,7 @@ jobs:
           toolchain: nightly
           components: rustfmt
 
-      - run: cargo fmt -- --check
+      - run: cargo +nightly fmt -- --check
 
   rust:
     name: Rust lint and test

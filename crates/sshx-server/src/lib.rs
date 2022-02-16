@@ -19,49 +19,84 @@ use grpc::GrpcServer;
 use hyper::{header::CONTENT_TYPE, service::make_service_fn, Body, Request, Server};
 use sshx_core::proto::{greeter_server::GreeterServer, FILE_DESCRIPTOR_SET};
 use tonic::transport::Server as TonicServer;
-use tower::{steer::Steer, ServiceExt};
+use tower::{steer::Steer, ServiceBuilder, ServiceExt};
+use tower_http::{
+    trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer},
+    LatencyUnit,
+};
+use tracing::{Level, Span};
 
 pub mod grpc;
 pub mod http;
 
-/// Make a combined application server, listening on a TCP address.
-pub async fn make_server(addr: &SocketAddr, signal: impl Future<Output = ()>) -> hyper::Result<()> {
+/// Make the combined HTTP/gRPC application server, listening on a TCP address.
+pub async fn make_server(
+    addr: &SocketAddr,
+    signal: impl Future<Output = ()>,
+) -> anyhow::Result<()> {
     type BoxError = Box<dyn StdError + Send + Sync>;
 
-    let app = http::app()
-        .map_response(|r| r.map(|b| b.map_err::<_, BoxError>(Into::into).boxed_unsync()))
-        .map_err::<_, BoxError>(Into::into)
+    let http_service = http::app()
+        .layer(
+            TraceLayer::new_for_http()
+                .make_span_with(DefaultMakeSpan::new())
+                .on_request(|request: &Request<Body>, _span: &Span| {
+                    tracing::info!("started HTTP {} {}", request.method(), request.uri().path())
+                })
+                .on_response(
+                    DefaultOnResponse::new()
+                        .level(Level::INFO)
+                        .latency_unit(LatencyUnit::Micros),
+                ),
+        )
+        .map_response(|r| r.map(|b| b.map_err(BoxError::from).boxed_unsync()))
+        .map_err(BoxError::from)
         .boxed_clone();
-
-    let grpc_service = GreeterServer::new(GrpcServer);
-    let reflection_service = tonic_reflection::server::Builder::configure()
-        .register_encoded_file_descriptor_set(FILE_DESCRIPTOR_SET)
-        .build()
-        .unwrap();
 
     let grpc_service = TonicServer::builder()
-        .add_service(grpc_service)
-        .add_service(reflection_service)
-        .into_service()
-        .map_response(|r| r.map(|b| b.map_err::<_, BoxError>(Into::into).boxed_unsync()))
+        .add_service(GreeterServer::new(GrpcServer))
+        .add_service(
+            tonic_reflection::server::Builder::configure()
+                .register_encoded_file_descriptor_set(FILE_DESCRIPTOR_SET)
+                .build()?,
+        )
+        .into_service();
+
+    let grpc_service = ServiceBuilder::new()
+        .layer(
+            TraceLayer::new_for_grpc()
+                .make_span_with(DefaultMakeSpan::new())
+                .on_request(|request: &Request<Body>, _span: &Span| {
+                    tracing::info!("started gRPC {}", request.uri().path())
+                })
+                .on_response(
+                    DefaultOnResponse::new()
+                        .level(Level::INFO)
+                        .latency_unit(LatencyUnit::Micros),
+                ),
+        )
+        .service(grpc_service)
+        .map_response(|r| r.map(|b| b.map_err(BoxError::from).boxed_unsync()))
         .boxed_clone();
 
-    let svc: Steer<_, _, Request<Body>> = Steer::new(
-        [app, grpc_service],
+    let svc = Steer::new(
+        [http_service, grpc_service],
         |req: &Request<Body>, _services: &[_]| match req.headers().get(CONTENT_TYPE) {
             Some(value) if value.to_str().unwrap_or_default() == "application/grpc" => 1,
             _ => 0,
         },
     );
-
     let make_svc = make_service_fn(|_| {
         let svc = svc.clone();
         async { Ok::<_, std::convert::Infallible>(svc) }
     });
+
     Server::bind(addr)
         .serve(make_svc)
         .with_graceful_shutdown(signal)
-        .await
+        .await?;
+
+    Ok(())
 }
 
 #[cfg(test)]

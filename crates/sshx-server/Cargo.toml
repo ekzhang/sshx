@@ -12,3 +12,6 @@ tokio = { version = "1.16.1", features = ["full"] }
 tonic = "0.6.2"
 tonic-reflection = "0.3.0"
 tower = { version = "0.4.11", features = ["steer"] }
+tower-http = { version = "0.2.2", features = ["trace"] }
+tracing = "0.1.30"
+tracing-subscriber = "0.3.8"

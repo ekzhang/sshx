@@ -5,7 +5,10 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.53"
+axum = "0.4.5"
+hyper = { version = "0.14.17", features = ["full"] }
 sshx-core = { path = "../sshx-core" }
 tokio = { version = "1.16.1", features = ["full"] }
 tonic = "0.6.2"
 tonic-reflection = "0.3.0"
+tower = { version = "0.4.11", features = ["steer"] }

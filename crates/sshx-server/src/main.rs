@@ -1,4 +1,4 @@
-use sshx_server::make_server;
+use sshx_server::make_server_bind;
 use tokio::signal::unix::{signal, SignalKind};
 
 #[tokio::main]
@@ -11,7 +11,7 @@ async fn main() -> anyhow::Result<()> {
     let mut sigint = signal(SignalKind::interrupt())?;
 
     tracing::info!("server listening at {addr}");
-    make_server(&addr, async {
+    make_server_bind(&addr, async {
         tokio::select! {
             _ = sigterm.recv() => (),
             _ = sigint.recv() => (),

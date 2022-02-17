@@ -16,7 +16,12 @@ use std::{error::Error as StdError, future::Future, net::SocketAddr};
 
 use axum::body::HttpBody;
 use grpc::GrpcServer;
-use hyper::{header::CONTENT_TYPE, service::make_service_fn, Body, Request, Server};
+use hyper::{
+    header::CONTENT_TYPE,
+    server::{conn::AddrIncoming, Builder, Server},
+    service::make_service_fn,
+    Body, Request,
+};
 use sshx_core::proto::{greeter_server::GreeterServer, FILE_DESCRIPTOR_SET};
 use tonic::transport::Server as TonicServer;
 use tower::{steer::Steer, ServiceBuilder, ServiceExt};
@@ -29,9 +34,9 @@ use tracing::{Level, Span};
 pub mod grpc;
 pub mod http;
 
-/// Make the combined HTTP/gRPC application server, listening on a TCP address.
+/// Make the combined HTTP/gRPC application server, on a given listener.
 pub async fn make_server(
-    addr: &SocketAddr,
+    builder: Builder<AddrIncoming>,
     signal: impl Future<Output = ()>,
 ) -> anyhow::Result<()> {
     type BoxError = Box<dyn StdError + Send + Sync>;
@@ -86,12 +91,12 @@ pub async fn make_server(
             _ => 0,
         },
     );
-    let make_svc = make_service_fn(|_| {
+    let make_svc = make_service_fn(move |_| {
         let svc = svc.clone();
         async { Ok::<_, std::convert::Infallible>(svc) }
     });
 
-    Server::bind(addr)
+    builder
         .serve(make_svc)
         .with_graceful_shutdown(signal)
         .await?;
@@ -99,38 +104,10 @@ pub async fn make_server(
     Ok(())
 }
 
-#[cfg(test)]
-mod tests {
-    use std::time::Duration;
-
-    use tokio::{sync::oneshot, time};
-    use tonic::Request;
-
-    use super::make_server;
-
-    #[tokio::test]
-    async fn test_rpc() -> Result<(), anyhow::Error> {
-        use sshx_core::proto::*;
-
-        let endpoint = "http://[::1]:8051";
-        let addr = "[::1]:8051".parse()?;
-        let (tx, rx) = oneshot::channel();
-
-        tokio::spawn(async move {
-            time::sleep(Duration::from_millis(1)).await;
-            let req = Request::new(HelloRequest {
-                name: "adam".into(),
-            });
-            let mut client = greeter_client::GreeterClient::connect(endpoint)
-                .await
-                .unwrap();
-            let resp = client.say_hello(req).await.unwrap();
-            println!("resp={:?}", resp);
-
-            tx.send(()).unwrap();
-        });
-
-        make_server(&addr, async { rx.await.unwrap() }).await?;
-        Ok(())
-    }
+/// Convenience function to call [`make_server`] bound to a TCP address.
+pub async fn make_server_bind(
+    addr: &SocketAddr,
+    signal: impl Future<Output = ()>,
+) -> anyhow::Result<()> {
+    make_server(Server::try_bind(addr)?, signal).await
 }

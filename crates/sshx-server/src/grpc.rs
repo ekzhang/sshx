@@ -12,8 +12,6 @@ impl Greeter for GrpcServer {
         &self,
         request: Request<HelloRequest>,
     ) -> Result<Response<HelloReply>, Status> {
-        println!("Got a request: {:?}", request);
-
         let reply = HelloReply {
             message: format!("Hello {}!", request.get_ref().name),
         };

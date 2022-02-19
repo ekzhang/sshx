@@ -4,4 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+anyhow = "1.0.53"
+nix = "0.23.1"
 sshx-core = { path = "../sshx-core" }
+tokio = { version = "1.16.1", features = ["full"] }

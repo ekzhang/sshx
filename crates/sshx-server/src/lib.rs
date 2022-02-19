@@ -22,7 +22,7 @@ use hyper::{
     service::make_service_fn,
     Body, Request,
 };
-use sshx_core::proto::{greeter_server::GreeterServer, FILE_DESCRIPTOR_SET};
+use sshx_core::proto::{sshx_service_server::SshxServiceServer, FILE_DESCRIPTOR_SET};
 use tonic::transport::Server as TonicServer;
 use tower::{steer::Steer, ServiceBuilder, ServiceExt};
 use tower_http::{
@@ -59,7 +59,7 @@ pub async fn make_server(
         .boxed_clone();
 
     let grpc_service = TonicServer::builder()
-        .add_service(GreeterServer::new(GrpcServer))
+        .add_service(SshxServiceServer::new(GrpcServer))
         .add_service(
             tonic_reflection::server::Builder::configure()
                 .register_encoded_file_descriptor_set(FILE_DESCRIPTOR_SET)
@@ -87,7 +87,7 @@ pub async fn make_server(
     let svc = Steer::new(
         [http_service, grpc_service],
         |req: &Request<Body>, _services: &[_]| match req.headers().get(CONTENT_TYPE) {
-            Some(value) if value.to_str().unwrap_or_default() == "application/grpc" => 1,
+            Some(value) if value.to_str().ok() == Some("application/grpc") => 1,
             _ => 0,
         },
     );

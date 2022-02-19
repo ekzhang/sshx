@@ -1,19 +1,22 @@
+// This file contains the service definition for sshx, used by the client to
+// communicate their terminal state over gRPC.
+
 syntax = "proto3";
 package sshx;
 
-service Greeter {
-  // Our SayHello rpc accepts HelloRequests and returns HelloReplies
-  rpc SayHello(HelloRequest) returns (HelloReply);
+service SshxService {
+  // Say hello to the user.
+  rpc Hello(HelloRequest) returns (HelloReply);
 }
 
-// A request for the SayHello rpc.
+// A request for the Hello rpc.
 message HelloRequest {
-  // Request message contains the name to be greeted
+  // Request message contains the name to be greeted.
   string name = 1;
 }
 
-// A reply for the SayHello rpc.
+// A reply for the Hello rpc.
 message HelloReply {
-  // Reply contains the greeting message
+  // Reply contains the greeting message.
   string message = 1;
 }

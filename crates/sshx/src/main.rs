@@ -1,87 +1,93 @@
+use std::convert::Infallible;
 use std::env;
-use std::fs::File as StdFile;
+use std::ffi::CString;
 use std::os::unix::io::{FromRawFd, RawFd};
-use std::process::Command;
-use std::thread;
+use std::sync::Arc;
+use std::time::Duration;
 
-use nix::{pty, unistd::dup};
+use nix::fcntl::{fcntl, FcntlArg, OFlag};
+use nix::pty;
+use nix::unistd::{execv, ForkResult};
 use tokio::fs::File;
-use tokio::io::{self, BufReader};
+use tokio::io::{self, AsyncReadExt, AsyncWriteExt};
+use tokio::sync::mpsc;
+use tokio::time;
 
 /// Returns the default shell on this system.
 fn get_default_shell() -> String {
     env::var("SHELL").unwrap_or_else(|_| String::from("/bin/bash"))
 }
 
-fn child_task(shell: String, tty: RawFd) -> anyhow::Result<()> {
-    let tty2 = dup(tty)?;
-    let tty3 = dup(tty)?;
-    let stdin = unsafe { StdFile::from_raw_fd(tty) };
-    let stdout = unsafe { StdFile::from_raw_fd(tty2) };
-    let stderr = unsafe { StdFile::from_raw_fd(tty3) };
-    let mut child = Command::new(&shell)
-        .stdin(stdin)
-        .stdout(stdout)
-        .stderr(stderr)
-        .spawn()?;
-    child.wait()?;
-    Ok(())
+/// Entry point for the child process, which spawns a shell.
+fn child_task(shell: &str) -> anyhow::Result<Infallible> {
+    let command = CString::new(shell)?;
+    execv(&command, &[&command]).map_err(|e| e.into())
 }
 
+/// Entry point for the asynchronous controller.
 #[tokio::main]
-async fn main() -> anyhow::Result<()> {
+async fn controller_task(master_port: RawFd) -> anyhow::Result<()> {
+    fcntl(master_port, FcntlArg::F_SETFL(OFlag::O_NONBLOCK))?;
+
+    // Safety: The master file descriptor was created by forkpty() and has its
+    // ownership transferred here. It is closed at the end of the function.
+    let mut master = unsafe { File::from_raw_fd(master_port) };
+
+    // Input to communicate with the terminal.
+    let (tx, mut rx) = mpsc::channel::<Arc<[u8]>>(64);
+
+    tokio::spawn(async move {
+        // This task takes ownership of `master`, so there are no issues with
+        // concurrent reads and writes to the same file.
+        let mut buf = [0_u8; 2048];
+        loop {
+            tokio::select! {
+                message = rx.recv() => {
+                    if let Some(buf) = message {
+                        let result = master.write_all(&buf[..]).await;
+                        if let Err(e) = result {
+                            panic!("Failed to write to master: {e}");
+                        }
+                    } else {
+                        break;
+                    }
+                }
+                result = master.read(&mut buf) => {
+                    if let Ok(n) = result {
+                        // println!("{:?}", String::from_utf8_lossy(&buf[..n]));
+                        io::stdout().write_all(&buf[..n]).await.unwrap();
+                    } else {
+                        // On EAGAIN (non-blocking read), wait for a little bit.
+                        time::sleep(Duration::from_millis(10)).await;
+                    }
+                }
+            };
+        }
+    });
+
+    loop {
+        let mut buf = [0_u8; 256];
+        let n = io::stdin().read(&mut buf).await?;
+        tx.send(buf[0..n].into()).await?;
+    }
+}
+
+fn main() -> anyhow::Result<()> {
     let shell = get_default_shell();
     println!("Using default shell: {shell}");
 
-    let ports = pty::openpty(None, None)?;
-    thread::spawn(move || {
-        child_task(shell, ports.slave).expect("Child failed");
-    });
-
-    let master = unsafe { File::from_raw_fd(ports.master) };
-    let (mut master_read, mut master_write) = io::split(master);
-    let mut stdin = BufReader::new(io::stdin());
-    let mut stdout = io::stdout();
-
-    tokio::try_join!(
-        // async {
-        //     master_write.write_all(b"ls\n").await?;
-        //     time::sleep(Duration::from_secs(1)).await;
-        //     master_write.write_all(b"ls\n").await
-        // },
-        // async {
-        //     let mut buf = String::new();
-        //     stdin.read_line(&mut buf).await?;
-        //     println!("Okay! {:?} -> {buf}", buf.as_bytes());
-        //     master_write.write_all(buf.as_bytes()).await?;
-        //     Ok::<_, io::Error>(())
-        // },
-        // async {
-        //     let mut read = BufReader::new(master_read);
-        //     for _ in 0..5 {
-        //         let mut buf = String::new();
-        //         read.read_line(&mut buf).await?;
-        //         print!("{}", buf);
-        //     }
-        //     Ok(())
-        // },
-        io::copy(&mut stdin, &mut master_write),
-        io::copy(&mut master_read, &mut stdout),
-    )?;
+    // Safety: Child process spawned by forkpty() does no memory allocation and must
+    // use only "async-signal-safe" functions.
+    let result = unsafe { pty::forkpty(None, None) }?;
+    match result.fork_result {
+        ForkResult::Child => {
+            child_task(&shell).expect("Child failed");
+        }
+        ForkResult::Parent { child } => {
+            println!("Child has pid {child}");
+            controller_task(result.master)?;
+        }
+    }
 
     Ok(())
-
-    // loop {
-    //     let input_future = stdin.read(&mut buf);
-    //     let output_future = master.read(&mut buf2);
-    //     tokio::select! {
-    //         num_read = input_future => {
-    //             master.write_all(&buf[0..num_read?]).await?;
-    //         }
-    //         num_read = output_future => {
-    //             stdout.write_all(&buf2[0..num_read?]).await?;
-    //             stdout.flush().await?;
-    //         }
-    //     };
-    // }
 }

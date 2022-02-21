@@ -2,12 +2,11 @@ use std::env;
 use std::fs::File as StdFile;
 use std::os::unix::io::{FromRawFd, RawFd};
 use std::process::Command;
-use std::time::Duration;
+use std::thread;
 
 use nix::{pty, unistd::dup};
 use tokio::fs::File;
-use tokio::io::{self, AsyncBufReadExt, AsyncWriteExt, BufReader};
-use tokio::time;
+use tokio::io::{self, BufReader};
 
 /// Returns the default shell on this system.
 fn get_default_shell() -> String {
@@ -35,7 +34,7 @@ async fn main() -> anyhow::Result<()> {
     println!("Using default shell: {shell}");
 
     let ports = pty::openpty(None, None)?;
-    std::thread::spawn(move || {
+    thread::spawn(move || {
         child_task(shell, ports.slave).expect("Child failed");
     });
 
@@ -45,10 +44,11 @@ async fn main() -> anyhow::Result<()> {
     let mut stdout = io::stdout();
 
     tokio::try_join!(
-        async {
-            // time::sleep(Duration::from_secs(1)).await;
-            master_write.write_all(b"ls\n").await
-        },
+        // async {
+        //     master_write.write_all(b"ls\n").await?;
+        //     time::sleep(Duration::from_secs(1)).await;
+        //     master_write.write_all(b"ls\n").await
+        // },
         // async {
         //     let mut buf = String::new();
         //     stdin.read_line(&mut buf).await?;
@@ -56,17 +56,17 @@ async fn main() -> anyhow::Result<()> {
         //     master_write.write_all(buf.as_bytes()).await?;
         //     Ok::<_, io::Error>(())
         // },
-        async {
-            let mut read = BufReader::new(master_read);
-            for _ in 0..5 {
-                let mut buf = String::new();
-                read.read_line(&mut buf).await?;
-                print!("{}", buf);
-            }
-            Ok(())
-        },
-        // io::copy(&mut stdin, &mut master_write),
-        // io::copy(&mut master_read, &mut stdout),
+        // async {
+        //     let mut read = BufReader::new(master_read);
+        //     for _ in 0..5 {
+        //         let mut buf = String::new();
+        //         read.read_line(&mut buf).await?;
+        //         print!("{}", buf);
+        //     }
+        //     Ok(())
+        // },
+        io::copy(&mut stdin, &mut master_write),
+        io::copy(&mut master_read, &mut stdout),
     )?;
 
     Ok(())

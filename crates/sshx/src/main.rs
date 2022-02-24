@@ -5,6 +5,7 @@ use std::os::unix::io::{FromRawFd, RawFd};
 use std::sync::Arc;
 use std::time::Duration;
 
+use anyhow::Result;
 use nix::fcntl::{fcntl, FcntlArg, OFlag};
 use nix::pty;
 use nix::unistd::{execv, ForkResult};
@@ -19,14 +20,14 @@ fn get_default_shell() -> String {
 }
 
 /// Entry point for the child process, which spawns a shell.
-fn child_task(shell: &str) -> anyhow::Result<Infallible> {
+fn child_task(shell: &str) -> Result<Infallible> {
     let command = CString::new(shell)?;
     execv(&command, &[&command]).map_err(|e| e.into())
 }
 
 /// Entry point for the asynchronous controller.
 #[tokio::main]
-async fn controller_task(master_port: RawFd) -> anyhow::Result<()> {
+async fn controller_task(master_port: RawFd) -> Result<()> {
     fcntl(master_port, FcntlArg::F_SETFL(OFlag::O_NONBLOCK))?;
 
     // Safety: The master file descriptor was created by forkpty() and has its
@@ -74,7 +75,7 @@ async fn controller_task(master_port: RawFd) -> anyhow::Result<()> {
     }
 }
 
-fn main() -> anyhow::Result<()> {
+fn main() -> Result<()> {
     let shell = get_default_shell();
     println!("Using default shell: {shell}");
 

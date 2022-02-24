@@ -1,8 +1,9 @@
+use anyhow::Result;
 use sshx_server::make_server_bind;
 use tokio::signal::unix::{signal, SignalKind};
 
 #[tokio::main]
-async fn main() -> anyhow::Result<()> {
+async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
 
     let addr = "[::1]:8051".parse()?;

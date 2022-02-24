@@ -1,5 +1,6 @@
 use std::net::{SocketAddr, TcpListener};
 
+use anyhow::Result;
 use hyper::server::Server;
 use sshx_server::make_server;
 use tokio::sync::oneshot;
@@ -15,7 +16,7 @@ impl TestServer {
     ///
     /// Returns an object with the local address, as well as a custom [`Drop`]
     /// implementation that gracefully shuts down the server.
-    pub fn new() -> anyhow::Result<Self> {
+    pub fn new() -> Result<Self> {
         let listener = TcpListener::bind("[::1]:0")?;
         let local_addr = listener.local_addr()?;
 

@@ -14,6 +14,7 @@
 
 use std::{error::Error as StdError, future::Future, net::SocketAddr};
 
+use anyhow::Result;
 use axum::body::HttpBody;
 use grpc::GrpcServer;
 use hyper::{
@@ -38,7 +39,7 @@ pub mod http;
 pub async fn make_server(
     builder: Builder<AddrIncoming>,
     signal: impl Future<Output = ()>,
-) -> anyhow::Result<()> {
+) -> Result<()> {
     type BoxError = Box<dyn StdError + Send + Sync>;
 
     let http_service = http::app()
@@ -105,9 +106,6 @@ pub async fn make_server(
 }
 
 /// Convenience function to call [`make_server`] bound to a TCP address.
-pub async fn make_server_bind(
-    addr: &SocketAddr,
-    signal: impl Future<Output = ()>,
-) -> anyhow::Result<()> {
+pub async fn make_server_bind(addr: &SocketAddr, signal: impl Future<Output = ()>) -> Result<()> {
     make_server(Server::try_bind(addr)?, signal).await
 }

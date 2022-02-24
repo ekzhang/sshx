@@ -1,10 +1,12 @@
-use common::*;
+use anyhow::Result;
 use sshx_core::proto::{sshx_service_client::SshxServiceClient, HelloRequest};
+
+use crate::common::*;
 
 pub mod common;
 
 #[tokio::test]
-async fn test_rpc() -> anyhow::Result<()> {
+async fn test_rpc() -> Result<()> {
     let server = TestServer::new()?;
     let mut client = SshxServiceClient::connect(server.endpoint()).await.unwrap();
 

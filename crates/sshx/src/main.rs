@@ -42,23 +42,25 @@ async fn controller_task(master_port: RawFd) -> anyhow::Result<()> {
         let mut buf = [0_u8; 2048];
         loop {
             tokio::select! {
+                biased;
+
                 message = rx.recv() => {
                     if let Some(buf) = message {
-                        let result = master.write_all(&buf[..]).await;
-                        if let Err(e) = result {
-                            panic!("Failed to write to master: {e}");
-                        }
+                        master.write_all(&buf[..]).await.expect("Failed to write to master");
                     } else {
                         break;
                     }
                 }
                 result = master.read(&mut buf) => {
-                    if let Ok(n) = result {
-                        // println!("{:?}", String::from_utf8_lossy(&buf[..n]));
-                        io::stdout().write_all(&buf[..n]).await.unwrap();
-                    } else {
-                        // On EAGAIN (non-blocking read), wait for a little bit.
-                        time::sleep(Duration::from_millis(10)).await;
+                    match result {
+                        Ok(n) => io::stdout().write_all(&buf[..n]).await.unwrap(),
+                        Err(e) => match e.kind() {
+                            io::ErrorKind::WouldBlock => {
+                                // On EAGAIN (non-blocking read), wait for a little bit.
+                                time::sleep(Duration::from_millis(10)).await;
+                            }
+                            _ => panic!("Failed to read from PTY master: {e}"),
+                        },
                     }
                 }
             };

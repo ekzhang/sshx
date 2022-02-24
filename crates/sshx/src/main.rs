@@ -1,14 +1,12 @@
-use std::convert::Infallible;
-use std::env;
-use std::ffi::CString;
 use std::os::unix::io::{FromRawFd, RawFd};
+use std::process::{Command, ExitStatus};
 use std::sync::Arc;
 use std::time::Duration;
+use std::{env, thread};
 
 use anyhow::Result;
 use nix::fcntl::{fcntl, FcntlArg, OFlag};
 use nix::pty;
-use nix::unistd::{execv, ForkResult};
 use tokio::fs::File;
 use tokio::io::{self, AsyncReadExt, AsyncWriteExt};
 use tokio::sync::mpsc;
@@ -20,9 +18,17 @@ fn get_default_shell() -> String {
 }
 
 /// Entry point for the child process, which spawns a shell.
-fn child_task(shell: &str) -> Result<Infallible> {
-    let command = CString::new(shell)?;
-    execv(&command, &[&command]).map_err(|e| e.into())
+fn child_task(shell: &str, slave_port: RawFd) -> Result<ExitStatus> {
+    // Safety: The slave file descriptor was created by openpty() and has its
+    // ownership transferred here. It is closed at the end of the function.
+    let slave = unsafe { std::fs::File::from_raw_fd(slave_port) };
+
+    Command::new(shell)
+        .stdin(slave.try_clone()?)
+        .stdout(slave.try_clone()?)
+        .stderr(slave)
+        .status()
+        .map_err(|e| e.into())
 }
 
 /// Entry point for the asynchronous controller.
@@ -30,7 +36,7 @@ fn child_task(shell: &str) -> Result<Infallible> {
 async fn controller_task(master_port: RawFd) -> Result<()> {
     fcntl(master_port, FcntlArg::F_SETFL(OFlag::O_NONBLOCK))?;
 
-    // Safety: The master file descriptor was created by forkpty() and has its
+    // Safety: The master file descriptor was created by openpty() and has its
     // ownership transferred here. It is closed at the end of the function.
     let mut master = unsafe { File::from_raw_fd(master_port) };
 
@@ -81,16 +87,12 @@ fn main() -> Result<()> {
 
     // Safety: Child process spawned by forkpty() does no memory allocation and must
     // use only "async-signal-safe" functions.
-    let result = unsafe { pty::forkpty(None, None) }?;
-    match result.fork_result {
-        ForkResult::Child => {
-            child_task(&shell).expect("Child failed");
-        }
-        ForkResult::Parent { child } => {
-            println!("Child has pid {child}");
-            controller_task(result.master)?;
-        }
-    }
+    let result = pty::openpty(None, None)?;
+    thread::spawn(move || {
+        child_task(&shell, result.slave).ok();
+    });
+
+    controller_task(result.master)?;
 
     Ok(())
 }

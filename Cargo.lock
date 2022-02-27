@@ -823,6 +823,8 @@ dependencies = [
  "pin-project",
  "sshx-core",
  "tokio",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]

@@ -51,6 +51,8 @@ impl Terminal {
         // its blocking I/O on a separate thread.
         let master_write = master_read.try_clone().await?;
 
+        tracing::trace!("creating new terminal with child id = {}", child.id());
+
         Ok(Self {
             child,
             master_read,
@@ -104,7 +106,10 @@ impl AsyncWrite for Terminal {
 #[pinned_drop]
 impl PinnedDrop for Terminal {
     fn drop(self: Pin<&mut Self>) {
+        let this = self.project();
+        tracing::trace!("dropping terminal with child id = {}", this.child.id());
+
         // Reap the child process on closure so that it doesn't create zombies.
-        self.project().child.kill().ok();
+        this.child.kill().ok();
     }
 }

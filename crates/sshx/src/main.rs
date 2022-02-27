@@ -6,7 +6,7 @@ use anyhow::Result;
 use sshx::{get_default_shell, Terminal};
 use tokio::io::{self, AsyncReadExt, AsyncWriteExt};
 use tokio::signal;
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, watch};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -27,6 +27,12 @@ async fn main() -> Result<()> {
         }
     });
 
+    let (exit_tx, mut exit_rx) = watch::channel(false);
+    tokio::spawn(async move {
+        signal::ctrl_c().await.unwrap();
+        exit_tx.send(true).ok();
+    });
+
     loop {
         let mut buf = [0_u8; 256];
 
@@ -38,8 +44,11 @@ async fn main() -> Result<()> {
                 let n = result?;
                 io::stdout().write_all(&buf[..n]).await?;
             }
-            _ = signal::ctrl_c() => {
-                break;
+            Ok(()) = exit_rx.changed() => {
+                if *exit_rx.borrow_and_update() {
+                    tracing::trace!("gracefully exiting main");
+                    break;
+                }
             }
         }
     }

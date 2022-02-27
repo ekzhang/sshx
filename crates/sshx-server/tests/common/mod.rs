@@ -2,8 +2,10 @@ use std::net::{SocketAddr, TcpListener};
 
 use anyhow::Result;
 use hyper::server::Server;
+use sshx_core::proto::sshx_service_client::SshxServiceClient;
 use sshx_server::make_server;
 use tokio::sync::oneshot;
+use tonic::transport::Channel;
 
 /// An ephemeral, isolated server that is created for each test.
 pub struct TestServer {
@@ -40,6 +42,11 @@ impl TestServer {
     /// Returns the HTTP/2 gRPC endpoint for this server.
     pub fn endpoint(&self) -> String {
         format!("http://{}", self.local_addr)
+    }
+
+    /// Creates a gRPC client connected to this server.
+    pub async fn grpc_client(&self) -> Result<SshxServiceClient<Channel>> {
+        Ok(SshxServiceClient::connect(self.endpoint()).await?)
     }
 }
 

@@ -5,18 +5,57 @@ syntax = "proto3";
 package sshx;
 
 service SshxService {
-  // Say hello to the user.
-  rpc Hello(HelloRequest) returns (HelloReply);
+  // Create a new SSH session for a given computer.
+  rpc Open(OpenRequest) returns (OpenResponse);
+
+  // Stream real-time commands and terminal outputs to the session.
+  rpc Channel(stream ClientUpdate) returns (stream ServerUpdate);
+
+  // Gracefully shut down an existing SSH session.
+  rpc Close(CloseRequest) returns (CloseResponse);
 }
 
-// A request for the Hello rpc.
-message HelloRequest {
-  // Request message contains the name to be greeted.
+// Details of bytes exchanged with the terminal.
+message TerminalData {
+  uint32 id = 1; // ID of the shell.
+  string data = 2;
+}
+
+// Request to open an sshx session.
+message OpenRequest {}
+
+// Details of a newly-created sshx session.
+message OpenResponse {
+  string name = 1; // Name of the session.
+  string url = 2; // Public web URL to view as a client.
+}
+
+// Bidirectional streaming update from the client.
+message ClientUpdate {
+  oneof message {
+    string hello = 1; // First stream message, setting the session name.
+    TerminalData data = 2; // Stream data from the terminal.
+    uint32 new_shell = 3; // Acknowledge that a new shell was created.
+    string error = 15;
+  }
+}
+
+// Bidirectional streaming update from the server.
+message ServerUpdate {
+  oneof message {
+    TerminalData data = 1; // Stream commands to update the terminal.
+    uint32 create_shell = 2; // ID of a new shell.
+    uint32 close_shell = 3; // ID of a shell to close.
+    string error = 15;
+  }
+}
+
+// Request to stop a sshx session gracefully.
+message CloseRequest {
   string name = 1;
 }
 
-// A reply for the Hello rpc.
-message HelloReply {
-  // Reply contains the greeting message.
-  string message = 1;
+// Server response to closing a session.
+message CloseResponse {
+  bool exists = 1;
 }

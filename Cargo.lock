@@ -845,6 +845,7 @@ dependencies = [
  "hyper",
  "sshx-core",
  "tokio",
+ "tokio-stream",
  "tonic",
  "tonic-reflection",
  "tower",

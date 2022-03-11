@@ -49,3 +49,17 @@ jobs:
       - run: npm run check
 
       - run: npm run build
+
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [rustfmt, rust, web]
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: superfly/flyctl-actions@master
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        with:
+          args: "deploy --remote-only"

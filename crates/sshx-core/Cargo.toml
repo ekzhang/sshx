@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 prost = "0.9.0"
-tonic = "0.6.2"
+tonic = { version = "0.6.2", features = ["tls", "tls-roots"] }
 
 [build-dependencies]
 tonic-build = "0.6.2"

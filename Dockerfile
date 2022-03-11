@@ -3,7 +3,7 @@ WORKDIR /home/rust/src
 RUN apk --no-cache add musl-dev openssl-dev protoc
 RUN rustup component add rustfmt
 COPY . .
-RUN cargo build --release
+RUN cargo build --release --bin sshx-server
 
 FROM node:lts-alpine as frontend
 WORKDIR /usr/src/app

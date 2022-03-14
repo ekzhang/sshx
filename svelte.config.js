@@ -13,7 +13,7 @@ const config = {
 
   kit: {
     adapter: adapter({
-      fallback: "index.html", // SPA mode
+      fallback: "spa.html", // SPA mode
     }),
   },
 };

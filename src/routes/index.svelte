@@ -1,3 +1,7 @@
+<script lang="ts" context="module">
+  export const prerender = true;
+</script>
+
 <script lang="ts">
   import Seo from "$lib/components/Seo.svelte";
 </script>

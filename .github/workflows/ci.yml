@@ -6,6 +6,7 @@ jobs:
   rustfmt:
     name: Rust format
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v2
 
@@ -20,6 +21,7 @@ jobs:
   rust:
     name: Rust lint and test
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v2
 
@@ -55,6 +57,10 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [rustfmt, rust, web]
+    concurrency:
+      group: deploy
+      cancel-in-progress: true
+
     steps:
       - uses: actions/checkout@v2
 

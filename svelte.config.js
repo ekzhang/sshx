@@ -14,6 +14,7 @@ const config = {
   kit: {
     adapter: adapter({
       fallback: "spa.html", // SPA mode
+      precompress: true,
     }),
   },
 };

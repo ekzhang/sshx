@@ -20,10 +20,16 @@ pub fn app() -> Router<Body> {
 /// Serves static SvelteKit build files.
 fn frontend() -> Router<Body> {
     let service = service_fn(|req| async {
-        let resp = ServeDir::new("build").call(req).await?;
+        let resp = ServeDir::new("build")
+            .precompressed_gzip()
+            .precompressed_br()
+            .call(req)
+            .await?;
 
         if resp.status() == 404 {
             ServeFile::new("build/spa.html")
+                .precompressed_gzip()
+                .precompressed_br()
                 .call(Request::<Body>::default())
                 .await
         } else {

@@ -105,15 +105,12 @@ pub async fn make_server(
     let svc = Steer::new(
         [http_service, grpc_service, tls_redirect_service],
         |req: &Request<Body>, _services: &[_]| {
-            // Redirect proxied HTTP to HTTPS, see here for details:
-            // https://fly.io/blog/always-be-connecting-with-https/
-            if let Some(proto) = req.headers().get("x-forwarded-proto") {
-                if proto == "http" {
-                    return 2;
-                }
-            }
-            match req.headers().get(CONTENT_TYPE) {
-                Some(value) if value.to_str().ok() == Some("application/grpc") => 1,
+            let headers = req.headers();
+            match (headers.get("x-forwarded-proto"), headers.get(CONTENT_TYPE)) {
+                // Redirect proxied HTTP to HTTPS, see here for details:
+                // https://fly.io/blog/always-be-connecting-with-https/
+                (Some(proto), _) if proto == "http" => 2,
+                (_, Some(content)) if content == "application/grpc" => 1,
                 _ => 0,
             }
         },

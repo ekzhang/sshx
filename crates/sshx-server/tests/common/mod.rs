@@ -39,7 +39,7 @@ impl TestServer {
         self.local_addr
     }
 
-    /// Returns the HTTP/2 gRPC endpoint for this server.
+    /// Returns the HTTP/2 base endpoint URI for this server.
     pub fn endpoint(&self) -> String {
         format!("http://{}", self.local_addr)
     }

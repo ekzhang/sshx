@@ -2,16 +2,6 @@
   export const prerender = true;
 </script>
 
-<script lang="ts">
-  import Seo from "$lib/components/Seo.svelte";
-</script>
-
-<Seo
-  title="sshx"
-  ogTitle="sshx — share collaborative, live terminals on the web"
-  description="Blazing-fast, collaborative live terminal in your browser, with real-time chat, cursors, and activity tracking."
-/>
-
 <main class="p-8 max-w-screen-sm">
   <h1 class="text-6xl">sshx</h1>
   <p><em>Site under construction.</em></p>

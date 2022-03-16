@@ -14,6 +14,10 @@ processes = []
   protocol = "tcp"
 
   [[services.ports]]
+    handlers = ["http"]
+    port = 80
+
+  [[services.ports]]
     handlers = ["tls"]
     port = 443
 

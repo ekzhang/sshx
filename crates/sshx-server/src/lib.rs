@@ -14,19 +14,20 @@
 
 use std::{error::Error as StdError, future::Future, net::SocketAddr};
 
-use anyhow::Result;
-use axum::body::HttpBody;
+use anyhow::{anyhow, Result};
+use axum::{body::HttpBody, http::uri::Scheme};
 use grpc::GrpcServer;
 use hyper::{
-    header::CONTENT_TYPE,
+    header::{CONTENT_TYPE, HOST},
     server::{conn::AddrIncoming, Builder, Server},
     service::make_service_fn,
     Body, Request,
 };
 use sshx_core::proto::{sshx_service_server::SshxServiceServer, FILE_DESCRIPTOR_SET};
 use tonic::transport::Server as TonicServer;
-use tower::{steer::Steer, ServiceBuilder, ServiceExt};
+use tower::{service_fn, steer::Steer, ServiceBuilder, ServiceExt};
 use tower_http::{
+    services::Redirect,
     trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer},
     LatencyUnit,
 };
@@ -85,11 +86,36 @@ pub async fn make_server(
         .map_response(|r| r.map(|b| b.map_err(BoxError::from).boxed_unsync()))
         .boxed_clone();
 
+    let tls_redirect_service = service_fn(|req: Request<Body>| async {
+        let uri = req.uri();
+        tracing::info!("redirecting {} {uri} to https", req.method());
+        let mut parts = uri.clone().into_parts();
+        parts.scheme = Some(Scheme::HTTPS);
+        parts.authority = Some(
+            req.headers()
+                .get(HOST)
+                .ok_or_else(|| anyhow!("tls redirect missing host"))?
+                .to_str()?
+                .parse()?,
+        );
+        Ok(Redirect::permanent(parts.try_into()?).oneshot(req).await?)
+    })
+    .boxed_clone();
+
     let svc = Steer::new(
-        [http_service, grpc_service],
-        |req: &Request<Body>, _services: &[_]| match req.headers().get(CONTENT_TYPE) {
-            Some(value) if value.to_str().ok() == Some("application/grpc") => 1,
-            _ => 0,
+        [http_service, grpc_service, tls_redirect_service],
+        |req: &Request<Body>, _services: &[_]| {
+            // Redirect proxied HTTP to HTTPS, see here for details:
+            // https://fly.io/blog/always-be-connecting-with-https/
+            if let Some(proto) = req.headers().get("x-forwarded-proto") {
+                if proto == "http" {
+                    return 2;
+                }
+            }
+            match req.headers().get(CONTENT_TYPE) {
+                Some(value) if value.to_str().ok() == Some("application/grpc") => 1,
+                _ => 0,
+            }
         },
     );
     let make_svc = make_service_fn(move |_| {

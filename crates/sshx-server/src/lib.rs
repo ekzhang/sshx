@@ -34,7 +34,7 @@ use tower_http::{
 use tracing::{Level, Span};
 
 pub mod grpc;
-pub mod http;
+pub mod web;
 
 /// Make the combined HTTP/gRPC application server, on a given listener.
 pub async fn make_server(
@@ -43,7 +43,7 @@ pub async fn make_server(
 ) -> Result<()> {
     type BoxError = Box<dyn StdError + Send + Sync>;
 
-    let http_service = http::app()
+    let http_service = web::app()
         .layer(
             TraceLayer::new_for_http()
                 .make_span_with(DefaultMakeSpan::new())

@@ -34,6 +34,7 @@ pub struct Terminal {
 
 impl Terminal {
     /// Create a new terminal, with attached PTY.
+    #[tracing::instrument]
     pub async fn new(shell: &str) -> Result<Terminal> {
         let result = pty::openpty(None, None)?;
 
@@ -51,7 +52,7 @@ impl Terminal {
         // its blocking I/O on a separate thread.
         let master_write = master_read.try_clone().await?;
 
-        tracing::trace!("creating new terminal with child id = {}", child.id());
+        tracing::trace!(child.id = child.id(), "creating new terminal");
 
         Ok(Self {
             child,
@@ -107,7 +108,7 @@ impl AsyncWrite for Terminal {
 impl PinnedDrop for Terminal {
     fn drop(self: Pin<&mut Self>) {
         let this = self.project();
-        tracing::trace!("dropping terminal with child id = {}", this.child.id());
+        tracing::trace!(child.id = this.child.id(), "dropping terminal");
 
         // Reap the child process on closure so that it doesn't create zombies.
         this.child.kill().ok();

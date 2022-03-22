@@ -13,7 +13,7 @@ async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
 
     let shell = get_default_shell();
-    tracing::info!("using default shell: {shell}");
+    tracing::info!(%shell, "using default shell");
 
     let mut terminal = Terminal::new(&shell).await?;
 

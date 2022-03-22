@@ -7,13 +7,14 @@ use sshx::{get_default_shell, Terminal};
 use tokio::io::{self, AsyncReadExt, AsyncWriteExt};
 use tokio::signal;
 use tokio::sync::{mpsc, watch};
+use tracing::{info, trace};
 
 #[tokio::main]
 async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
 
     let shell = get_default_shell();
-    tracing::info!(%shell, "using default shell");
+    info!(%shell, "using default shell");
 
     let mut terminal = Terminal::new(&shell).await?;
 
@@ -46,7 +47,7 @@ async fn main() -> Result<()> {
             }
             Ok(()) = exit_rx.changed() => {
                 if *exit_rx.borrow_and_update() {
-                    tracing::trace!("gracefully exiting main");
+                    trace!("gracefully exiting main");
                     break;
                 }
             }

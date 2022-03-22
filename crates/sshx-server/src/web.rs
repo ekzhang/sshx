@@ -11,6 +11,7 @@ use axum::{
 use hyper::{Request, StatusCode};
 use tower::{service_fn, Service};
 use tower_http::services::{ServeDir, ServeFile};
+use tracing::error;
 
 /// Returns the web application server, built with Axum.
 pub fn app() -> Router<Body> {
@@ -51,6 +52,6 @@ fn backend() -> Router<Body> {
 /// Error handler for tower-http services.
 async fn error_handler(error: io::Error) -> (StatusCode, String) {
     let message = format!("unhandled internal error: {error}");
-    tracing::error!("{message}");
+    error!("{message}");
     (StatusCode::INTERNAL_SERVER_ERROR, message)
 }

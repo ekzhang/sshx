@@ -27,7 +27,7 @@ use sshx_core::proto::{sshx_service_server::SshxServiceServer, FILE_DESCRIPTOR_S
 use tonic::transport::Server as TonicServer;
 use tower::{service_fn, steer::Steer, ServiceBuilder, ServiceExt};
 use tower_http::{services::Redirect, trace::TraceLayer};
-use tracing::Span;
+use tracing::{info, info_span, Span};
 
 pub mod grpc;
 pub mod web;
@@ -42,16 +42,16 @@ pub async fn make_server(
     let http_service = web::app()
         .layer(
             TraceLayer::new_for_http()
-                .make_span_with(tracing::info_span!("web"))
+                .make_span_with(info_span!("web"))
                 .on_request(|req: &Request<_>, _span: &Span| {
-                    tracing::info!(method = ?req.method(), uri = %req.uri(), "started HTTP")
+                    info!(method = ?req.method(), uri = %req.uri(), "started HTTP");
                 })
                 .on_response(|resp: &Response<_>, latency: Duration, _span: &Span| {
-                    tracing::info!(
+                    info!(
                         latency = format_args!("{} μs", latency.as_micros()),
                         status = ?resp.status(),
                         "finished processing request",
-                    )
+                    );
                 }),
         )
         .map_response(|r| r.map(|b| b.map_err(BoxError::from).boxed_unsync()))
@@ -70,15 +70,15 @@ pub async fn make_server(
     let grpc_service = ServiceBuilder::new()
         .layer(
             TraceLayer::new_for_grpc()
-                .make_span_with(tracing::info_span!("grpc"))
+                .make_span_with(info_span!("grpc"))
                 .on_request(|req: &Request<_>, _span: &Span| {
-                    tracing::info!(uri = %req.uri(), "started gRPC")
+                    info!(uri = %req.uri(), "started gRPC");
                 })
                 .on_response(|_resp: &Response<_>, latency: Duration, _span: &Span| {
-                    tracing::info!(
+                    info!(
                         latency = format_args!("{} μs", latency.as_micros()),
                         "finished processing request",
-                    )
+                    );
                 }),
         )
         .service(grpc_service)
@@ -87,7 +87,7 @@ pub async fn make_server(
 
     let tls_redirect_service = service_fn(|req: Request<Body>| async {
         let uri = req.uri();
-        tracing::info!(method = ?req.method(), %uri, "redirecting to https");
+        info!(method = ?req.method(), %uri, "redirecting to https");
         let mut parts = uri.clone().into_parts();
         parts.scheme = Some(Scheme::HTTPS);
         parts.authority = Some(

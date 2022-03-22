@@ -4,6 +4,7 @@ use anyhow::Result;
 use clap::Parser;
 use sshx_server::make_server_bind;
 use tokio::signal::unix::{signal, SignalKind};
+use tracing::info;
 
 /// The sshx server CLI interface.
 #[derive(Parser, Debug)]
@@ -29,13 +30,13 @@ async fn main() -> Result<()> {
     let mut sigterm = signal(SignalKind::terminate())?;
     let mut sigint = signal(SignalKind::interrupt())?;
 
-    tracing::info!("server listening at {addr}");
+    info!("server listening at {addr}");
     make_server_bind(&addr, async {
         tokio::select! {
             _ = sigterm.recv() => (),
             _ = sigint.recv() => (),
         }
-        tracing::info!("gracefully shutting down...");
+        info!("gracefully shutting down...");
     })
     .await?;
     Ok(())

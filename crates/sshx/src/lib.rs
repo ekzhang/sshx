@@ -16,6 +16,7 @@ use nix::pty;
 use pin_project::{pin_project, pinned_drop};
 use tokio::fs::File;
 use tokio::io::{self, AsyncRead, AsyncWrite};
+use tracing::{instrument, trace};
 
 /// Returns the default shell on this system.
 pub fn get_default_shell() -> String {
@@ -34,7 +35,7 @@ pub struct Terminal {
 
 impl Terminal {
     /// Create a new terminal, with attached PTY.
-    #[tracing::instrument]
+    #[instrument]
     pub async fn new(shell: &str) -> Result<Terminal> {
         let result = pty::openpty(None, None)?;
 
@@ -52,7 +53,7 @@ impl Terminal {
         // its blocking I/O on a separate thread.
         let master_write = master_read.try_clone().await?;
 
-        tracing::trace!(child.id = child.id(), "creating new terminal");
+        trace!(child.id = child.id(), "creating new terminal");
 
         Ok(Self {
             child,
@@ -108,7 +109,7 @@ impl AsyncWrite for Terminal {
 impl PinnedDrop for Terminal {
     fn drop(self: Pin<&mut Self>) {
         let this = self.project();
-        tracing::trace!(child.id = this.child.id(), "dropping terminal");
+        trace!(child.id = this.child.id(), "dropping terminal");
 
         // Reap the child process on closure so that it doesn't create zombies.
         this.child.kill().ok();

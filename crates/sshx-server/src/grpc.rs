@@ -1,22 +1,37 @@
 //! Defines gRPC routes and application request logic.
 
+use nanoid::nanoid;
 use sshx_core::proto::{sshx_service_server::SshxService, *};
 use tokio::sync::mpsc;
 use tokio_stream::{wrappers::ReceiverStream, StreamExt};
 use tonic::{Request, Response, Status, Streaming};
+use tracing::info;
+
+use crate::session::{Session, SessionStore};
 
 /// Server that handles gRPC requests from the sshx command-line client.
-pub struct GrpcServer;
+pub struct GrpcServer(pub SessionStore);
 
 #[tonic::async_trait]
 impl SshxService for GrpcServer {
     type ChannelStream = ReceiverStream<Result<ServerUpdate, Status>>;
 
     async fn open(&self, request: Request<OpenRequest>) -> Result<Response<OpenResponse>, Status> {
-        let _ = request;
+        use dashmap::mapref::entry::Entry;
+
+        let domain = request.into_inner().domain;
+        if domain.is_empty() {
+            return Err(Status::invalid_argument("domain is empty"));
+        }
+        let id = nanoid!();
+        info!(%id, "creating new session");
+        match self.0.entry(id.clone()) {
+            Entry::Occupied(_) => return Err(Status::already_exists("generated duplicate ID")),
+            Entry::Vacant(v) => v.insert(Session::new()),
+        };
         Ok(Response::new(OpenResponse {
-            name: "placeholder".into(),
-            url: "https://example.com".into(),
+            name: id.clone(),
+            url: format!("https://{domain}/join/{id}"),
         }))
     }
 

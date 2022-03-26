@@ -7,7 +7,9 @@ edition = "2021"
 anyhow = "1.0.53"
 axum = "0.4.5"
 clap = { version = "3.1.6", features = ["derive"] }
+dashmap = "5.2.0"
 hyper = { version = "0.14.17", features = ["full"] }
+nanoid = "0.4.0"
 sshx-core = { path = "../sshx-core" }
 tokio = { version = "1.16.1", features = ["full"] }
 tokio-stream = "0.1.8"

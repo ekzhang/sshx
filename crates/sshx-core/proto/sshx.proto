@@ -22,20 +22,22 @@ message TerminalData {
 }
 
 // Request to open an sshx session.
-message OpenRequest {}
+message OpenRequest {
+  string domain = 1; // Web domain of the server.
+}
 
 // Details of a newly-created sshx session.
 message OpenResponse {
   string name = 1; // Name of the session.
-  string url = 2; // Public web URL to view as a client.
+  string url = 2;  // Public web URL to view as a client.
 }
 
 // Bidirectional streaming update from the client.
 message ClientUpdate {
   oneof message {
-    string hello = 1; // First stream message, setting the session name.
+    string hello = 1;      // First stream message, setting the session name.
     TerminalData data = 2; // Stream data from the terminal.
-    uint32 new_shell = 3; // Acknowledge that a new shell was created.
+    uint32 new_shell = 3;  // Acknowledge that a new shell was created.
     string error = 15;
   }
 }
@@ -43,19 +45,15 @@ message ClientUpdate {
 // Bidirectional streaming update from the server.
 message ServerUpdate {
   oneof message {
-    TerminalData data = 1; // Stream commands to update the terminal.
+    TerminalData data = 1;   // Stream commands to update the terminal.
     uint32 create_shell = 2; // ID of a new shell.
-    uint32 close_shell = 3; // ID of a shell to close.
+    uint32 close_shell = 3;  // ID of a shell to close.
     string error = 15;
   }
 }
 
 // Request to stop a sshx session gracefully.
-message CloseRequest {
-  string name = 1;
-}
+message CloseRequest { string name = 1; }
 
 // Server response to closing a session.
-message CloseResponse {
-  bool exists = 1;
-}
+message CloseResponse { bool exists = 1; }

@@ -13,9 +13,13 @@ use tower::{service_fn, Service};
 use tower_http::services::{ServeDir, ServeFile};
 use tracing::error;
 
+use crate::session::SessionStore;
+
 /// Returns the web application server, built with Axum.
-pub fn app() -> Router<Body> {
-    Router::new().nest("/api", backend()).fallback(frontend())
+pub fn app(store: SessionStore) -> Router<Body> {
+    Router::new()
+        .nest("/api", backend(store))
+        .fallback(frontend())
 }
 
 /// Serves static SvelteKit build files.
@@ -42,7 +46,8 @@ fn frontend() -> Router<Body> {
 }
 
 /// Runs the backend web API server.
-fn backend() -> Router<Body> {
+fn backend(store: SessionStore) -> Router<Body> {
+    let _ = store;
     Router::new().route(
         "/:message",
         get(|Path(message): Path<String>| async move { format!("got a message: {message}") }),

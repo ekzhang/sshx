@@ -27,9 +27,12 @@ use sshx_core::proto::{sshx_service_server::SshxServiceServer, FILE_DESCRIPTOR_S
 use tonic::transport::Server as TonicServer;
 use tower::{service_fn, steer::Steer, ServiceBuilder, ServiceExt};
 use tower_http::{services::Redirect, trace::TraceLayer};
-use tracing::{info, info_span, Span};
+use tracing::{debug, info, info_span, Span};
+
+use crate::session::SessionStore;
 
 pub mod grpc;
+pub mod session;
 pub mod web;
 
 /// Make the combined HTTP/gRPC application server, on a given listener.
@@ -39,15 +42,17 @@ pub async fn make_server(
 ) -> Result<()> {
     type BoxError = Box<dyn StdError + Send + Sync>;
 
-    let http_service = web::app()
+    let store = SessionStore::default();
+
+    let http_service = web::app(store.clone())
         .layer(
             TraceLayer::new_for_http()
                 .make_span_with(info_span!("web"))
                 .on_request(|req: &Request<_>, _span: &Span| {
-                    info!(method = ?req.method(), uri = %req.uri(), "started HTTP");
+                    debug!(method = ?req.method(), uri = %req.uri(), "started HTTP");
                 })
                 .on_response(|resp: &Response<_>, latency: Duration, _span: &Span| {
-                    info!(
+                    debug!(
                         latency = format_args!("{} μs", latency.as_micros()),
                         status = ?resp.status(),
                         "finished processing request",
@@ -59,7 +64,7 @@ pub async fn make_server(
         .boxed_clone();
 
     let grpc_service = TonicServer::builder()
-        .add_service(SshxServiceServer::new(GrpcServer))
+        .add_service(SshxServiceServer::new(GrpcServer(store)))
         .add_service(
             tonic_reflection::server::Builder::configure()
                 .register_encoded_file_descriptor_set(FILE_DESCRIPTOR_SET)
@@ -72,10 +77,10 @@ pub async fn make_server(
             TraceLayer::new_for_grpc()
                 .make_span_with(info_span!("grpc"))
                 .on_request(|req: &Request<_>, _span: &Span| {
-                    info!(uri = %req.uri(), "started gRPC");
+                    debug!(uri = %req.uri(), "started gRPC");
                 })
                 .on_response(|_resp: &Response<_>, latency: Duration, _span: &Span| {
-                    info!(
+                    debug!(
                         latency = format_args!("{} μs", latency.as_micros()),
                         "finished processing request",
                     );

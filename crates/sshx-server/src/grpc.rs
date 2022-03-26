@@ -10,7 +10,14 @@ use tracing::info;
 use crate::session::{Session, SessionStore};
 
 /// Server that handles gRPC requests from the sshx command-line client.
-pub struct GrpcServer(pub SessionStore);
+pub struct GrpcServer(SessionStore);
+
+impl GrpcServer {
+    /// Construct a new [`GrpcServer`] instance with associated state.
+    pub fn new(store: SessionStore) -> Self {
+        Self(store)
+    }
+}
 
 #[tonic::async_trait]
 impl SshxService for GrpcServer {

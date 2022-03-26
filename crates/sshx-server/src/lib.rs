@@ -12,7 +12,7 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
-use std::{error::Error as StdError, future::Future, net::SocketAddr, time::Duration};
+use std::{error::Error as StdError, future::Future, net::SocketAddr};
 
 use anyhow::{anyhow, Result};
 use axum::{body::HttpBody, http::uri::Scheme};
@@ -21,13 +21,13 @@ use hyper::{
     header::{CONTENT_TYPE, HOST},
     server::{conn::AddrIncoming, Builder, Server},
     service::make_service_fn,
-    Body, Request, Response,
+    Body, Request,
 };
 use sshx_core::proto::{sshx_service_server::SshxServiceServer, FILE_DESCRIPTOR_SET};
 use tonic::transport::Server as TonicServer;
 use tower::{service_fn, steer::Steer, ServiceBuilder, ServiceExt};
 use tower_http::{services::Redirect, trace::TraceLayer};
-use tracing::{debug, info, info_span, Span};
+use tracing::info;
 
 use crate::session::SessionStore;
 
@@ -45,26 +45,13 @@ pub async fn make_server(
     let store = SessionStore::default();
 
     let http_service = web::app(store.clone())
-        .layer(
-            TraceLayer::new_for_http()
-                .make_span_with(info_span!("web"))
-                .on_request(|req: &Request<_>, _span: &Span| {
-                    debug!(method = ?req.method(), uri = %req.uri(), "started HTTP");
-                })
-                .on_response(|resp: &Response<_>, latency: Duration, _span: &Span| {
-                    debug!(
-                        latency = format_args!("{} μs", latency.as_micros()),
-                        status = ?resp.status(),
-                        "finished processing request",
-                    );
-                }),
-        )
+        .layer(TraceLayer::new_for_http())
         .map_response(|r| r.map(|b| b.map_err(BoxError::from).boxed_unsync()))
         .map_err(BoxError::from)
         .boxed_clone();
 
     let grpc_service = TonicServer::builder()
-        .add_service(SshxServiceServer::new(GrpcServer(store)))
+        .add_service(SshxServiceServer::new(GrpcServer::new(store)))
         .add_service(
             tonic_reflection::server::Builder::configure()
                 .register_encoded_file_descriptor_set(FILE_DESCRIPTOR_SET)
@@ -73,19 +60,7 @@ pub async fn make_server(
         .into_service();
 
     let grpc_service = ServiceBuilder::new()
-        .layer(
-            TraceLayer::new_for_grpc()
-                .make_span_with(info_span!("grpc"))
-                .on_request(|req: &Request<_>, _span: &Span| {
-                    debug!(uri = %req.uri(), "started gRPC");
-                })
-                .on_response(|_resp: &Response<_>, latency: Duration, _span: &Span| {
-                    debug!(
-                        latency = format_args!("{} μs", latency.as_micros()),
-                        "finished processing request",
-                    );
-                }),
-        )
+        .layer(TraceLayer::new_for_grpc())
         .service(grpc_service)
         .map_response(|r| r.map(|b| b.map_err(BoxError::from).boxed_unsync()))
         .boxed_clone();

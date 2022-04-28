@@ -17,8 +17,9 @@ service SshxService {
 
 // Details of bytes exchanged with the terminal.
 message TerminalData {
-  uint32 id = 1; // ID of the shell.
-  string data = 2;
+  uint32 id = 1;   // ID of the shell.
+  string data = 2; // UTF-8 terminal data.
+  uint64 seq = 3;  // Sequence number of the first byte.
 }
 
 // Request to open an sshx session.
@@ -32,12 +33,18 @@ message OpenResponse {
   string url = 2;  // Public web URL to view as a client.
 }
 
+// Sequence numbers for all active shells, used for synchronization.
+message SequenceNumbers {
+  map<uint32, uint64> map = 1; // Active shells and their sequence numbers.
+}
+
 // Bidirectional streaming update from the client.
 message ClientUpdate {
   oneof message {
-    string hello = 1;      // First stream message, setting the session name.
-    TerminalData data = 2; // Stream data from the terminal.
-    uint32 new_shell = 3;  // Acknowledge that a new shell was created.
+    SequenceNumbers hello = 1; // First stream message.
+    TerminalData data = 2;     // Stream data from the terminal.
+    uint32 created_shell = 3;  // Acknowledge that a new shell was created.
+    uint32 closed_shell = 4;   // Acknowledge that a shell was closed.
     string error = 15;
   }
 }
@@ -45,15 +52,20 @@ message ClientUpdate {
 // Bidirectional streaming update from the server.
 message ServerUpdate {
   oneof message {
-    TerminalData data = 1;   // Stream commands to update the terminal.
-    uint32 create_shell = 2; // ID of a new shell.
-    uint32 close_shell = 3;  // ID of a shell to close.
+    TerminalData data = 1;    // Stream remote-submitted commands.
+    uint32 create_shell = 2;  // ID of a new shell.
+    uint32 close_shell = 3;   // ID of a shell to close.
+    SequenceNumbers sync = 4; // Periodic sequence number sync.
     string error = 15;
   }
 }
 
 // Request to stop a sshx session gracefully.
-message CloseRequest { string name = 1; }
+message CloseRequest {
+  string name = 1; // Name of the session to terminate.
+}
 
 // Server response to closing a session.
-message CloseResponse { bool exists = 1; }
+message CloseResponse {
+  bool exists = 1; // True if the session was found and closed.
+}

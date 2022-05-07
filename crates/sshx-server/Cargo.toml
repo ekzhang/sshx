@@ -5,18 +5,18 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.53"
-axum = "0.4.5"
+axum = "0.5.4"
 clap = { version = "3.1.6", features = ["derive"] }
 dashmap = "5.2.0"
-hyper = { version = "0.14.17", features = ["full"] }
+hyper = { version = "0.14.18", features = ["full"] }
 nanoid = "0.4.0"
 sshx-core = { path = "../sshx-core" }
 tokio = { version = "1.16.1", features = ["full"] }
 tokio-stream = "0.1.8"
-tonic = { version = "0.6.2", features = ["tls", "tls-roots"] }
-tonic-reflection = "0.3.0"
-tower = { version = "0.4.11", features = ["steer"] }
-tower-http = { version = "0.2.2", features = ["fs", "redirect", "trace"] }
+tonic = { version = "0.7.2", features = ["tls", "tls-roots"] }
+tonic-reflection = "0.4.0"
+tower = { version = "0.4.12", features = ["steer"] }
+tower-http = { version = "0.3.2", features = ["fs", "redirect", "trace"] }
 tracing = "0.1.30"
 tracing-subscriber = "0.3.8"
 

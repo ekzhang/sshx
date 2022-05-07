@@ -2,51 +2,37 @@
 
 use std::io;
 
-use axum::{
-    body::Body,
-    extract::Path,
-    routing::{get, get_service},
-    Router,
-};
-use hyper::{Request, StatusCode};
-use tower::{service_fn, Service};
+use axum::routing::{get, get_service};
+use axum::{extract::Path, Router};
+use hyper::StatusCode;
 use tower_http::services::{ServeDir, ServeFile};
 use tracing::error;
 
 use crate::session::SessionStore;
 
 /// Returns the web application server, built with Axum.
-pub fn app(store: SessionStore) -> Router<Body> {
+pub fn app(store: SessionStore) -> Router {
     Router::new()
         .nest("/api", backend(store))
         .fallback(frontend())
 }
 
 /// Serves static SvelteKit build files.
-fn frontend() -> Router<Body> {
-    let service = service_fn(|req| async {
-        let resp = ServeDir::new("build")
-            .precompressed_gzip()
-            .precompressed_br()
-            .call(req)
-            .await?;
+fn frontend() -> Router {
+    let root_spa = ServeFile::new("build/spa.html")
+        .precompressed_gzip()
+        .precompressed_br();
 
-        if resp.status() == 404 {
-            ServeFile::new("build/spa.html")
-                .precompressed_gzip()
-                .precompressed_br()
-                .call(Request::<Body>::default())
-                .await
-        } else {
-            Ok(resp)
-        }
-    });
+    let static_files = ServeDir::new("build")
+        .precompressed_gzip()
+        .precompressed_br()
+        .fallback(root_spa);
 
-    Router::new().nest("/", get_service(service).handle_error(error_handler))
+    Router::new().nest("/", get_service(static_files).handle_error(error_handler))
 }
 
 /// Runs the backend web API server.
-fn backend(store: SessionStore) -> Router<Body> {
+fn backend(store: SessionStore) -> Router {
     let _ = store;
     Router::new().route(
         "/:message",

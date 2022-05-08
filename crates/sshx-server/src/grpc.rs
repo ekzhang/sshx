@@ -24,7 +24,7 @@ impl SshxService for GrpcServer {
     type ChannelStream = ReceiverStream<Result<ServerUpdate, Status>>;
 
     async fn open(&self, request: Request<OpenRequest>) -> Result<Response<OpenResponse>, Status> {
-        use dashmap::mapref::entry::Entry;
+        use dashmap::mapref::entry::Entry::*;
 
         let domain = request.into_inner().domain;
         if domain.is_empty() {
@@ -33,8 +33,8 @@ impl SshxService for GrpcServer {
         let id = nanoid!();
         info!(%id, "creating new session");
         match self.0.entry(id.clone()) {
-            Entry::Occupied(_) => return Err(Status::already_exists("generated duplicate ID")),
-            Entry::Vacant(v) => v.insert(Session::new()),
+            Occupied(_) => return Err(Status::already_exists("generated duplicate ID")),
+            Vacant(v) => v.insert(Session::new().into()),
         };
         Ok(Response::new(OpenResponse {
             name: id.clone(),

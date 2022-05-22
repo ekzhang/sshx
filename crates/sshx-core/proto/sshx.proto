@@ -40,19 +40,19 @@ message SequenceNumbers {
 
 // Bidirectional streaming update from the client.
 message ClientUpdate {
-  oneof message {
-    SequenceNumbers hello = 1; // First stream message.
-    TerminalData data = 2;     // Stream data from the terminal.
-    uint32 created_shell = 3;  // Acknowledge that a new shell was created.
-    uint32 closed_shell = 4;   // Acknowledge that a shell was closed.
+  oneof client_message {
+    string session_name = 1;  // First stream message.
+    TerminalData data = 2;    // Stream data from the terminal.
+    uint32 created_shell = 3; // Acknowledge that a new shell was created.
+    uint32 closed_shell = 4;  // Acknowledge that a shell was closed.
     string error = 15;
   }
 }
 
 // Bidirectional streaming update from the server.
 message ServerUpdate {
-  oneof message {
-    TerminalData data = 1;    // Stream remote-submitted commands.
+  oneof server_message {
+    TerminalData data = 1;    // Remote input bytes, `seq` field ignored.
     uint32 create_shell = 2;  // ID of a new shell.
     uint32 close_shell = 3;   // ID of a shell to close.
     SequenceNumbers sync = 4; // Periodic sequence number sync.

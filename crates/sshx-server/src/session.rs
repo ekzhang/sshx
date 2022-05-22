@@ -43,6 +43,11 @@ impl Session {
         }
     }
 
+    /// Return the sequence numbers for current shells.
+    pub fn sequence_numbers(&self) -> HashMap<u32, u64> {
+        self.seqnums.borrow().clone()
+    }
+
     /// Add a new shell to the session.
     pub fn add_shell(&self, id: u32) -> Result<()> {
         use dashmap::mapref::entry::Entry::*;

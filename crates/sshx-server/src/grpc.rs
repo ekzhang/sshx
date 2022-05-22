@@ -1,6 +1,7 @@
 //! Defines gRPC routes and application request logic.
 
-use std::{sync::Arc, time::Duration};
+use std::sync::Arc;
+use std::time::Duration;
 
 use nanoid::nanoid;
 use sshx_core::proto::{
@@ -147,8 +148,9 @@ impl SshxService for GrpcServer {
         &self,
         request: Request<CloseRequest>,
     ) -> Result<Response<CloseResponse>, Status> {
-        let _ = request;
-        todo!()
+        let name = request.into_inner().name;
+        let exists = self.0.remove(&name).is_some();
+        Ok(Response::new(CloseResponse { exists }))
     }
 }
 

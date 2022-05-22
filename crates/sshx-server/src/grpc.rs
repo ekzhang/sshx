@@ -40,9 +40,9 @@ impl SshxService for GrpcServer {
     async fn open(&self, request: Request<OpenRequest>) -> RR<OpenResponse> {
         use dashmap::mapref::entry::Entry::*;
 
-        let domain = request.into_inner().domain;
-        if domain.is_empty() {
-            return Err(Status::invalid_argument("domain is empty"));
+        let origin = request.into_inner().origin;
+        if origin.is_empty() {
+            return Err(Status::invalid_argument("origin is empty"));
         }
         let id = nanoid!();
         info!(%id, "creating new session");
@@ -52,7 +52,7 @@ impl SshxService for GrpcServer {
         };
         Ok(Response::new(OpenResponse {
             name: id.clone(),
-            url: format!("https://{domain}/join/{id}"),
+            url: format!("{origin}/join/{id}"),
         }))
     }
 

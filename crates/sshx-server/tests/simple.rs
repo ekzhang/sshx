@@ -12,7 +12,7 @@ async fn test_rpc() -> Result<()> {
     let mut client = server.grpc_client().await?;
 
     let req = OpenRequest {
-        domain: "sshx.io".into(),
+        origin: "sshx.io".into(),
     };
     let resp = client.open(req).await?;
     assert!(!resp.into_inner().name.is_empty());

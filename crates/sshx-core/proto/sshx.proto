@@ -24,7 +24,7 @@ message TerminalData {
 
 // Request to open an sshx session.
 message OpenRequest {
-  string domain = 1; // Web domain of the server.
+  string origin = 1; // Web origin of the server.
 }
 
 // Details of a newly-created sshx session.

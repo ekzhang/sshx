@@ -1,13 +1,18 @@
-use std::io::Read;
-use std::sync::Arc;
-use std::thread;
-
 use anyhow::Result;
-use sshx::{get_default_shell, Terminal};
-use tokio::io::{self, AsyncReadExt, AsyncWriteExt};
+use clap::Parser;
+use sshx::get_default_shell;
+use sshx_core::proto::{sshx_service_client::SshxServiceClient, CloseRequest, OpenRequest};
 use tokio::signal;
-use tokio::sync::mpsc;
-use tracing::{error, info, trace};
+use tracing::info;
+
+/// Web-based, real-time collaboration for your remote terminal.
+#[derive(Parser, Debug)]
+#[clap(author, version, about, long_about = None)]
+struct Args {
+    /// Address of the remote sshx server.
+    #[clap(short, long, default_value = "https://sshx.io")]
+    server: String,
+}
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -16,41 +21,26 @@ async fn main() -> Result<()> {
     let shell = get_default_shell();
     info!(%shell, "using default shell");
 
-    let mut terminal = Terminal::new(&shell).await?;
+    let args = Args::parse();
+    info!(origin = %args.server, "connecting to server");
 
-    // Separate thread for reading from standard input.
-    let (tx, mut rx) = mpsc::channel::<Arc<[u8]>>(16);
-    thread::spawn(move || loop {
-        let mut buf = [0u8; 256];
-        let n = std::io::stdin().read(&mut buf).unwrap();
-        if tx.blocking_send(buf[0..n].into()).is_err() {
-            break;
-        }
-    });
+    let mut client = SshxServiceClient::connect(args.server.clone()).await?;
+
+    let req = OpenRequest {
+        origin: args.server.clone(),
+    };
+    let resp = client.open(req).await?.into_inner();
+    let name = resp.name;
+    info!(url = %resp.url, "opened new session");
 
     let exit_signal = signal::ctrl_c();
     tokio::pin!(exit_signal);
 
-    loop {
-        let mut buf = [0u8; 256];
+    (&mut exit_signal).await?;
 
-        tokio::select! {
-            Some(bytes) = rx.recv() => {
-                terminal.write_all(&bytes).await?;
-            }
-            result = terminal.read(&mut buf) => {
-                let n = result?;
-                io::stdout().write_all(&buf[..n]).await?;
-            }
-            result = &mut exit_signal => {
-                if let Err(err) = result {
-                    error!(?err, "failed to listen for exit signal");
-                }
-                trace!("gracefully exiting main");
-                break;
-            }
-        }
-    }
+    info!("closing session");
+    let req = CloseRequest { name };
+    client.close(req).await?;
 
     Ok(())
 }

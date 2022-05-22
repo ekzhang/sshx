@@ -86,7 +86,7 @@ impl AsyncRead for Terminal {
     }
 }
 
-// Redirect terminal reads to the write file object.
+// Redirect terminal writes to the write file object.
 impl AsyncWrite for Terminal {
     fn poll_write(
         self: Pin<&mut Self>,

@@ -9,7 +9,8 @@ use sshx_core::proto::{
     ClientUpdate, CloseRequest, CloseResponse, OpenRequest, OpenResponse, SequenceNumbers,
     ServerUpdate,
 };
-use tokio::{sync::mpsc, time};
+use tokio::sync::mpsc;
+use tokio::time::{self, MissedTickBehavior};
 use tokio_stream::{wrappers::ReceiverStream, StreamExt};
 use tonic::{Request, Response, Status, Streaming};
 use tracing::{error, info, warn};
@@ -30,11 +31,13 @@ impl GrpcServer {
     }
 }
 
+type RR<T> = Result<Response<T>, Status>;
+
 #[tonic::async_trait]
 impl SshxService for GrpcServer {
     type ChannelStream = ReceiverStream<Result<ServerUpdate, Status>>;
 
-    async fn open(&self, request: Request<OpenRequest>) -> Result<Response<OpenResponse>, Status> {
+    async fn open(&self, request: Request<OpenRequest>) -> RR<OpenResponse> {
         use dashmap::mapref::entry::Entry::*;
 
         let domain = request.into_inner().domain;
@@ -53,10 +56,7 @@ impl SshxService for GrpcServer {
         }))
     }
 
-    async fn channel(
-        &self,
-        request: Request<Streaming<ClientUpdate>>,
-    ) -> Result<Response<Self::ChannelStream>, Status> {
+    async fn channel(&self, request: Request<Streaming<ClientUpdate>>) -> RR<Self::ChannelStream> {
         let mut stream = request.into_inner();
         let first_update = match stream.next().await {
             Some(result) => result?,
@@ -76,82 +76,90 @@ impl SshxService for GrpcServer {
         // automatically closed.
         let (tx, rx) = mpsc::channel(16);
         tokio::spawn(async move {
-            let mut interval = time::interval(SYNC_INTERVAL);
-            loop {
-                let msg = tokio::select! {
-                    // Send periodic sync messages to the server.
-                    _ = interval.tick() => {
-                        let map = session.sequence_numbers();
-                        let msg = ServerMessage::Sync(SequenceNumbers { map });
-                        if send_msg(&tx, msg).await {
-                            continue;
-                        } else {
-                            break;
-                        }
-                    }
-                    // Handle incoming client messages.
-                    maybe_update = stream.next() => {
-                        if let Some(Ok(update)) = maybe_update {
-                            match client_msg(update) {
-                                Ok(msg) => msg,
-                                Err(err) => {
-                                    let _ = tx.send(Err(err)).await;
-                                    break;
-                                }
-                            }
-                        } else {
-                            // The client has hung up on their end.
-                            return;
-                        }
-                    }
-                };
-
-                match msg {
-                    ClientMessage::SessionName(_) => {
-                        if !send_err(&tx, "unexpected session name".into()).await {
-                            break;
-                        }
-                    }
-                    ClientMessage::Data(data) => {
-                        if let Err(err) = session.add_data(data.id, &data.data, data.seq) {
-                            if !send_err(&tx, format!("add data: {:?}", err)).await {
-                                break;
-                            }
-                        }
-                    }
-                    ClientMessage::CreatedShell(id) => {
-                        if let Err(err) = session.add_shell(id) {
-                            if !send_err(&tx, format!("add shell: {:?}", err)).await {
-                                break;
-                            }
-                        }
-                    }
-                    ClientMessage::ClosedShell(id) => {
-                        if let Err(err) = session.close_shell(id) {
-                            if !send_err(&tx, format!("close shell: {:?}", err)).await {
-                                break;
-                            }
-                        }
-                    }
-                    ClientMessage::Error(err) => {
-                        error!(?err, "error received from client");
-                    }
-                }
+            if let Err(err) = handle_streaming(&tx, &session, stream).await {
+                warn!(?err, "connection exiting early due to an error");
             }
-            warn!("connection exiting early due to an error");
         });
 
         Ok(Response::new(ReceiverStream::new(rx)))
     }
 
-    async fn close(
-        &self,
-        request: Request<CloseRequest>,
-    ) -> Result<Response<CloseResponse>, Status> {
+    async fn close(&self, request: Request<CloseRequest>) -> RR<CloseResponse> {
         let name = request.into_inner().name;
         let exists = self.0.remove(&name).is_some();
         Ok(Response::new(CloseResponse { exists }))
     }
+}
+
+type ServerTx = mpsc::Sender<Result<ServerUpdate, Status>>;
+
+/// Handle bidirectional streaming messages RPC messages.
+async fn handle_streaming(
+    tx: &ServerTx,
+    session: &Session,
+    mut stream: Streaming<ClientUpdate>,
+) -> Result<(), &'static str> {
+    let mut interval = time::interval(SYNC_INTERVAL);
+    interval.set_missed_tick_behavior(MissedTickBehavior::Delay);
+    loop {
+        tokio::select! {
+            // Send periodic sync messages to the server.
+            _ = interval.tick() => {
+                let map = session.sequence_numbers();
+                let msg = ServerMessage::Sync(SequenceNumbers { map });
+                if !send_msg(tx, msg).await {
+                    return Err("failed to send sync message");
+                }
+            }
+            // Handle incoming client messages.
+            maybe_update = stream.next() => {
+                if let Some(Ok(update)) = maybe_update {
+                    if !handle_update(tx, session, update).await {
+                        return Err("error responding to client update");
+                    }
+                } else {
+                    // The client has hung up on their end.
+                    return Ok(());
+                }
+            }
+        };
+    }
+}
+
+/// Handles a singe update from the client. Returns `true` on success.
+async fn handle_update(tx: &ServerTx, session: &Session, update: ClientUpdate) -> bool {
+    let msg = match client_msg(update) {
+        Ok(msg) => msg,
+        Err(err) => {
+            let _ = tx.send(Err(err)).await;
+            return false;
+        }
+    };
+
+    match msg {
+        ClientMessage::SessionName(_) => {
+            return send_err(tx, "unexpected session name".into()).await;
+        }
+        ClientMessage::Data(data) => {
+            if let Err(err) = session.add_data(data.id, &data.data, data.seq) {
+                return send_err(tx, format!("add data: {:?}", err)).await;
+            }
+        }
+        ClientMessage::CreatedShell(id) => {
+            if let Err(err) = session.add_shell(id) {
+                return send_err(tx, format!("add shell: {:?}", err)).await;
+            }
+        }
+        ClientMessage::ClosedShell(id) => {
+            if let Err(err) = session.close_shell(id) {
+                return send_err(tx, format!("close shell: {:?}", err)).await;
+            }
+        }
+        ClientMessage::Error(err) => {
+            error!(?err, "error received from client");
+        }
+    }
+    true
 }
 
 /// Extracts the client message enum from an update.
@@ -162,14 +170,14 @@ fn client_msg(update: ClientUpdate) -> Result<ClientMessage, Status> {
 }
 
 /// Attempt to send a server message to the client.
-async fn send_msg(tx: &mpsc::Sender<Result<ServerUpdate, Status>>, message: ServerMessage) -> bool {
+async fn send_msg(tx: &ServerTx, message: ServerMessage) -> bool {
     let update = Ok(ServerUpdate {
         server_message: Some(message),
     });
     tx.send(update).await.is_ok()
 }
 
-/// Attempt to send an error message to the client.
-async fn send_err(tx: &mpsc::Sender<Result<ServerUpdate, Status>>, err: String) -> bool {
+/// Attempt to send an error string to the client.
+async fn send_err(tx: &ServerTx, err: String) -> bool {
     send_msg(tx, ServerMessage::Error(err)).await
 }

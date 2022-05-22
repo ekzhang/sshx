@@ -6,10 +6,13 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.53"
 axum = "0.5.4"
+base64 = "0.13.0"
 clap = { version = "3.1.6", features = ["derive"] }
 dashmap = "5.2.0"
+hmac = "0.12.1"
 hyper = { version = "0.14.18", features = ["full"] }
 nanoid = "0.4.0"
+sha2 = "0.10.2"
 sshx-core = { path = "../sshx-core" }
 tokio = { version = "1.18.1", features = ["full"] }
 tokio-stream = "0.1.8"

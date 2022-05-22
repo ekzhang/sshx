@@ -12,7 +12,7 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
-use std::{error::Error as StdError, future::Future, net::SocketAddr};
+use std::{error::Error as StdError, future::Future, net::SocketAddr, sync::Arc};
 
 use anyhow::{anyhow, Result};
 use axum::{body::HttpBody, http::uri::Scheme};
@@ -23,16 +23,18 @@ use hyper::{
     service::make_service_fn,
     Body, Request,
 };
+use nanoid::nanoid;
 use sshx_core::proto::{sshx_service_server::SshxServiceServer, FILE_DESCRIPTOR_SET};
 use tonic::transport::Server as TonicServer;
 use tower::{service_fn, steer::Steer, ServiceBuilder, ServiceExt};
 use tower_http::{services::Redirect, trace::TraceLayer};
 use tracing::info;
 
-use crate::session::SessionStore;
+use crate::state::ServerState;
 
 pub mod grpc;
 pub mod session;
+pub mod state;
 pub mod web;
 
 /// Make the combined HTTP/gRPC application server, on a given listener.
@@ -42,16 +44,17 @@ pub async fn make_server(
 ) -> Result<()> {
     type BoxError = Box<dyn StdError + Send + Sync>;
 
-    let store = SessionStore::default();
+    let secret = nanoid!();
+    let state = Arc::new(ServerState::new(&secret));
 
-    let http_service = web::app(store.clone())
+    let http_service = web::app(state.clone())
         .layer(TraceLayer::new_for_http())
         .map_response(|r| r.map(|b| b.map_err(BoxError::from).boxed_unsync()))
         .map_err(BoxError::from)
         .boxed_clone();
 
     let grpc_service = TonicServer::builder()
-        .add_service(SshxServiceServer::new(GrpcServer::new(store)))
+        .add_service(SshxServiceServer::new(GrpcServer::new(state)))
         .add_service(
             tonic_reflection::server::Builder::configure()
                 .register_encoded_file_descriptor_set(FILE_DESCRIPTOR_SET)

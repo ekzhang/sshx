@@ -3,6 +3,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
+use hmac::Mac;
 use nanoid::nanoid;
 use sshx_core::proto::{
     client_update::ClientMessage, server_update::ServerMessage, sshx_service_server::SshxService,
@@ -15,19 +16,20 @@ use tokio_stream::{wrappers::ReceiverStream, StreamExt};
 use tonic::{Request, Response, Status, Streaming};
 use tracing::{error, info, warn};
 
-use crate::session::{Session, SessionStore};
+use crate::session::Session;
+use crate::state::ServerState;
 
 /// Interval for synchronizing sequence numbers from the server.
 pub const SYNC_INTERVAL: Duration = Duration::from_secs(5);
 
 /// Server that handles gRPC requests from the sshx command-line client.
 #[derive(Clone)]
-pub struct GrpcServer(SessionStore);
+pub struct GrpcServer(Arc<ServerState>);
 
 impl GrpcServer {
     /// Construct a new [`GrpcServer`] instance with associated state.
-    pub fn new(store: SessionStore) -> Self {
-        Self(store)
+    pub fn new(state: Arc<ServerState>) -> Self {
+        Self(state)
     }
 }
 
@@ -44,15 +46,18 @@ impl SshxService for GrpcServer {
         if origin.is_empty() {
             return Err(Status::invalid_argument("origin is empty"));
         }
-        let id = nanoid!();
-        info!(%id, "creating new session");
-        match self.0.entry(id.clone()) {
+        let name = nanoid!();
+        info!(%name, "creating new session");
+        match self.0.store.entry(name.clone()) {
             Occupied(_) => return Err(Status::already_exists("generated duplicate ID")),
             Vacant(v) => v.insert(Session::new().into()),
         };
+        let token = self.0.mac.clone().chain_update(&name).finalize();
+        let url = format!("{origin}/join/{name}");
         Ok(Response::new(OpenResponse {
-            name: id.clone(),
-            url: format!("{origin}/join/{id}"),
+            name,
+            token: base64::encode(token.into_bytes()),
+            url,
         }))
     }
 
@@ -63,10 +68,16 @@ impl SshxService for GrpcServer {
             None => return Err(Status::invalid_argument("missing first message")),
         };
         let session_name = match client_msg(first_update)? {
-            ClientMessage::SessionName(name) => name,
+            ClientMessage::Hello(hello) => {
+                let (name, token) = hello
+                    .split_once(',')
+                    .ok_or_else(|| Status::invalid_argument("missing name and token"))?;
+                validate_token(&self.0.mac, name, token)?;
+                name.to_string()
+            }
             _ => return Err(Status::invalid_argument("invalid first message")),
         };
-        let session = match self.0.get(&session_name) {
+        let session = match self.0.store.get(&session_name) {
             Some(session) => Arc::clone(&session),
             None => return Err(Status::not_found("session not found")),
         };
@@ -85,10 +96,21 @@ impl SshxService for GrpcServer {
     }
 
     async fn close(&self, request: Request<CloseRequest>) -> RR<CloseResponse> {
-        let name = request.into_inner().name;
-        let exists = self.0.remove(&name).is_some();
+        let request = request.into_inner();
+        validate_token(&self.0.mac, &request.name, &request.token)?;
+        let exists = self.0.store.remove(&request.name).is_some();
         Ok(Response::new(CloseResponse { exists }))
     }
+}
+
+/// Validate the client token for a session.
+fn validate_token(mac: &(impl Mac + Clone), name: &str, token: &str) -> Result<(), Status> {
+    if let Ok(token) = base64::decode(token) {
+        if mac.clone().chain_update(name).verify_slice(&token).is_ok() {
+            return Ok(());
+        }
+    }
+    Err(Status::unauthenticated("invalid token"))
 }
 
 type ServerTx = mpsc::Sender<Result<ServerUpdate, Status>>;
@@ -137,8 +159,8 @@ async fn handle_update(tx: &ServerTx, session: &Session, update: ClientUpdate) -
     };
 
     match msg {
-        ClientMessage::SessionName(_) => {
-            return send_err(tx, "unexpected session name".into()).await;
+        ClientMessage::Hello(_) => {
+            return send_err(tx, "unexpected hello".into()).await;
         }
         ClientMessage::Data(data) => {
             if let Err(err) = session.add_data(data.id, &data.data, data.seq) {

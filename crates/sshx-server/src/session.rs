@@ -1,6 +1,6 @@
 //! Core logic for sshx sessions, independent of message transport.
 
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
 
 use anyhow::{bail, Context, Result};
 use dashmap::DashMap;
@@ -105,6 +105,3 @@ impl Default for Session {
         Self::new()
     }
 }
-
-/// A concurrent map of session IDs to session objects.
-pub type SessionStore = Arc<DashMap<String, Arc<Session>>>;

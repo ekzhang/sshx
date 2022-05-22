@@ -30,7 +30,6 @@ async fn main() -> Result<()> {
         origin: args.server.clone(),
     };
     let resp = client.open(req).await?.into_inner();
-    let name = resp.name;
     info!(url = %resp.url, "opened new session");
 
     let exit_signal = signal::ctrl_c();
@@ -39,7 +38,10 @@ async fn main() -> Result<()> {
     (&mut exit_signal).await?;
 
     info!("closing session");
-    let req = CloseRequest { name };
+    let req = CloseRequest {
+        name: resp.name,
+        token: resp.token,
+    };
     client.close(req).await?;
 
     Ok(())

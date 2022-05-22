@@ -1,6 +1,7 @@
 //! HTTP and WebSocket handlers for the sshx web interface.
 
 use std::io;
+use std::sync::Arc;
 
 use axum::routing::{get, get_service};
 use axum::{extract::Path, Router};
@@ -8,12 +9,12 @@ use hyper::StatusCode;
 use tower_http::services::{ServeDir, ServeFile};
 use tracing::error;
 
-use crate::session::SessionStore;
+use crate::state::ServerState;
 
 /// Returns the web application server, built with Axum.
-pub fn app(store: SessionStore) -> Router {
+pub fn app(state: Arc<ServerState>) -> Router {
     Router::new()
-        .nest("/api", backend(store))
+        .nest("/api", backend(state))
         .fallback(frontend())
 }
 
@@ -32,8 +33,8 @@ fn frontend() -> Router {
 }
 
 /// Runs the backend web API server.
-fn backend(store: SessionStore) -> Router {
-    let _ = store;
+fn backend(state: Arc<ServerState>) -> Router {
+    let _ = state;
     Router::new().route(
         "/:message",
         get(|Path(message): Path<String>| async move { format!("got a message: {message}") }),

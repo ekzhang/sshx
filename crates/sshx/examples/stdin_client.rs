@@ -3,7 +3,7 @@ use std::sync::Arc;
 use std::thread;
 
 use anyhow::Result;
-use sshx::{get_default_shell, Terminal};
+use sshx::terminal::{get_default_shell, Terminal};
 use tokio::io::{self, AsyncReadExt, AsyncWriteExt};
 use tokio::signal;
 use tokio::sync::mpsc;

@@ -1,6 +1,6 @@
 use anyhow::Result;
 use clap::Parser;
-use sshx::get_default_shell;
+use sshx::terminal::get_default_shell;
 use sshx_core::proto::{sshx_service_client::SshxServiceClient, CloseRequest, OpenRequest};
 use tokio::signal;
 use tracing::info;

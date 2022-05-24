@@ -9,6 +9,7 @@ clap = { version = "3.1.18", features = ["derive"] }
 nix = "0.23.1"
 pin-project = "1.0.10"
 sshx-core = { path = "../sshx-core" }
+tonic = { version = "0.7.2", features = ["tls", "tls-roots"] }
 tokio = { version = "1.18.1", features = ["full"] }
 tracing = "0.1.30"
 tracing-subscriber = "0.3.8"

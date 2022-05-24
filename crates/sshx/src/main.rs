@@ -1,7 +1,6 @@
 use anyhow::Result;
 use clap::Parser;
-use sshx::terminal::get_default_shell;
-use sshx_core::proto::{sshx_service_client::SshxServiceClient, CloseRequest, OpenRequest};
+use sshx::{controller::Controller, terminal::get_default_shell};
 use tokio::signal;
 use tracing::info;
 
@@ -22,27 +21,14 @@ async fn main() -> Result<()> {
     info!(%shell, "using default shell");
 
     let args = Args::parse();
-    info!(origin = %args.server, "connecting to server");
 
-    let mut client = SshxServiceClient::connect(args.server.clone()).await?;
-
-    let req = OpenRequest {
-        origin: args.server.clone(),
-    };
-    let resp = client.open(req).await?.into_inner();
-    info!(url = %resp.url, "opened new session");
+    let controller = Controller::new(&args.server).await?;
 
     let exit_signal = signal::ctrl_c();
     tokio::pin!(exit_signal);
 
     (&mut exit_signal).await?;
-
-    info!("closing session");
-    let req = CloseRequest {
-        name: resp.name,
-        token: resp.token,
-    };
-    client.close(req).await?;
+    controller.close().await?;
 
     Ok(())
 }

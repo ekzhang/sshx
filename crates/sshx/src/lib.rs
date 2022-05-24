@@ -5,4 +5,5 @@
 
 #![warn(missing_docs)]
 
+pub mod controller;
 pub mod terminal;

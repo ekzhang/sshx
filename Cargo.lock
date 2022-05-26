@@ -1284,6 +1284,7 @@ dependencies = [
  "pin-project",
  "sshx-core",
  "tokio",
+ "tokio-stream",
  "tonic",
  "tracing",
  "tracing-subscriber",

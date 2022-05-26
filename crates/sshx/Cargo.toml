@@ -11,5 +11,6 @@ pin-project = "1.0.10"
 sshx-core = { path = "../sshx-core" }
 tonic = { version = "0.7.2", features = ["tls", "tls-roots"] }
 tokio = { version = "1.18.1", features = ["full"] }
+tokio-stream = "0.1.8"
 tracing = "0.1.30"
 tracing-subscriber = "0.3.8"

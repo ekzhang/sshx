@@ -1311,6 +1311,7 @@ dependencies = [
  "hmac",
  "hyper",
  "nanoid",
+ "parking_lot",
  "reqwest",
  "sha2",
  "sshx-core",

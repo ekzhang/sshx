@@ -19,7 +19,7 @@ use tracing::{error, info, warn};
 use crate::session::Session;
 use crate::state::ServerState;
 
-/// Interval for synchronizing sequence numbers from the server.
+/// Interval for synchronizing sequence numbers with the client.
 pub const SYNC_INTERVAL: Duration = Duration::from_secs(5);
 
 /// Server that handles gRPC requests from the sshx command-line client.
@@ -67,8 +67,8 @@ impl SshxService for GrpcServer {
             Some(result) => result?,
             None => return Err(Status::invalid_argument("missing first message")),
         };
-        let session_name = match client_msg(first_update)? {
-            ClientMessage::Hello(hello) => {
+        let session_name = match first_update.client_message {
+            Some(ClientMessage::Hello(hello)) => {
                 let (name, token) = hello
                     .split_once(',')
                     .ok_or_else(|| Status::invalid_argument("missing name and token"))?;
@@ -150,45 +150,32 @@ async fn handle_streaming(
 
 /// Handles a singe update from the client. Returns `true` on success.
 async fn handle_update(tx: &ServerTx, session: &Session, update: ClientUpdate) -> bool {
-    let msg = match client_msg(update) {
-        Ok(msg) => msg,
-        Err(err) => {
-            let _ = tx.send(Err(err)).await;
-            return false;
-        }
-    };
-
-    match msg {
-        ClientMessage::Hello(_) => {
+    session.access();
+    match update.client_message {
+        Some(ClientMessage::Hello(_)) => {
             return send_err(tx, "unexpected hello".into()).await;
         }
-        ClientMessage::Data(data) => {
+        Some(ClientMessage::Data(data)) => {
             if let Err(err) = session.add_data(data.id, &data.data, data.seq) {
                 return send_err(tx, format!("add data: {:?}", err)).await;
             }
         }
-        ClientMessage::CreatedShell(id) => {
+        Some(ClientMessage::CreatedShell(id)) => {
             if let Err(err) = session.add_shell(id) {
                 return send_err(tx, format!("add shell: {:?}", err)).await;
             }
         }
-        ClientMessage::ClosedShell(id) => {
+        Some(ClientMessage::ClosedShell(id)) => {
             if let Err(err) = session.close_shell(id) {
                 return send_err(tx, format!("close shell: {:?}", err)).await;
             }
         }
-        ClientMessage::Error(err) => {
+        Some(ClientMessage::Error(err)) => {
             error!(?err, "error received from client");
         }
+        None => (), // Heartbeat message, ignored.
     }
     true
-}
-
-/// Extracts the client message enum from an update.
-fn client_msg(update: ClientUpdate) -> Result<ClientMessage, Status> {
-    update
-        .client_message
-        .ok_or_else(|| Status::invalid_argument("message is missing from client update"))
 }
 
 /// Attempt to send a server message to the client.

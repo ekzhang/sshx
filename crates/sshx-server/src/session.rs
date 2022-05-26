@@ -4,6 +4,7 @@ use std::collections::HashMap;
 
 use anyhow::{bail, Context, Result};
 use dashmap::DashMap;
+use parking_lot::Mutex;
 use tokio::{sync::watch, time::Instant};
 use tracing::info;
 
@@ -15,6 +16,9 @@ pub struct Session {
 
     /// Read-only timestamp when the session was started.
     created: Instant,
+
+    /// Timestamp of the last client message from an active connection.
+    updated: Mutex<Instant>,
 
     /// Watch channel source for new sequence numbers.
     seqnums: watch::Sender<HashMap<u32, u64>>,
@@ -36,9 +40,11 @@ struct State {
 impl Session {
     /// Construct a new session.
     pub fn new() -> Self {
+        let now = Instant::now();
         Session {
             shells: Default::default(),
-            created: Instant::now(),
+            created: now,
+            updated: Mutex::new(now),
             seqnums: watch::channel(HashMap::default()).0,
         }
     }
@@ -97,6 +103,11 @@ impl Session {
         }
 
         Ok(())
+    }
+
+    /// Register a client message, refreshing the last update timestamp.
+    pub fn access(&self) {
+        *self.updated.lock() = Instant::now();
     }
 }
 

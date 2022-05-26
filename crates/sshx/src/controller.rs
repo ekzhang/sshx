@@ -1,16 +1,19 @@
 //! Network gRPC client allowing server control of terminals.
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result};
 use sshx_core::proto::client_update::ClientMessage;
 use sshx_core::proto::server_update::ServerMessage;
 use sshx_core::proto::ClientUpdate;
 use sshx_core::proto::{sshx_service_client::SshxServiceClient, CloseRequest, OpenRequest};
 use tokio::sync::mpsc;
-use tokio::time::{self, Duration};
+use tokio::time::{self, Duration, MissedTickBehavior};
 use tokio_stream::wrappers::ReceiverStream;
 use tokio_stream::StreamExt;
 use tonic::transport::Channel;
 use tracing::{error, info};
+
+/// Interval for sending empty heartbeat messages to the server.
+const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(2);
 
 /// Handles a singel session's communication with the remote server.
 pub struct Controller {
@@ -55,13 +58,20 @@ impl Controller {
         let hello = ClientMessage::Hello(format!("{},{}", self.name, self.token));
         send_msg(&tx, hello).await.context("error during Hello")?;
 
+        let mut interval = time::interval(HEARTBEAT_INTERVAL);
+        interval.set_missed_tick_behavior(MissedTickBehavior::Delay);
         loop {
-            let message = match messages.next().await {
-                Some(result) => result
-                    .context("error from server")?
-                    .server_message
-                    .context("message from server is missing")?,
-                None => bail!("server closed connection"),
+            let message = tokio::select! {
+                _ = interval.tick() => {
+                    tx.send(ClientUpdate::default()).await?;
+                    continue;
+                }
+                item = messages.next() => {
+                    item.context("server closed connection")?
+                        .context("error from server")?
+                        .server_message
+                        .context("server message is missing")?
+                }
             };
 
             match message {

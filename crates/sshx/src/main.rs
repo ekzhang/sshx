@@ -1,8 +1,7 @@
 use anyhow::Result;
 use clap::Parser;
-use sshx::{controller::Controller, terminal::get_default_shell};
+use sshx::controller::Controller;
 use tokio::signal;
-use tracing::info;
 
 /// Web-based, real-time collaboration for your remote terminal.
 #[derive(Parser, Debug)]
@@ -16,9 +15,6 @@ struct Args {
 #[tokio::main]
 async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
-
-    let shell = get_default_shell();
-    info!(%shell, "using default shell");
 
     let args = Args::parse();
 

@@ -29,6 +29,8 @@ jobs:
         with:
           toolchain: stable
 
+      - uses: Swatinem/rust-cache@v1
+
       - run: cargo clippy --all-targets -- -D warnings
 
       - run: cargo test

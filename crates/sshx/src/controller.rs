@@ -193,39 +193,26 @@ async fn shell_task(
     let shell = get_default_shell();
     info!(%shell, "spawning new shell");
 
+    let mut term = Terminal::new(&shell).await?;
+
     let mut content = String::new(); // content from the terminal
-    let mut decoder = UTF_8.new_decoder(); // UTF-8 decoder
+    let mut decoder = UTF_8.new_decoder(); // UTF-8 streaming decoder
     let mut seq = 0; // our log of the server's sequence number
     let mut seq_outdated = 0; // number of times seq has been outdated
     let mut buf = [0u8; 4096]; // buffer for reading
     let mut finished = false; // set when this is done
 
-    let mut term = Terminal::new(&shell).await?;
-    loop {
-        // Send data if the server has fallen behind.
-        if content.len() > seq {
-            seq = prev_char_boundary(&content, seq);
-            let data = TerminalData {
-                id,
-                data: content[seq..].into(),
-                seq: seq as u64,
-            };
-            output_tx.send(ClientMessage::Data(data)).await?;
-            seq = content.len();
-            seq_outdated = 0;
-        }
-
-        if finished {
-            break;
-        }
-
-        // let (term_read, term_write) = io::split(&mut term);
+    while !finished {
         tokio::select! {
             result = term.read(&mut buf) => {
                 let n = result?;
-                content.reserve(decoder.max_utf8_buffer_length(n).unwrap());
-                let (result, _, _) = decoder.decode_to_string(&buf[..n], &mut content, false);
-                debug_assert!(result == CoderResult::InputEmpty);
+                if n == 0 {
+                    finished = true;
+                } else {
+                    content.reserve(decoder.max_utf8_buffer_length(n).unwrap());
+                    let (result, _, _) = decoder.decode_to_string(&buf[..n], &mut content, false);
+                    debug_assert!(result == CoderResult::InputEmpty);
+                }
             }
             item = shell_rx.recv() => {
                 match item {
@@ -240,15 +227,28 @@ async fn shell_task(
                             }
                         }
                     }
-                    None => {
-                        // We've reached the end of this shell.
-                        content.reserve(decoder.max_utf8_buffer_length(0).unwrap());
-                        let (result, _, _) = decoder.decode_to_string(&[], &mut content, true);
-                        debug_assert!(result == CoderResult::InputEmpty);
-                        finished = true;
-                    }
+                    None => finished = true, // Server closed this shell.
                 }
             }
+        }
+
+        if finished {
+            content.reserve(decoder.max_utf8_buffer_length(0).unwrap());
+            let (result, _, _) = decoder.decode_to_string(&[], &mut content, true);
+            debug_assert!(result == CoderResult::InputEmpty);
+        }
+
+        // Send data if the server has fallen behind.
+        if content.len() > seq {
+            seq = prev_char_boundary(&content, seq);
+            let data = TerminalData {
+                id,
+                data: content[seq..].into(),
+                seq: seq as u64,
+            };
+            output_tx.send(ClientMessage::Data(data)).await?;
+            seq = content.len();
+            seq_outdated = 0;
         }
     }
     Ok(())

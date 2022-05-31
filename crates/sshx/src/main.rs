@@ -18,12 +18,14 @@ async fn main() -> Result<()> {
 
     let args = Args::parse();
 
-    let controller = Controller::new(&args.server).await?;
+    let mut controller = Controller::new(&args.server).await?;
 
     let exit_signal = signal::ctrl_c();
     tokio::pin!(exit_signal);
-
-    (&mut exit_signal).await?;
+    tokio::select! {
+        _ = controller.run() => unreachable!(),
+        Ok(()) = &mut exit_signal => (),
+    };
     controller.close().await?;
 
     Ok(())

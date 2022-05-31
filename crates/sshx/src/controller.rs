@@ -1,7 +1,8 @@
 //! Network gRPC client allowing server control of terminals.
 
+use std::collections::HashMap;
+
 use anyhow::{Context, Result};
-use dashmap::DashMap;
 use encoding_rs::{CoderResult, UTF_8};
 use sshx_core::proto::{
     client_update::ClientMessage, server_update::ServerMessage,
@@ -26,7 +27,7 @@ pub struct Controller {
     token: String,
 
     /// Channels with backpressure routing messages to each shell task.
-    shells_tx: DashMap<u32, mpsc::Sender<ShellData>>,
+    shells_tx: HashMap<u32, mpsc::Sender<ShellData>>,
     /// Channel shared with tasks to allow them to output client messages.
     output_tx: mpsc::Sender<ClientMessage>,
     /// Owned receiving end of the `output_tx` channel.
@@ -56,7 +57,7 @@ impl Controller {
             client,
             name: resp.name,
             token: resp.token,
-            shells_tx: DashMap::new(),
+            shells_tx: HashMap::new(),
             output_tx,
             output_rx,
         })
@@ -142,7 +143,7 @@ impl Controller {
     }
 
     /// Entry point to start a new terminal task on the client.
-    fn spawn_shell_task(&self, id: u32) {
+    fn spawn_shell_task(&mut self, id: u32) {
         let (shell_tx, shell_rx) = mpsc::channel(16);
         let opt = self.shells_tx.insert(id, shell_tx);
         debug_assert!(opt.is_none(), "shell ID cannot be in existing tasks");

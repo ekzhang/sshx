@@ -1280,7 +1280,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "clap",
- "dashmap",
  "encoding_rs",
  "nix",
  "pin-project",

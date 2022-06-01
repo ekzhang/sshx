@@ -1315,6 +1315,7 @@ dependencies = [
  "parking_lot",
  "reqwest",
  "sha2",
+ "sshx",
  "sshx-core",
  "tokio",
  "tokio-stream",

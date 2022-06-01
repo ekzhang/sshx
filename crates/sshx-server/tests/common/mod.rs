@@ -1,9 +1,10 @@
-use std::net::{SocketAddr, TcpListener};
+use std::net::SocketAddr;
 
 use anyhow::Result;
-use hyper::server::Server;
+use hyper::server::conn::AddrIncoming;
 use sshx_core::proto::sshx_service_client::SshxServiceClient;
 use sshx_server::make_server;
+use tokio::net::TcpListener;
 use tokio::sync::oneshot;
 use tonic::transport::Channel;
 
@@ -18,12 +19,13 @@ impl TestServer {
     ///
     /// Returns an object with the local address, as well as a custom [`Drop`]
     /// implementation that gracefully shuts down the server.
-    pub fn new() -> Result<Self> {
-        let listener = TcpListener::bind("[::1]:0")?;
+    pub async fn new() -> Result<Self> {
+        let listener = TcpListener::bind("[::1]:0").await?;
         let local_addr = listener.local_addr()?;
 
         let (tx, rx) = oneshot::channel();
-        let server = make_server(Server::from_tcp(listener)?, async { rx.await.unwrap() });
+        let incoming = AddrIncoming::from_listener(listener)?;
+        let server = make_server(incoming, async { rx.await.unwrap() });
         tokio::spawn(async move {
             server.await.unwrap();
         });

@@ -19,7 +19,7 @@ use axum::{body::HttpBody, http::uri::Scheme};
 use grpc::GrpcServer;
 use hyper::{
     header::{CONTENT_TYPE, HOST},
-    server::{conn::AddrIncoming, Builder, Server},
+    server::{conn::AddrIncoming, Server},
     service::make_service_fn,
     Body, Request,
 };
@@ -38,10 +38,7 @@ pub mod state;
 pub mod web;
 
 /// Make the combined HTTP/gRPC application server, on a given listener.
-pub async fn make_server(
-    builder: Builder<AddrIncoming>,
-    signal: impl Future<Output = ()>,
-) -> Result<()> {
+pub async fn make_server(incoming: AddrIncoming, signal: impl Future<Output = ()>) -> Result<()> {
     type BoxError = Box<dyn StdError + Send + Sync>;
 
     let secret = nanoid!();
@@ -102,7 +99,8 @@ pub async fn make_server(
         async { Ok::<_, std::convert::Infallible>(svc) }
     });
 
-    builder
+    Server::builder(incoming)
+        .tcp_nodelay(true)
         .serve(make_svc)
         .with_graceful_shutdown(signal)
         .await?;
@@ -112,5 +110,5 @@ pub async fn make_server(
 
 /// Convenience function to call [`make_server`] bound to a TCP address.
 pub async fn make_server_bind(addr: &SocketAddr, signal: impl Future<Output = ()>) -> Result<()> {
-    make_server(Server::try_bind(addr)?, signal).await
+    make_server(AddrIncoming::bind(addr)?, signal).await
 }

@@ -8,7 +8,7 @@ pub mod common;
 
 #[tokio::test]
 async fn test_rpc() -> Result<()> {
-    let server = TestServer::new()?;
+    let server = TestServer::new().await?;
     let mut client = server.grpc_client().await?;
 
     let req = OpenRequest {
@@ -22,7 +22,7 @@ async fn test_rpc() -> Result<()> {
 
 #[tokio::test]
 async fn test_web_get() -> Result<()> {
-    let server = TestServer::new()?;
+    let server = TestServer::new().await?;
 
     let resp = reqwest::get(server.endpoint()).await?;
     assert!(!resp.status().is_server_error());
@@ -32,7 +32,7 @@ async fn test_web_get() -> Result<()> {
 
 #[tokio::test]
 async fn test_web_tls_redirect() -> Result<()> {
-    let server = TestServer::new()?;
+    let server = TestServer::new().await?;
 
     let client = Client::builder().redirect(Policy::none()).build()?;
 

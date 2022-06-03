@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.53"
+async-channel = "1.6.1"
 axum = "0.5.4"
 base64 = "0.13.0"
 clap = { version = "3.1.6", features = ["derive"] }

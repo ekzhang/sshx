@@ -125,12 +125,18 @@ async fn handle_streaming(
     interval.set_missed_tick_behavior(MissedTickBehavior::Delay);
     loop {
         tokio::select! {
-            // Send periodic sync messages to the server.
+            // Send periodic sync messages to the client.
             _ = interval.tick() => {
                 let map = session.sequence_numbers();
                 let msg = ServerMessage::Sync(SequenceNumbers { map });
                 if !send_msg(tx, msg).await {
                     return Err("failed to send sync message");
+                }
+            }
+            // Send buffered server updates to the client.
+            Ok(msg) = session.update_rx().recv() => {
+                if !send_msg(tx, msg).await {
+                    return Err("failed to send update message");
                 }
             }
             // Handle incoming client messages.

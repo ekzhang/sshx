@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use anyhow::{bail, Context, Result};
 use dashmap::DashMap;
 use parking_lot::Mutex;
+use sshx_core::proto::server_update::ServerMessage;
 use tokio::{sync::watch, time::Instant};
 use tracing::info;
 
@@ -22,6 +23,12 @@ pub struct Session {
 
     /// Watch channel source for new sequence numbers.
     seqnums: watch::Sender<HashMap<u32, u64>>,
+
+    /// Sender end of a channel that buffers messages for the client.
+    update_tx: async_channel::Sender<ServerMessage>,
+
+    /// Receiver end of a channel that buffers messages for the client.
+    update_rx: async_channel::Receiver<ServerMessage>,
 }
 
 /// Internal state for each shell.
@@ -41,11 +48,14 @@ impl Session {
     /// Construct a new session.
     pub fn new() -> Self {
         let now = Instant::now();
+        let (update_tx, update_rx) = async_channel::bounded(256);
         Session {
             shells: Default::default(),
             created: now,
             updated: Mutex::new(now),
             seqnums: watch::channel(HashMap::default()).0,
+            update_tx,
+            update_rx,
         }
     }
 
@@ -108,6 +118,16 @@ impl Session {
     /// Register a client message, refreshing the last update timestamp.
     pub fn access(&self) {
         *self.updated.lock() = Instant::now();
+    }
+
+    /// Access the sender of the client message channel for this session.
+    pub fn update_tx(&self) -> &async_channel::Sender<ServerMessage> {
+        &self.update_tx
+    }
+
+    /// Access the receiver of the client message channel for this session.
+    pub fn update_rx(&self) -> &async_channel::Receiver<ServerMessage> {
+        &self.update_rx
     }
 }
 

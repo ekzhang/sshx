@@ -1,0 +1,7 @@
+procs:
+  server:
+    shell: cargo run --bin sshx-server
+  client:
+    shell: cargo run --bin sshx -- --server http://localhost:8051
+  web:
+    shell: npm run dev

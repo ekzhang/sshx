@@ -19,12 +19,13 @@ use axum::{body::HttpBody, http::uri::Scheme};
 use grpc::GrpcServer;
 use hyper::{
     header::{CONTENT_TYPE, HOST},
-    server::{conn::AddrIncoming, Server},
+    server::{conn::AddrIncoming, Server as HyperServer},
     service::make_service_fn,
     Body, Request,
 };
 use nanoid::nanoid;
 use sshx_core::proto::{sshx_service_server::SshxServiceServer, FILE_DESCRIPTOR_SET};
+use tokio::sync::watch;
 use tonic::transport::Server as TonicServer;
 use tower::{service_fn, steer::Steer, ServiceBuilder, ServiceExt};
 use tower_http::{services::Redirect, trace::TraceLayer};
@@ -37,12 +38,62 @@ pub mod session;
 pub mod state;
 pub mod web;
 
-/// Make the combined HTTP/gRPC application server, on a given listener.
-pub async fn make_server(incoming: AddrIncoming, signal: impl Future<Output = ()>) -> Result<()> {
-    type BoxError = Box<dyn StdError + Send + Sync>;
+/// The combined HTTP/gRPC application server for sshx.
+pub struct Server {
+    state: Arc<ServerState>,
+    kill_tx: watch::Sender<bool>,
+}
 
-    let secret = nanoid!();
-    let state = Arc::new(ServerState::new(&secret));
+impl Server {
+    /// Create a new application server, but do not listen for connections yet.
+    #[allow(clippy::new_without_default)]
+    pub fn new() -> Self {
+        let secret = nanoid!();
+        let state = Arc::new(ServerState::new(&secret));
+        let (kill_tx, _) = watch::channel(false);
+        Self { state, kill_tx }
+    }
+
+    /// Returns the server's state object.
+    pub fn state(&self) -> Arc<ServerState> {
+        Arc::clone(&self.state)
+    }
+
+    /// Returns a future that resolves when the server is terminated.
+    fn terminated(&self) -> impl Future<Output = ()> + 'static {
+        let mut kill_rx = self.kill_tx.subscribe();
+        async move {
+            while !*kill_rx.borrow_and_update() {
+                if kill_rx.changed().await.is_err() {
+                    break;
+                }
+            }
+        }
+    }
+
+    /// Run the application server, listening on a stream of connections.
+    pub async fn listen(&self, incoming: AddrIncoming) -> Result<()> {
+        make_server(Arc::clone(&self.state), incoming, self.terminated()).await
+    }
+
+    /// Convenience function to call [`Server::listen`] bound to a TCP address.
+    pub async fn bind(&self, addr: &SocketAddr) -> Result<()> {
+        self.listen(AddrIncoming::bind(addr)?).await
+    }
+
+    /// Send a graceful shutdown signal to the server.
+    pub fn shutdown(&self) {
+        self.kill_tx.send_replace(true);
+    }
+}
+
+/// Make the application server, with a given state and termination signal.
+async fn make_server(
+    state: Arc<ServerState>,
+    incoming: AddrIncoming,
+    signal: impl Future<Output = ()>,
+) -> Result<()> {
+    type BoxError = Box<dyn StdError + Send + Sync>;
 
     let http_service = web::app(state.clone())
         .layer(TraceLayer::new_for_http())
@@ -99,16 +150,11 @@ pub async fn make_server(incoming: AddrIncoming, signal: impl Future<Output = ()
         async { Ok::<_, std::convert::Infallible>(svc) }
     });
 
-    Server::builder(incoming)
+    HyperServer::builder(incoming)
         .tcp_nodelay(true)
         .serve(make_svc)
         .with_graceful_shutdown(signal)
         .await?;
 
     Ok(())
-}
-
-/// Convenience function to call [`make_server`] bound to a TCP address.
-pub async fn make_server_bind(addr: &SocketAddr, signal: impl Future<Output = ()>) -> Result<()> {
-    make_server(AddrIncoming::bind(addr)?, signal).await
 }

@@ -104,7 +104,7 @@ impl Session {
             let segment = data
                 .get(start as usize..)
                 .context("failed to decode utf-8 suffix in data")?;
-            info!(id, n = segment.len(), "adding data to shell");
+            info!(id, ?segment, "adding data to shell");
             shell.data.push((
                 self.created.elapsed().as_millis() as u64,
                 String::from(segment),

@@ -63,6 +63,11 @@ impl Controller {
         })
     }
 
+    /// Returns the name of the session.
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
     /// Run the controller forever, listening for requests from the server.
     pub async fn run(&mut self) -> ! {
         loop {
@@ -76,11 +81,12 @@ impl Controller {
     /// Helper function used by `run()` that can return errors.
     async fn try_channel(&mut self) -> Result<()> {
         let (tx, rx) = mpsc::channel(16);
-        let resp = self.client.clone().channel(ReceiverStream::new(rx)).await?;
-        let mut messages = resp.into_inner(); // A stream of server messages.
 
         let hello = ClientMessage::Hello(format!("{},{}", self.name, self.token));
-        send_msg(&tx, hello).await.context("error during Hello")?;
+        send_msg(&tx, hello).await?;
+
+        let resp = self.client.channel(ReceiverStream::new(rx)).await?;
+        let mut messages = resp.into_inner(); // A stream of server messages.
 
         let mut interval = time::interval(HEARTBEAT_INTERVAL);
         interval.set_missed_tick_behavior(MissedTickBehavior::Delay);

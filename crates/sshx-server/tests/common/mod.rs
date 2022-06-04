@@ -1,17 +1,19 @@
 use std::net::SocketAddr;
+use std::sync::Arc;
 
 use anyhow::Result;
 use hyper::server::conn::AddrIncoming;
 use sshx_core::proto::sshx_service_client::SshxServiceClient;
-use sshx_server::make_server;
+use sshx_server::session::Session;
+use sshx_server::state::ServerState;
+use sshx_server::Server;
 use tokio::net::TcpListener;
-use tokio::sync::oneshot;
 use tonic::transport::Channel;
 
 /// An ephemeral, isolated server that is created for each test.
 pub struct TestServer {
     local_addr: SocketAddr,
-    terminate: Option<oneshot::Sender<()>>,
+    server: Arc<Server>,
 }
 
 impl TestServer {
@@ -23,17 +25,16 @@ impl TestServer {
         let listener = TcpListener::bind("[::1]:0").await?;
         let local_addr = listener.local_addr()?;
 
-        let (tx, rx) = oneshot::channel();
         let incoming = AddrIncoming::from_listener(listener)?;
-        let server = make_server(incoming, async { rx.await.unwrap() });
-        tokio::spawn(async move {
-            server.await.unwrap();
-        });
+        let server = Arc::new(Server::new());
+        {
+            let server = Arc::clone(&server);
+            tokio::spawn(async move {
+                server.listen(incoming).await.unwrap();
+            });
+        }
 
-        Ok(TestServer {
-            local_addr,
-            terminate: Some(tx),
-        })
+        Ok(TestServer { local_addr, server })
     }
 
     /// Returns the local TCP address of this server.
@@ -50,10 +51,20 @@ impl TestServer {
     pub async fn grpc_client(&self) -> Result<SshxServiceClient<Channel>> {
         Ok(SshxServiceClient::connect(self.endpoint()).await?)
     }
+
+    /// Return the current server state object.
+    pub fn state(&self) -> Arc<ServerState> {
+        self.server.state()
+    }
+
+    /// Returns the session associated with the given controller name.
+    pub fn find_session(&self, name: &str) -> Option<Arc<Session>> {
+        self.state().store.get(name).map(|s| s.clone())
+    }
 }
 
 impl Drop for TestServer {
     fn drop(&mut self) {
-        self.terminate.take().unwrap().send(()).ok();
+        self.server.shutdown();
     }
 }

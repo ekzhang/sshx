@@ -9,6 +9,8 @@ use sshx_core::proto::server_update::ServerMessage;
 use tokio::{sync::watch, time::Instant};
 use tracing::info;
 
+use crate::utils::Shutdown;
+
 /// In-memory state for a single sshx session.
 #[derive(Debug)]
 pub struct Session {
@@ -29,6 +31,9 @@ pub struct Session {
 
     /// Receiver end of a channel that buffers messages for the client.
     update_rx: async_channel::Receiver<ServerMessage>,
+
+    /// Set when this session has been closed and removed.
+    shutdown: Shutdown,
 }
 
 /// Internal state for each shell.
@@ -56,6 +61,7 @@ impl Session {
             seqnums: watch::channel(HashMap::default()).0,
             update_tx,
             update_rx,
+            shutdown: Shutdown::new(),
         }
     }
 
@@ -128,6 +134,16 @@ impl Session {
     /// Access the receiver of the client message channel for this session.
     pub fn update_rx(&self) -> &async_channel::Receiver<ServerMessage> {
         &self.update_rx
+    }
+
+    /// Send a termination signal to exit this session.
+    pub fn shutdown(&self) {
+        self.shutdown.shutdown()
+    }
+
+    /// Resolves when the session has received a shutdown signal.
+    pub async fn terminated(&self) {
+        self.shutdown.wait().await
     }
 }
 

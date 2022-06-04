@@ -25,23 +25,24 @@ use hyper::{
 };
 use nanoid::nanoid;
 use sshx_core::proto::{sshx_service_server::SshxServiceServer, FILE_DESCRIPTOR_SET};
-use tokio::sync::watch;
 use tonic::transport::Server as TonicServer;
 use tower::{service_fn, steer::Steer, ServiceBuilder, ServiceExt};
 use tower_http::{services::Redirect, trace::TraceLayer};
 use tracing::info;
+use utils::Shutdown;
 
 use crate::state::ServerState;
 
 pub mod grpc;
 pub mod session;
 pub mod state;
+pub mod utils;
 pub mod web;
 
 /// The combined HTTP/gRPC application server for sshx.
 pub struct Server {
     state: Arc<ServerState>,
-    kill_tx: watch::Sender<bool>,
+    shutdown: Shutdown,
 }
 
 impl Server {
@@ -49,9 +50,10 @@ impl Server {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         let secret = nanoid!();
-        let state = Arc::new(ServerState::new(&secret));
-        let (kill_tx, _) = watch::channel(false);
-        Self { state, kill_tx }
+        Self {
+            state: Arc::new(ServerState::new(&secret)),
+            shutdown: Shutdown::new(),
+        }
     }
 
     /// Returns the server's state object.
@@ -60,15 +62,8 @@ impl Server {
     }
 
     /// Returns a future that resolves when the server is terminated.
-    fn terminated(&self) -> impl Future<Output = ()> + 'static {
-        let mut kill_rx = self.kill_tx.subscribe();
-        async move {
-            while !*kill_rx.borrow_and_update() {
-                if kill_rx.changed().await.is_err() {
-                    break;
-                }
-            }
-        }
+    async fn terminated(&self) {
+        self.shutdown.wait().await
     }
 
     /// Run the application server, listening on a stream of connections.
@@ -83,7 +78,12 @@ impl Server {
 
     /// Send a graceful shutdown signal to the server.
     pub fn shutdown(&self) {
-        self.kill_tx.send_replace(true);
+        // Stop receiving new network connections.
+        self.shutdown.shutdown();
+        // Terminate each of the existing sessions.
+        for entry in &self.state.store {
+            entry.value().shutdown();
+        }
     }
 }
 

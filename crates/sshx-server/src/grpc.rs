@@ -98,7 +98,13 @@ impl SshxService for GrpcServer {
     async fn close(&self, request: Request<CloseRequest>) -> RR<CloseResponse> {
         let request = request.into_inner();
         validate_token(&self.0.mac, &request.name, &request.token)?;
-        let exists = self.0.store.remove(&request.name).is_some();
+        let exists = match self.0.store.remove(&request.name) {
+            Some((_, session)) => {
+                session.shutdown();
+                true
+            }
+            None => false,
+        };
         Ok(Response::new(CloseResponse { exists }))
     }
 }
@@ -149,6 +155,12 @@ async fn handle_streaming(
                     // The client has hung up on their end.
                     return Ok(());
                 }
+            }
+            // Exit on a session shutdown signal.
+            _ = session.terminated() => {
+                let msg = String::from("disconnecting because session is closed");
+                send_msg(tx, ServerMessage::Error(msg)).await;
+                return Ok(());
             }
         };
     }

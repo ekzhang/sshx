@@ -10,7 +10,7 @@ use sshx_core::proto::{
 };
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::mpsc;
-use tokio::time::{self, Duration, MissedTickBehavior};
+use tokio::time::{self, Duration, Instant, MissedTickBehavior};
 use tokio_stream::{wrappers::ReceiverStream, StreamExt};
 use tonic::transport::Channel;
 use tracing::{error, info, warn};
@@ -70,11 +70,19 @@ impl Controller {
 
     /// Run the controller forever, listening for requests from the server.
     pub async fn run(&mut self) -> ! {
+        let mut last_retry = Instant::now();
+        let mut retries = 0;
         loop {
             if let Err(err) = self.try_channel().await {
-                error!(?err, "disconnected, retrying in 1s...");
-                time::sleep(Duration::from_secs(1)).await;
+                if last_retry.elapsed() >= Duration::from_secs(10) {
+                    retries = 0;
+                }
+                let secs = 2_u64.pow(retries.min(5));
+                error!(?err, "disconnected, retrying in {secs}s...");
+                time::sleep(Duration::from_secs(secs)).await;
+                retries += 1;
             }
+            last_retry = Instant::now();
         }
     }
 

@@ -1,3 +1,6 @@
+# Needed for .dockerignore
+**/.git
+
 /target
 .vscode/
 

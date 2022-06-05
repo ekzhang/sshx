@@ -21,7 +21,7 @@ const config = {
       server: {
         proxy: {
           "/api": {
-            target: "http://localhost:8051",
+            target: "http://[::1]:8051",
             changeOrigin: true,
             ws: true,
           },

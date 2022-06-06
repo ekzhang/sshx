@@ -8,7 +8,7 @@
 
 <main class="max-w-screen-xl mx-auto px-16">
   <header class="my-12">
-    <img class="h-16" src={logotypeDark} alt="sshx logo" />
+    <img class="h-16 -mx-1" src={logotypeDark} alt="sshx logo" />
   </header>
   <h1 class="font-extrabold text-5xl max-w-[26ch] leading-[1.15] py-2">
     Web-based, <span class="title-gradient">real-time collaboration</span> for your
@@ -44,6 +44,6 @@
   }
 
   code {
-    @apply text-[0.9em] bg-gray-600 px-1 py-0.5 rounded;
+    @apply text-[0.9em] text-white bg-gray-600 px-1 py-0.5 rounded;
   }
 </style>

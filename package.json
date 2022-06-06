@@ -14,6 +14,7 @@
     "format": "prettier --ignore-path .gitignore --write --plugin-search-dir=. ."
   },
   "dependencies": {
+    "@fontsource/inter": "^4.5.11",
     "svelte": "^3.48.0"
   },
   "devDependencies": {

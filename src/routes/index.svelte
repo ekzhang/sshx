@@ -2,52 +2,48 @@
   export const prerender = true;
 </script>
 
-<main class="p-8 max-w-screen-sm">
-  <h1 class="text-6xl">sshx</h1>
-  <p><em>Site under construction.</em></p>
+<script lang="ts">
+  import logotypeDark from "$lib/assets/logotype-dark.svg";
+</script>
 
-  <h2 class="text-2xl mt-8">Installation instructions</h2>
+<main class="max-w-screen-xl mx-auto px-16">
+  <header class="my-12">
+    <img class="h-16" src={logotypeDark} alt="sshx logo" />
+  </header>
+  <h1 class="font-extrabold text-5xl max-w-[26ch] leading-[1.15] py-2">
+    Web-based, <span class="title-gradient">real-time collaboration</span> for your
+    remote terminal
+  </h1>
 
-  <p>Run this command to install the CLI tool.</p>
+  <section class="my-8 space-y-6 text-xl max-w-[460px] text-gray-200">
+    <p>
+      <code>sshx</code> lets you share your terminal by link with anyone on the web.
+    </p>
+    <p>
+      It supports <b>live presence</b> and <b>chat</b> so you can see who’s
+      online and seamlessly work with them. Plus, it’s <b>fast</b>: just run a
+      single Rust-based CLI tool to start your session.
+    </p>
+    <p>
+      Use <code>sshx</code> for pair programming, demos, remote access, or even just
+      as a fashionable web interface for your terminal.
+    </p>
+  </section>
 
-  <pre>$ <code>cargo install sshx</code></pre>
-
-  <p>
-    You should be able to run the <code>sshx</code> command to start a new live,
-    collaborative session from your computer. Invite others to join the link from
-    their browser.
-  </p>
-
-  <p>
-    Trying using for pair development, presentations, or debugging sessions.
-    Have fun programming together!
-  </p>
-
-  <h2 class="text-2xl mt-8">Credits</h2>
-
-  <p>
-    Source is available on GitHub at <a href="https://github.com/ekzhang/sshx"
-      >ekzhang/sshx</a
-    >. This software was developed and designed by
-    <a href="https://www.ekzhang.com/">Eric Zhang</a>.
-  </p>
+  <button
+    class="bg-pink-600 hover:bg-pink-500 active:ring-4 active:ring-pink-500/50 text-lg font-semibold px-8 py-2 rounded-full my-2"
+    on:click={() => alert("this site is still under construction!")}
+  >
+    Get Started
+  </button>
 </main>
 
 <style lang="postcss">
-  p,
-  pre {
-    @apply my-4 text-gray-600;
-  }
-
-  pre {
-    @apply p-2 bg-gray-100;
+  .title-gradient {
+    @apply text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-400 to-blue-500;
   }
 
   code {
-    @apply text-black;
-  }
-
-  a {
-    @apply text-blue-700 font-medium underline decoration-dotted hover:decoration-solid;
+    @apply text-[0.9em] bg-gray-600 px-1 py-0.5 rounded;
   }
 </style>

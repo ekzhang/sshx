@@ -61,6 +61,6 @@
   }
 
   code {
-    @apply text-[0.9em] text-white bg-gray-600 px-1 py-0.5 rounded;
+    @apply text-[0.9em] text-white font-medium bg-gray-600 px-1 py-0.5 rounded;
   }
 </style>

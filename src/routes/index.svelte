@@ -4,6 +4,8 @@
 
 <script lang="ts">
   import logotypeDark from "$lib/assets/logotype-dark.svg";
+  import landingGraphic from "$lib/assets/landing-graphic.svg";
+  import landingBackground from "$lib/assets/landing-background.svg";
 </script>
 
 <main class="max-w-screen-xl mx-auto px-16">
@@ -15,7 +17,22 @@
     remote terminal
   </h1>
 
-  <section class="my-8 space-y-6 text-xl max-w-[460px] text-gray-200">
+  <div class="relative">
+    <div class="absolute left-[180px] top-[-200px] -z-10">
+      <img class="select-none" src={landingBackground} alt="" />
+    </div>
+    <div class="absolute left-[500px] w-[1000px]">
+      <img
+        class="mt-5 mb-8 w-[720px]"
+        width={813}
+        height={623}
+        src={landingGraphic}
+        alt="two terminal windows running sshx and three live cursors"
+      />
+    </div>
+  </div>
+
+  <section class="my-12 space-y-6 text-xl max-w-[460px] text-gray-200">
     <p>
       <code>sshx</code> lets you share your terminal by link with anyone on the web.
     </p>

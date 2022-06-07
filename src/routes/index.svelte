@@ -151,7 +151,7 @@ sudo mv -v /tmp/sshx /usr/local/bin/sshx`,
 
         <p>
           It's that easy! This kicks off a live session with your unique link at <code
-            >sshx.io/join/$ID</code
+            >https://sshx.io/s/$ID</code
           >, and you can invite anyone to collaborate together in your terminal
           on the web.
         </p>
@@ -179,11 +179,12 @@ sudo mv -v /tmp/sshx /usr/local/bin/sshx`,
 
 <style lang="postcss">
   h1 {
-    @apply font-extrabold text-4xl sm:text-5xl max-w-[26ch] leading-[1.15] py-2;
+    @apply font-extrabold text-4xl sm:text-5xl max-w-[26ch] py-2;
+    line-height: 1.15;
   }
 
   h2 {
-    @apply font-extrabold text-3xl mb-12 md:text-center scroll-mt-8;
+    @apply font-extrabold text-3xl sm:text-4xl mb-12 md:text-center scroll-mt-8;
   }
 
   code {

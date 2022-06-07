@@ -53,7 +53,7 @@ impl SshxService for GrpcServer {
             Vacant(v) => v.insert(Session::new().into()),
         };
         let token = self.0.mac.clone().chain_update(&name).finalize();
-        let url = format!("{origin}/join/{name}");
+        let url = format!("{origin}/s/{name}");
         Ok(Response::new(OpenResponse {
             name,
             token: base64::encode(token.into_bytes()),

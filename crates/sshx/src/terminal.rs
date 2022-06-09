@@ -9,7 +9,8 @@ use std::process::{Child, Command};
 use std::task::{Context, Poll};
 
 use anyhow::Result;
-use nix::pty;
+use nix::libc::{TIOCGWINSZ, TIOCSWINSZ};
+use nix::pty::{self, Winsize};
 use pin_project::{pin_project, pinned_drop};
 use tokio::fs::File;
 use tokio::io::{self, AsyncRead, AsyncWrite};
@@ -24,6 +25,7 @@ pub fn get_default_shell() -> String {
 #[pin_project(PinnedDrop)]
 pub struct Terminal {
     child: Child,
+    slave: i32,
     #[pin]
     master_read: File,
     #[pin]
@@ -54,6 +56,7 @@ impl Terminal {
 
         Ok(Self {
             child,
+            slave: result.slave,
             master_read,
             master_write,
         })
@@ -69,6 +72,34 @@ impl Terminal {
             .stderr(slave)
             .spawn()
             .map_err(|e| e.into())
+    }
+
+    /// Get the window size of the TTY.
+    pub fn get_winsize(&self) -> Result<(u16, u16)> {
+        nix::ioctl_read_bad!(ioctl_gwinsz, TIOCGWINSZ, Winsize);
+        let mut winsize = Winsize {
+            ws_row: 0,
+            ws_col: 0,
+            ws_xpixel: 0, // ignored
+            ws_ypixel: 0, // ignored
+        };
+        // Safety: The slave file descriptor was created by openpty().
+        unsafe { ioctl_gwinsz(self.slave, &mut winsize) }?;
+        Ok((winsize.ws_row, winsize.ws_col))
+    }
+
+    /// Set the window size of the TTY.
+    pub fn set_winsize(&self, rows: u16, cols: u16) -> Result<()> {
+        nix::ioctl_write_ptr_bad!(ioctl_swinsz, TIOCSWINSZ, Winsize);
+        let winsize = Winsize {
+            ws_row: rows,
+            ws_col: cols,
+            ws_xpixel: 0, // ignored
+            ws_ypixel: 0, // ignored
+        };
+        // Safety: The slave file descriptor was created by openpty().
+        unsafe { ioctl_swinsz(self.slave, &winsize) }?;
+        Ok(())
     }
 }
 
@@ -110,5 +141,21 @@ impl PinnedDrop for Terminal {
 
         // Reap the child process on closure so that it doesn't create zombies.
         this.child.kill().ok();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use anyhow::Result;
+
+    use super::Terminal;
+
+    #[tokio::test]
+    async fn winsize() -> Result<()> {
+        let terminal = Terminal::new("/bin/sh").await?;
+        assert_eq!(terminal.get_winsize()?, (0, 0));
+        terminal.set_winsize(120, 72)?;
+        assert_eq!(terminal.get_winsize()?, (120, 72));
+        Ok(())
     }
 }

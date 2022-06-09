@@ -1,5 +1,7 @@
 //! Terminal driver, which communicates with a shell subprocess through PTY.
 
+#![allow(unsafe_code)]
+
 use std::env;
 use std::os::unix::io::{FromRawFd, RawFd};
 use std::pin::Pin;

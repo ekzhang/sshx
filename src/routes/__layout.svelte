@@ -4,6 +4,7 @@
   import "@fontsource/fira-code/500.css";
   import "@fontsource/fira-code/700.css";
 
+  import "xterm/css/xterm.css";
   import "../app.css";
 </script>
 

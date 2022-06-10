@@ -8,3 +8,6 @@ declare namespace App {
   // interface Session {}
   // interface Stuff {}
 }
+
+// Type declarations for external libraries.
+declare module "fontfaceobserver";

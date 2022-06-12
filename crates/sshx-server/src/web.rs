@@ -3,15 +3,17 @@
 use std::io;
 use std::sync::Arc;
 
-use axum::extract::ws::{WebSocket, WebSocketUpgrade};
+use anyhow::Result;
+use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
 use axum::extract::Path;
 use axum::middleware::{self, Next};
 use axum::response::{IntoResponse, Redirect, Response};
 use axum::routing::{get, get_service};
 use axum::{Extension, Router};
 use hyper::{Request, StatusCode};
+use serde::{Deserialize, Serialize};
 use tower_http::services::{ServeDir, ServeFile};
-use tracing::{error, info_span, Instrument};
+use tracing::{error, info, info_span, warn, Instrument};
 
 use crate::session::Session;
 use crate::state::ServerState;
@@ -80,6 +82,14 @@ fn backend(state: Arc<ServerState>) -> Router {
         .layer(Extension(state))
 }
 
+/// A real-time message sent from the server over WebSocket.
+#[derive(Serialize, Debug)]
+struct WsServer {}
+
+/// A real-time message sent from the client over WebSocket.
+#[derive(Deserialize, Debug)]
+struct WsClient {}
+
 async fn get_session_ws(
     Path(id): Path<String>,
     ws: WebSocketUpgrade,
@@ -88,13 +98,42 @@ async fn get_session_ws(
     if let Some(session) = state.store.get(&id) {
         let session = Arc::clone(&*session);
         ws.on_upgrade(move |socket| {
-            handle_socket(socket, session).instrument(info_span!("ws", %id))
+            async {
+                if let Err(err) = handle_socket(socket, session).await {
+                    warn!(?err, "exiting early");
+                }
+            }
+            .instrument(info_span!("ws", %id))
         })
     } else {
         (StatusCode::NOT_FOUND, "session not found").into_response()
     }
 }
 
-async fn handle_socket(mut _socket: WebSocket, _session: Arc<Session>) {
-    todo!()
+/// Handle an incoming live WebSocket connection to a given session.
+async fn handle_socket(mut socket: WebSocket, session: Arc<Session>) -> Result<()> {
+    /// Send a message to the client over WebSocket.
+    async fn send(socket: &mut WebSocket, msg: WsServer) -> Result<()> {
+        let msg = serde_json::to_string(&msg)?;
+        socket.send(Message::Text(msg)).await?;
+        Ok(())
+    }
+
+    /// Receive a message from the client over WebSocket.
+    async fn recv(socket: &mut WebSocket) -> Result<Option<WsClient>> {
+        Ok(loop {
+            match socket.recv().await.transpose()? {
+                Some(Message::Text(msg)) => break Some(serde_json::from_str(&msg)?),
+                Some(Message::Binary(_)) => warn!("ignoring binary message over WebSocket"),
+                Some(_) => (), // ignore other message types, keep looping
+                None => break None,
+            }
+        })
+    }
+
+    let _ = session;
+    send(&mut socket, WsServer {}).await?;
+    let msg = recv(&mut socket).await?;
+    info!(?msg);
+    Ok(())
 }

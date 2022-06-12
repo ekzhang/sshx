@@ -3,14 +3,17 @@
 use std::io;
 use std::sync::Arc;
 
+use axum::extract::ws::{WebSocket, WebSocketUpgrade};
+use axum::extract::Path;
 use axum::middleware::{self, Next};
-use axum::response::Redirect;
+use axum::response::{IntoResponse, Redirect, Response};
 use axum::routing::{get, get_service};
-use axum::{extract::Path, Router};
+use axum::{Extension, Router};
 use hyper::{Request, StatusCode};
 use tower_http::services::{ServeDir, ServeFile};
-use tracing::error;
+use tracing::{error, info_span, Instrument};
 
+use crate::session::Session;
 use crate::state::ServerState;
 
 /// Returns the web application server, built with Axum.
@@ -63,18 +66,35 @@ fn frontend() -> Router {
         .layer(remove_dot_html)
 }
 
-/// Runs the backend web API server.
-fn backend(state: Arc<ServerState>) -> Router {
-    let _ = state;
-    Router::new().route(
-        "/:message",
-        get(|Path(message): Path<String>| async move { format!("got a message: {message}") }),
-    )
-}
-
 /// Error handler for tower-http services.
-async fn error_handler(error: io::Error) -> (StatusCode, String) {
+async fn error_handler(error: io::Error) -> impl IntoResponse {
     let message = format!("unhandled internal error: {error}");
     error!("{message}");
     (StatusCode::INTERNAL_SERVER_ERROR, message)
+}
+
+/// Runs the backend web API server.
+fn backend(state: Arc<ServerState>) -> Router {
+    Router::new()
+        .route("/s/:id", get(get_session_ws))
+        .layer(Extension(state))
+}
+
+async fn get_session_ws(
+    Path(id): Path<String>,
+    ws: WebSocketUpgrade,
+    Extension(state): Extension<Arc<ServerState>>,
+) -> Response {
+    if let Some(session) = state.store.get(&id) {
+        let session = Arc::clone(&*session);
+        ws.on_upgrade(move |socket| {
+            handle_socket(socket, session).instrument(info_span!("ws", %id))
+        })
+    } else {
+        (StatusCode::NOT_FOUND, "session not found").into_response()
+    }
+}
+
+async fn handle_socket(mut _socket: WebSocket, _session: Arc<Session>) {
+    todo!()
 }

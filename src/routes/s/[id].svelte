@@ -37,6 +37,7 @@
     term.onKey(({ key }) => {
       console.log(key.charCodeAt(0));
       term.write(key);
+      if (key == "\r") term.write("\n");
     });
 
     term.resize(100, 10);

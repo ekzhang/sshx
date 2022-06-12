@@ -84,11 +84,27 @@ fn backend(state: Arc<ServerState>) -> Router {
 
 /// A real-time message sent from the server over WebSocket.
 #[derive(Serialize, Debug)]
-struct WsServer {}
+#[serde(rename_all = "camelCase")]
+pub enum WsServer {
+    /// Notification when the set of open shells has changed.
+    Shells(Vec<u32>),
+    /// Subscription results, chunks of terminal data.
+    Chunks(u32, Vec<(u64, String)>),
+}
 
 /// A real-time message sent from the client over WebSocket.
 #[derive(Deserialize, Debug)]
-struct WsClient {}
+#[serde(rename_all = "camelCase")]
+pub enum WsClient {
+    /// Create a new shell.
+    Create,
+    /// Close a specific shell.
+    Close(u32),
+    /// Add user data to a given shell.
+    Data(u32, String),
+    /// Subscribe to a shell, starting at a given chunk index.
+    Subscribe(u32, u64),
+}
 
 async fn get_session_ws(
     Path(id): Path<String>,
@@ -132,7 +148,7 @@ async fn handle_socket(mut socket: WebSocket, session: Arc<Session>) -> Result<(
     }
 
     let _ = session;
-    send(&mut socket, WsServer {}).await?;
+    send(&mut socket, WsServer::Shells(vec![])).await?;
     let msg = recv(&mut socket).await?;
     info!(?msg);
     Ok(())

@@ -19,7 +19,7 @@ serde_json = "1.0.81"
 sha2 = "0.10.2"
 sshx-core = { path = "../sshx-core" }
 tokio = { version = "1.18.1", features = ["full"] }
-tokio-stream = "0.1.8"
+tokio-stream = { version = "0.1.8", features = ["sync"] }
 tonic = { version = "0.7.2", features = ["tls", "tls-roots"] }
 tonic-reflection = "0.4.0"
 tower = { version = "0.4.12", features = ["steer"] }

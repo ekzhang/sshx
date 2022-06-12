@@ -7,6 +7,7 @@ use dashmap::DashMap;
 use parking_lot::Mutex;
 use sshx_core::proto::server_update::ServerMessage;
 use tokio::{sync::watch, time::Instant};
+use tokio_stream::{wrappers::WatchStream, Stream};
 use tracing::info;
 
 use crate::utils::Shutdown;
@@ -23,8 +24,8 @@ pub struct Session {
     /// Timestamp of the last client message from an active connection.
     updated: Mutex<Instant>,
 
-    /// Watch channel source for new sequence numbers.
-    seqnums: watch::Sender<HashMap<u32, u64>>,
+    /// Watch channel source for the sorted list of open shells.
+    ids: watch::Sender<Vec<u32>>,
 
     /// Sender end of a channel that buffers messages for the client.
     update_tx: async_channel::Sender<ServerMessage>,
@@ -58,7 +59,7 @@ impl Session {
             shells: Default::default(),
             created: now,
             updated: Mutex::new(now),
-            seqnums: watch::channel(HashMap::default()).0,
+            ids: watch::channel(Vec::new()).0,
             update_tx,
             update_rx,
             shutdown: Shutdown::new(),
@@ -67,7 +68,18 @@ impl Session {
 
     /// Return the sequence numbers for current shells.
     pub fn sequence_numbers(&self) -> HashMap<u32, u64> {
-        self.seqnums.borrow().clone()
+        let mut seqnums = HashMap::with_capacity(self.shells.len());
+        for entry in &self.shells {
+            if !entry.value().closed {
+                seqnums.insert(*entry.key(), entry.value().seqnum);
+            }
+        }
+        seqnums
+    }
+
+    /// Receive a notification every time the set of shells is changed.
+    pub fn subscribe_shells(&self) -> impl Stream<Item = Vec<u32>> + 'static {
+        WatchStream::new(self.ids.subscribe())
     }
 
     /// Add a new shell to the session.
@@ -77,8 +89,9 @@ impl Session {
             Occupied(_) => bail!("shell already exists with id={id}"),
             Vacant(v) => v.insert(State::default()),
         };
-        self.seqnums.send_modify(|seqnums| {
-            seqnums.insert(id, 0);
+        self.ids.send_modify(|ids| {
+            let index = ids.partition_point(|&x| x < id);
+            ids.insert(index, id);
         });
         Ok(())
     }
@@ -90,8 +103,8 @@ impl Session {
             Some(_) => return Ok(()),
             None => bail!("cannot close shell with id={id}, does not exist"),
         }
-        self.seqnums.send_modify(|seqnums| {
-            seqnums.remove(&id);
+        self.ids.send_modify(|ids| {
+            ids.retain(|&x| x != id);
         });
         Ok(())
     }

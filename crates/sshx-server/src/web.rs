@@ -1,5 +1,6 @@
 //! HTTP and WebSocket handlers for the sshx web interface.
 
+use std::collections::HashSet;
 use std::io;
 use std::sync::Arc;
 
@@ -12,8 +13,11 @@ use axum::routing::{get, get_service};
 use axum::{Extension, Router};
 use hyper::{Request, StatusCode};
 use serde::{Deserialize, Serialize};
+use sshx_core::proto::{server_update::ServerMessage, TerminalData};
+use tokio::sync::mpsc;
+use tokio_stream::StreamExt;
 use tower_http::services::{ServeDir, ServeFile};
-use tracing::{error, info, info_span, warn, Instrument};
+use tracing::{error, info_span, warn, Instrument};
 
 use crate::session::Session;
 use crate::state::ServerState;
@@ -147,9 +151,62 @@ async fn handle_socket(mut socket: WebSocket, session: Arc<Session>) -> Result<(
         })
     }
 
-    let _ = session;
+    let mut subscribed = HashSet::new(); // prevent duplicate subscriptions
+    let (chunks_tx, mut chunks_rx) = mpsc::channel::<(u32, Vec<(u64, String)>)>(1);
+
+    let update_tx = session.update_tx();
+    let shells_stream = session.subscribe_shells();
+    tokio::pin!(shells_stream);
     send(&mut socket, WsServer::Shells(vec![])).await?;
-    let msg = recv(&mut socket).await?;
-    info!(?msg);
+    loop {
+        let msg = tokio::select! {
+            _ = session.terminated() => break,
+            Some(shells) = shells_stream.next() => {
+                send(&mut socket, WsServer::Shells(shells)).await?;
+                continue;
+            }
+            Some((id, chunks)) = chunks_rx.recv() => {
+                send(&mut socket, WsServer::Chunks(id, chunks)).await?;
+                continue;
+            }
+            result = recv(&mut socket) => {
+                match result? {
+                    Some(msg) => msg,
+                    None => break,
+                }
+            }
+        };
+
+        match msg {
+            WsClient::Create => {
+                let id = session.next_id();
+                update_tx.send(ServerMessage::CreateShell(id)).await?;
+            }
+            WsClient::Close(id) => {
+                update_tx.send(ServerMessage::CloseShell(id)).await?;
+            }
+            WsClient::Data(id, data) => {
+                let data = TerminalData { id, data, seq: 0 };
+                update_tx.send(ServerMessage::Data(data)).await?;
+            }
+            WsClient::Subscribe(id, chunknum) => {
+                if subscribed.contains(&id) {
+                    continue;
+                }
+                subscribed.insert(id);
+                let session = Arc::clone(&session);
+                let chunks_tx = chunks_tx.clone();
+                tokio::spawn(async move {
+                    let stream = session.subscribe_chunks(id, chunknum);
+                    tokio::pin!(stream);
+                    while let Some(chunks) = stream.next().await {
+                        if chunks_tx.send((id, chunks)).await.is_err() {
+                            break;
+                        }
+                    }
+                });
+            }
+        }
+    }
     Ok(())
 }

@@ -1,51 +1,51 @@
 <script lang="ts">
   import { page } from "$app/stores";
 
-  import { onMount } from "svelte";
+  import { onDestroy, onMount } from "svelte";
 
-  let termEl: HTMLDivElement;
+  import { Srocket } from "$lib/srocket";
+  import type { WsClient, WsServer } from "$lib/types";
+  import XTerm from "$lib/XTerm.svelte";
 
-  onMount(async () => {
-    const { Terminal } = await import("xterm");
-    const FontFaceObserver = (await import("fontfaceobserver")).default;
+  let srocket: Srocket<WsServer, WsClient> | null = null;
 
-    // This is the monospace font family configured in Tailwind.
-    let fontFamily =
-      '"Fira Code", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace';
-    try {
-      await Promise.all([
-        new FontFaceObserver("Fira Code").load(),
-        new FontFaceObserver("Fira Code", { weight: "bold" }).load(),
-      ]);
-    } catch (error) {
-      console.warn("Could not load terminal font", error);
-    }
+  /** Bound "write" method for each terminal. */
+  const writers: ((data: string) => void)[] = [];
 
-    const term = new Terminal({
-      allowTransparency: true,
-      cursorBlink: false,
-      cursorStyle: "block",
-      fontFamily,
-      fontWeight: 400,
-      fontWeightBold: 700,
-      scrollback: 5000,
-      theme: {}, // TODO: Add theme
-    });
-    term.open(termEl);
-    term.write("Hello from \x1B[1;3;31mxterm.js\x1B[0m $ ");
-
-    term.onKey(({ key }) => {
-      console.log(key.charCodeAt(0));
-      term.write(key);
-      if (key == "\r") term.write("\n");
+  onMount(() => {
+    srocket = new Srocket<WsServer, WsClient>(`/api/s/${$page.params.id}`, {
+      onMessage(message) {
+        if (message.chunks) {
+          const [id, chunks] = message.chunks;
+          for (const chunk of chunks) {
+            writers[id](chunk[1]);
+          }
+        } else if (message.shells) {
+          if (message.shells.includes(0)) {
+            srocket?.send({ subscribe: [0, 0] });
+          }
+        }
+      },
     });
 
-    term.resize(100, 10);
+    // TODO: Implement actual client logic.
+    srocket?.send({ create: null });
   });
+
+  onDestroy(() => srocket?.dispose());
+
+  function handleKey(id: number, key: string) {
+    srocket?.send({ data: [id, key] });
+  }
 </script>
 
 This is the page for session {$page.params.id}.
 
 <div>
-  <div class="inline-block" bind:this={termEl} />
+  <XTerm
+    cols={80}
+    rows={24}
+    bind:write={writers[0]}
+    on:key={({ detail }) => handleKey(0, detail)}
+  />
 </div>

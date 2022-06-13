@@ -1,12 +1,15 @@
 //! Core logic for sshx sessions, independent of message transport.
 
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::Arc;
 
 use anyhow::{bail, Context, Result};
 use dashmap::DashMap;
 use parking_lot::Mutex;
 use sshx_core::proto::server_update::ServerMessage;
-use tokio::{sync::watch, time::Instant};
+use tokio::sync::{watch, Notify};
+use tokio::time::Instant;
 use tokio_stream::{wrappers::WatchStream, Stream};
 use tracing::info;
 
@@ -17,6 +20,9 @@ use crate::utils::Shutdown;
 pub struct Session {
     /// In-memory state for the session.
     shells: DashMap<u32, State>,
+
+    /// Atomic counter to get new, unique shell IDs.
+    counter: AtomicU32,
 
     /// Read-only timestamp when the session was started.
     created: Instant,
@@ -48,6 +54,9 @@ struct State {
 
     /// Set when this shell is terminated.
     closed: bool,
+
+    /// Updated when any of the above fields change.
+    notify: Arc<Notify>,
 }
 
 impl Session {
@@ -57,6 +66,7 @@ impl Session {
         let (update_tx, update_rx) = async_channel::bounded(256);
         Session {
             shells: Default::default(),
+            counter: AtomicU32::new(0),
             created: now,
             updated: Mutex::new(now),
             ids: watch::channel(Vec::new()).0,
@@ -64,6 +74,11 @@ impl Session {
             update_rx,
             shutdown: Shutdown::new(),
         }
+    }
+
+    /// Returns the next shell ID.
+    pub fn next_id(&self) -> u32 {
+        self.counter.fetch_add(1, Ordering::Relaxed)
     }
 
     /// Return the sequence numbers for current shells.
@@ -80,6 +95,40 @@ impl Session {
     /// Receive a notification every time the set of shells is changed.
     pub fn subscribe_shells(&self) -> impl Stream<Item = Vec<u32>> + 'static {
         WatchStream::new(self.ids.subscribe())
+    }
+
+    /// Subscribe for chunks from a shell, until it is closed.
+    pub fn subscribe_chunks(
+        &self,
+        id: u32,
+        chunknum: u64,
+    ) -> impl Stream<Item = Vec<(u64, String)>> + '_ {
+        let mut chunknum = chunknum as usize;
+        async_stream::stream! {
+            while !self.shutdown.is_terminated() {
+                // We absolutely cannot hold `shell` across an await point,
+                // since that would cause deadlocks.
+                let shell = match self.shells.get(&id) {
+                    Some(shell) if !shell.closed => shell,
+                    _ => return,
+                };
+                let notify = Arc::clone(&shell.notify);
+                let notified = notify.notified();
+                if chunknum < shell.data.len() {
+                    let chunks = shell.data[chunknum..].to_vec();
+                    chunknum = shell.data.len();
+                    drop(shell);
+                    yield chunks;
+                } else {
+                    drop(shell);
+                }
+
+                tokio::select! {
+                    _ = notified => (),
+                    _ = self.terminated() => return,
+                }
+            }
+        }
     }
 
     /// Add a new shell to the session.
@@ -99,7 +148,10 @@ impl Session {
     /// Terminates an existing shell.
     pub fn close_shell(&self, id: u32) -> Result<()> {
         match self.shells.get_mut(&id) {
-            Some(mut shell) if !shell.closed => shell.closed = true,
+            Some(mut shell) if !shell.closed => {
+                shell.closed = true;
+                shell.notify.notify_waiters();
+            }
             Some(_) => return Ok(()),
             None => bail!("cannot close shell with id={id}, does not exist"),
         }
@@ -129,6 +181,7 @@ impl Session {
                 String::from(segment),
             ));
             shell.seqnum += segment.len() as u64;
+            shell.notify.notify_waiters();
         }
 
         Ok(())

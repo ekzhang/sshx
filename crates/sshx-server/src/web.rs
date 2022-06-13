@@ -104,8 +104,9 @@ async fn get_session_ws(
 async fn handle_socket(mut socket: WebSocket, session: Arc<Session>) -> Result<()> {
     /// Send a message to the client over WebSocket.
     async fn send(socket: &mut WebSocket, msg: WsServer) -> Result<()> {
-        let msg = serde_json::to_string(&msg)?;
-        socket.send(Message::Text(msg)).await?;
+        let mut buf = Vec::new();
+        ciborium::ser::into_writer(&msg, &mut buf)?;
+        socket.send(Message::Binary(buf)).await?;
         Ok(())
     }
 
@@ -113,8 +114,8 @@ async fn handle_socket(mut socket: WebSocket, session: Arc<Session>) -> Result<(
     async fn recv(socket: &mut WebSocket) -> Result<Option<WsClient>> {
         Ok(loop {
             match socket.recv().await.transpose()? {
-                Some(Message::Text(msg)) => break Some(serde_json::from_str(&msg)?),
-                Some(Message::Binary(_)) => warn!("ignoring binary message over WebSocket"),
+                Some(Message::Text(_)) => warn!("ignoring text message over WebSocket"),
+                Some(Message::Binary(msg)) => break Some(ciborium::de::from_reader(&msg[..])?),
                 Some(_) => (), // ignore other message types, keep looping
                 None => break None,
             }

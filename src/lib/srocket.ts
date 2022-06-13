@@ -5,6 +5,8 @@
  * is not open-sourced as its own library because it's not ready for that.
  */
 
+import { encode, decode } from "cbor-x";
+
 /** How long to wait between reconnections. */
 const RECONNECT_DELAY = 500;
 
@@ -32,7 +34,7 @@ export class Srocket<T, U> {
 
   #ws: WebSocket | null;
   #connected: boolean;
-  #buffer: string[];
+  #buffer: Uint8Array[];
   #disposed: boolean;
 
   constructor(url: string, options: SrocketOptions<T>) {
@@ -55,7 +57,7 @@ export class Srocket<T, U> {
 
   /** Queue a message to send to the server, with "at-most-once" semantics. */
   send(message: U) {
-    const data = JSON.stringify(message);
+    const data = encode(message);
     if (this.#connected && this.#ws) {
       this.#ws.send(data);
     } else {
@@ -78,6 +80,7 @@ export class Srocket<T, U> {
       throw new Error("invariant violation: reconnecting while connected");
     }
     this.#ws = new WebSocket(this.#url);
+    this.#ws.binaryType = "arraybuffer";
     this.#ws.onopen = () => {
       this.#stateChange(true);
     };
@@ -90,11 +93,11 @@ export class Srocket<T, U> {
       this.#options.onError?.(event);
     };
     this.#ws.onmessage = (event) => {
-      if (typeof event.data === "string") {
-        const message: T = JSON.parse(event.data);
+      if (event.data instanceof ArrayBuffer) {
+        const message: T = decode(new Uint8Array(event.data));
         this.#options.onMessage(message);
       } else {
-        console.warn("unexpected non-string message, ignoring");
+        console.warn("unexpected non-buffer message, ignoring");
       }
     };
   }

@@ -1,5 +1,3 @@
-import http from "http";
-
 import adapter from "@sveltejs/adapter-static";
 import preprocess from "svelte-preprocess";
 
@@ -26,7 +24,6 @@ const config = {
             target: "http://[::1]:8051",
             changeOrigin: true,
             ws: true,
-            agent: new http.Agent(), // See https://github.com/vitejs/vite/issues/4794
           },
         },
       },

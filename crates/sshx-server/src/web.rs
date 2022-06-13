@@ -8,7 +8,7 @@ use anyhow::Result;
 use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
 use axum::extract::Path;
 use axum::middleware::{self, Next};
-use axum::response::{IntoResponse, Redirect, Response};
+use axum::response::{IntoResponse, Redirect};
 use axum::routing::{get, get_service};
 use axum::{Extension, Router};
 use hyper::{Request, StatusCode};
@@ -114,19 +114,19 @@ async fn get_session_ws(
     Path(id): Path<String>,
     ws: WebSocketUpgrade,
     Extension(state): Extension<Arc<ServerState>>,
-) -> Response {
+) -> impl IntoResponse {
     if let Some(session) = state.store.get(&id) {
         let session = Arc::clone(&*session);
-        ws.on_upgrade(move |socket| {
+        Ok(ws.on_upgrade(move |socket| {
             async {
                 if let Err(err) = handle_socket(socket, session).await {
                     warn!(?err, "exiting early");
                 }
             }
             .instrument(info_span!("ws", %id))
-        })
+        }))
     } else {
-        (StatusCode::NOT_FOUND, "session not found").into_response()
+        Err(StatusCode::NOT_FOUND)
     }
 }
 

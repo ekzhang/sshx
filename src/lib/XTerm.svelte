@@ -35,7 +35,7 @@
 
   const dispatch = createEventDispatcher<{ key: string }>();
 
-  export let cols: number, rows: number;
+  export let rows: number, cols: number;
   export let write: (data: string) => void; // bound function prop
 
   let termEl: HTMLDivElement;

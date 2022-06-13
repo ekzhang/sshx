@@ -208,6 +208,7 @@ async fn shell_task(
     info!(%shell, "spawning new shell");
 
     let mut term = Terminal::new(&shell).await?;
+    term.set_winsize(24, 80)?; // TODO: Make this reactive.
 
     let mut content = String::new(); // content from the terminal
     let mut decoder = UTF_8.new_decoder(); // UTF-8 streaming decoder

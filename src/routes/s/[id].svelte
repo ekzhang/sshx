@@ -43,8 +43,8 @@ This is the page for session {$page.params.id}.
 
 <div>
   <XTerm
-    cols={80}
     rows={24}
+    cols={80}
     bind:write={writers[0]}
     on:key={({ detail }) => handleKey(0, detail)}
   />

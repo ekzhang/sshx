@@ -27,84 +27,87 @@ export type SrocketOptions<T> = {
 
 /** A reconnecting WebSocket client for real-time communication. */
 export class Srocket<T, U> {
-  private ws: WebSocket | null;
-  private connected: boolean;
-  private buffer: string[];
-  private disposed: boolean;
+  #url: string;
+  #options: SrocketOptions<T>;
 
-  constructor(
-    private readonly url: string,
-    private readonly options: SrocketOptions<T>,
-  ) {
-    this.ws = null;
-    this.connected = false;
-    this.buffer = [];
-    this.disposed = false;
-    this.reconnect();
+  #ws: WebSocket | null;
+  #connected: boolean;
+  #buffer: string[];
+  #disposed: boolean;
+
+  constructor(url: string, options: SrocketOptions<T>) {
+    this.#url = url;
+    this.#options = options;
+
+    this.#ws = null;
+    this.#connected = false;
+    this.#buffer = [];
+    this.#disposed = false;
+    this.#reconnect();
   }
 
   /** Queue a message to send to the server, with "at-most-once" semantics. */
   send(message: U) {
     const data = JSON.stringify(message);
-    if (this.connected && this.ws) {
-      this.ws.send(data);
+    if (this.#connected && this.#ws) {
+      this.#ws.send(data);
     } else {
-      if (this.buffer.length < BUFFER_SIZE) {
-        this.buffer.push(data);
+      if (this.#buffer.length < BUFFER_SIZE) {
+        this.#buffer.push(data);
       }
     }
   }
 
   /** Dispose of this WebSocket permanently. */
   dispose() {
-    this.stateChange(false);
-    this.disposed = true;
-    this.ws?.close();
+    this.#stateChange(false);
+    this.#disposed = true;
+    this.#ws?.close();
   }
 
-  private reconnect() {
-    if (this.disposed) return;
-    if (this.ws !== null) {
+  #reconnect() {
+    if (this.#disposed) return;
+    if (this.#ws !== null) {
       throw new Error("invariant violation: reconnecting while connected");
     }
-    this.ws = new WebSocket(this.url);
-    this.ws.onopen = () => {
-      this.stateChange(true);
+    this.#ws = new WebSocket(this.#url);
+    this.#ws.onopen = () => {
+      this.#stateChange(true);
     };
-    this.ws.onclose = () => {
-      this.ws = null;
-      this.stateChange(false);
-      setTimeout(() => this.reconnect(), RECONNECT_DELAY);
+    this.#ws.onclose = () => {
+      this.#ws = null;
+      this.#stateChange(false);
+      setTimeout(() => this.#reconnect(), RECONNECT_DELAY);
     };
-    this.ws.onerror = (event) => {
-      this.options.onError?.(event);
+    this.#ws.onerror = (event) => {
+      this.#options.onError?.(event);
     };
-    this.ws.onmessage = (event) => {
+    this.#ws.onmessage = (event) => {
       if (typeof event.data === "string") {
         const message: T = JSON.parse(event.data);
-        this.options.onMessage(message);
+        this.#options.onMessage(message);
       } else {
         console.warn("unexpected non-string message, ignoring");
       }
     };
   }
 
-  private stateChange(connected: boolean) {
-    if (!this.disposed && connected !== this.connected) {
-      this.connected = connected;
+  #stateChange(connected: boolean) {
+    if (!this.#disposed && connected !== this.#connected) {
+      this.#connected = connected;
       if (connected) {
-        this.options.onConnect?.();
+        this.#options.onConnect?.();
 
-        if (!this.ws) {
+        if (!this.#ws) {
           throw new Error("invariant violation: connected but ws is null");
         }
         // Send any queued messages.
-        for (const message of this.buffer) {
-          this.ws.send(message);
+        for (const message of this.#buffer) {
+          this.#ws.send(message);
         }
-        this.buffer = [];
+        this.#buffer = [];
       } else {
-        this.options.onDisconnect?.();
+        this.#options.onDisconnect?.();
       }
     }
   }

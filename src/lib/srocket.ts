@@ -8,7 +8,7 @@
 /** How long to wait between reconnections. */
 const RECONNECT_DELAY = 500;
 
-/** Number of messages to queue  */
+/** Number of messages to queue while disconnected. */
 const BUFFER_SIZE = 64;
 
 export type SrocketOptions<T> = {
@@ -37,6 +37,13 @@ export class Srocket<T, U> {
 
   constructor(url: string, options: SrocketOptions<T>) {
     this.#url = url;
+    if (this.#url.startsWith("/")) {
+      // Get WebSocket URL relative to the current origin.
+      this.#url =
+        (window.location.protocol === "https:" ? "wss://" : "ws://") +
+        window.location.host +
+        this.#url;
+    }
     this.#options = options;
 
     this.#ws = null;

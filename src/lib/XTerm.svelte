@@ -9,6 +9,7 @@
       if (state === "loaded") return;
       else if (state === "initial") {
         const FontFaceObserver = (await import("fontfaceobserver")).default;
+        state = "loading";
         try {
           await new FontFaceObserver("Fira Code VF").load();
         } catch (error) {

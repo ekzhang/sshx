@@ -11,7 +11,7 @@ use sshx_core::proto::server_update::ServerMessage;
 use tokio::sync::{watch, Notify};
 use tokio::time::Instant;
 use tokio_stream::{wrappers::WatchStream, Stream};
-use tracing::info;
+use tracing::debug;
 
 use crate::utils::Shutdown;
 
@@ -175,7 +175,7 @@ impl Session {
             let segment = data
                 .get(start as usize..)
                 .context("failed to decode utf-8 suffix in data")?;
-            info!(id, ?segment, "adding data to shell");
+            debug!(id, ?segment, "adding data to shell");
             shell.data.push((
                 self.created.elapsed().as_millis() as u64,
                 String::from(segment),

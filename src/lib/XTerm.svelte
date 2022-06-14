@@ -10,10 +10,7 @@
       else if (state === "initial") {
         const FontFaceObserver = (await import("fontfaceobserver")).default;
         try {
-          await Promise.all([
-            new FontFaceObserver("Fira Code").load(),
-            new FontFaceObserver("Fira Code", { weight: "bold" }).load(),
-          ]);
+          await new FontFaceObserver("Fira Code VF").load();
         } catch (error) {
           console.warn("Could not load terminal font", error);
         }
@@ -64,9 +61,9 @@
       cursorStyle: "block",
       // This is the monospace font family configured in Tailwind.
       fontFamily:
-        '"Fira Code", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+        '"Fira Code VF", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
       fontWeight: 400,
-      fontWeightBold: 700,
+      fontWeightBold: 500,
       scrollback: 5000,
       theme: {}, // TODO: Add theme
     });

@@ -2,15 +2,21 @@
 
 #![allow(unsafe_code)]
 
+use std::convert::Infallible;
 use std::env;
-use std::os::unix::io::{FromRawFd, RawFd};
+use std::ffi::{CStr, CString};
+use std::os::unix::io::{AsRawFd, FromRawFd, RawFd};
 use std::pin::Pin;
-use std::process::{Child, Command};
+use std::process::exit;
 use std::task::{Context, Poll};
 
 use anyhow::Result;
-use nix::libc::{TIOCGWINSZ, TIOCSWINSZ};
+use close_fds::CloseFdsBuilder;
+use nix::errno::Errno;
+use nix::libc::{login_tty, TIOCGWINSZ, TIOCSWINSZ};
 use nix::pty::{self, Winsize};
+use nix::sys::signal::{kill, Signal::SIGKILL};
+use nix::unistd::{execvp, fork, ForkResult, Pid};
 use pin_project::{pin_project, pinned_drop};
 use tokio::fs::File;
 use tokio::io::{self, AsyncRead, AsyncWrite};
@@ -24,8 +30,8 @@ pub fn get_default_shell() -> String {
 /// An object that stores the state for a terminal session.
 #[pin_project(PinnedDrop)]
 pub struct Terminal {
-    child: Child,
-    slave: i32,
+    child: Pid,
+    slave: File,
     #[pin]
     master_read: File,
     #[pin]
@@ -38,13 +44,18 @@ impl Terminal {
     pub async fn new(shell: &str) -> Result<Terminal> {
         let result = pty::openpty(None, None)?;
 
-        // Safety: The slave file descriptor was created by openpty() and has its
-        // ownership transferred here. It is closed at the end of the function.
-        let child = unsafe { Self::child_task(shell, result.slave) }?;
-
         // Safety: The master file descriptor was created by openpty() and has its
         // ownership transferred here. It is closed when the object is dropped.
         let master_read = unsafe { File::from_raw_fd(result.master) };
+
+        // Safety: The slave file descriptor was created by openpty() and has its
+        // ownership transferred here. It is closed when the object is dropped. (This
+        // File object is only used for resource ownership.)
+        let slave = unsafe { File::from_raw_fd(result.slave) };
+
+        // The slave file descriptor was created by openpty() and has its ownership
+        // transferred here. From the master side, it is closed on drop.
+        let child = Self::fork_child(shell, slave.as_raw_fd())?;
 
         // We need to clone the file object to prevent livelocks in Tokio, when multiple
         // reads and writes happen concurrently on the same file descriptor. This is a
@@ -52,53 +63,55 @@ impl Terminal {
         // its blocking I/O on a separate thread.
         let master_write = master_read.try_clone().await?;
 
-        trace!(child.id = child.id(), "creating new terminal");
+        trace!(%child, "creating new terminal");
 
         Ok(Self {
             child,
-            slave: result.slave,
+            slave,
             master_read,
             master_write,
         })
     }
 
     /// Entry point for the child process, which spawns a shell.
-    unsafe fn child_task(shell: &str, slave_port: RawFd) -> Result<Child> {
-        let slave = std::fs::File::from_raw_fd(slave_port);
+    fn fork_child(shell: &str, slave_port: RawFd) -> Result<Pid> {
+        let shell = CString::new(shell.to_owned())?;
 
-        Command::new(shell)
-            .stdin(slave.try_clone()?)
-            .stdout(slave.try_clone()?)
-            .stderr(slave)
-            .spawn()
-            .map_err(|e| e.into())
+        // Safety: This does not use any async-signal-unsafe operations in the child
+        // branch, such as memory allocation.
+        match unsafe { fork() }? {
+            ForkResult::Parent { child } => Ok(child),
+            ForkResult::Child => match Self::execv_child(&shell, slave_port) {
+                Ok(infallible) => match infallible {},
+                Err(_) => exit(1),
+            },
+        }
+    }
+
+    fn execv_child(shell: &CStr, slave_port: RawFd) -> Result<Infallible, Errno> {
+        // Safety: The slave file descriptor was created by openpty().
+        Errno::result(unsafe { login_tty(slave_port) })?;
+        // Safety: This is called immediately before an execv(), and there are no other
+        // threads in this process to interact with its file descriptor table.
+        unsafe { CloseFdsBuilder::new().closefrom(3) };
+        execvp(shell, &[shell])
     }
 
     /// Get the window size of the TTY.
     pub fn get_winsize(&self) -> Result<(u16, u16)> {
         nix::ioctl_read_bad!(ioctl_gwinsz, TIOCGWINSZ, Winsize);
-        let mut winsize = Winsize {
-            ws_row: 0,
-            ws_col: 0,
-            ws_xpixel: 0, // ignored
-            ws_ypixel: 0, // ignored
-        };
+        let mut winsize = make_winsize(0, 0);
         // Safety: The slave file descriptor was created by openpty().
-        unsafe { ioctl_gwinsz(self.slave, &mut winsize) }?;
+        unsafe { ioctl_gwinsz(self.slave.as_raw_fd(), &mut winsize) }?;
         Ok((winsize.ws_row, winsize.ws_col))
     }
 
     /// Set the window size of the TTY.
     pub fn set_winsize(&self, rows: u16, cols: u16) -> Result<()> {
         nix::ioctl_write_ptr_bad!(ioctl_swinsz, TIOCSWINSZ, Winsize);
-        let winsize = Winsize {
-            ws_row: rows,
-            ws_col: cols,
-            ws_xpixel: 0, // ignored
-            ws_ypixel: 0, // ignored
-        };
+        let winsize = make_winsize(rows, cols);
         // Safety: The slave file descriptor was created by openpty().
-        unsafe { ioctl_swinsz(self.slave, &winsize) }?;
+        unsafe { ioctl_swinsz(self.slave.as_raw_fd(), &winsize) }?;
         Ok(())
     }
 }
@@ -137,10 +150,19 @@ impl AsyncWrite for Terminal {
 impl PinnedDrop for Terminal {
     fn drop(self: Pin<&mut Self>) {
         let this = self.project();
-        trace!(child.id = this.child.id(), "dropping terminal");
+        trace!(child = %this.child, "dropping terminal");
 
-        // Reap the child process on closure so that it doesn't create zombies.
-        this.child.kill().ok();
+        // Reap the child process on closure so that it doesn't keep running.
+        kill(*this.child, SIGKILL).ok();
+    }
+}
+
+fn make_winsize(rows: u16, cols: u16) -> Winsize {
+    Winsize {
+        ws_row: rows,
+        ws_col: cols,
+        ws_xpixel: 0, // ignored
+        ws_ypixel: 0, // ignored
     }
 }
 

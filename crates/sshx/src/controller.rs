@@ -168,9 +168,7 @@ impl Controller {
                 let err = ClientMessage::Error(err.to_string());
                 output_tx.send(err).await.ok();
             }
-            if let Err(err) = output_tx.send(ClientMessage::ClosedShell(id)).await {
-                error!(?err, "could not send close shell message");
-            }
+            output_tx.send(ClientMessage::ClosedShell(id)).await.ok();
         });
     }
 

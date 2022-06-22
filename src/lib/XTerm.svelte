@@ -63,6 +63,8 @@
   let termEl: HTMLDivElement;
   let term: Terminal | null = null;
 
+  let currentTitle = "Remote Terminal";
+
   const preloadBuffer: string[] = [];
 
   write = (data: string) => {
@@ -97,6 +99,10 @@
 
     term.open(termEl);
     term.resize(cols, rows);
+    term.onTitleChange((title) => {
+      currentTitle = title;
+    });
+
     for (const data of preloadBuffer) {
       term.write(data);
     }
@@ -117,7 +123,7 @@
       <div class="w-3 h-3 rounded-full bg-green-500" />
     </div>
     <div class="flex-shrink-0 p-2 text-sm text-gray-400 font-bold">
-      Remote Terminal
+      {currentTitle}
     </div>
     <div class="flex-1" />
   </div>

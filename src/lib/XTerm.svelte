@@ -110,8 +110,16 @@
 </script>
 
 <div class="inline-block rounded-lg" style:background={theme.background}>
-  <div class="text-center p-2 text-sm text-gray-400 font-bold">
-    Remote Terminal
+  <div class="flex">
+    <div class="flex-1 flex items-center space-x-2 px-3">
+      <div class="w-3 h-3 rounded-full bg-red-500" />
+      <div class="w-3 h-3 rounded-full bg-yellow-500" />
+      <div class="w-3 h-3 rounded-full bg-green-500" />
+    </div>
+    <div class="flex-shrink-0 p-2 text-sm text-gray-400 font-bold">
+      Remote Terminal
+    </div>
+    <div class="flex-1" />
   </div>
-  <div class="inline-block px-5 py-2" bind:this={termEl} />
+  <div class="inline-block px-4 py-2" bind:this={termEl} />
 </div>

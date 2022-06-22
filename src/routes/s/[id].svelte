@@ -41,7 +41,7 @@
 
 This is the page for session {$page.params.id}.
 
-<div>
+<div class="p-6">
   <XTerm
     rows={24}
     cols={80}

@@ -15,7 +15,7 @@ use tokio_stream::{wrappers::ReceiverStream, StreamExt};
 use tonic::transport::Channel;
 use tracing::{error, info, warn};
 
-use crate::terminal::{get_default_shell, Terminal};
+use crate::terminal::Terminal;
 
 /// Interval for sending empty heartbeat messages to the server.
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(2);
@@ -23,6 +23,8 @@ const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(2);
 /// Handles a singel session's communication with the remote server.
 pub struct Controller {
     client: SshxServiceClient<Channel>,
+    shell: String,
+
     name: String,
     token: String,
     url: String,
@@ -45,7 +47,7 @@ enum ShellData {
 
 impl Controller {
     /// Construct a new controller, connecting to the remote server.
-    pub async fn new(origin: &str) -> Result<Self> {
+    pub async fn new(origin: &str, shell: &str) -> Result<Self> {
         info!(%origin, "connecting to server");
         let mut client = SshxServiceClient::connect(String::from(origin)).await?;
         let req = OpenRequest {
@@ -55,6 +57,7 @@ impl Controller {
         let (output_tx, output_rx) = mpsc::channel(64);
         Ok(Self {
             client,
+            shell: shell.into(),
             name: resp.name,
             token: resp.token,
             url: resp.url,
@@ -168,9 +171,10 @@ impl Controller {
         let opt = self.shells_tx.insert(id, shell_tx);
         debug_assert!(opt.is_none(), "shell ID cannot be in existing tasks");
 
+        let shell = self.shell.clone();
         let output_tx = self.output_tx.clone();
         tokio::spawn(async move {
-            if let Err(err) = shell_task(id, shell_rx, output_tx.clone()).await {
+            if let Err(err) = shell_task(id, &shell, shell_rx, output_tx.clone()).await {
                 let err = ClientMessage::Error(err.to_string());
                 output_tx.send(err).await.ok();
             }
@@ -203,15 +207,14 @@ async fn send_msg(tx: &mpsc::Sender<ClientUpdate>, message: ClientMessage) -> Re
 /// Asynchronous task handling a single shell within the session.
 async fn shell_task(
     id: u32,
+    shell: &str,
     mut shell_rx: mpsc::Receiver<ShellData>,
     output_tx: mpsc::Sender<ClientMessage>,
 ) -> Result<()> {
+    info!(%shell, "spawning new shell");
     output_tx.send(ClientMessage::CreatedShell(id)).await?;
 
-    let shell = get_default_shell();
-    info!(%shell, "spawning new shell");
-
-    let mut term = Terminal::new(&shell).await?;
+    let mut term = Terminal::new(shell).await?;
     term.set_winsize(24, 80)?; // TODO: Make this reactive.
 
     let mut content = String::new(); // content from the terminal

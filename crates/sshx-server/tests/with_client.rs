@@ -10,7 +10,7 @@ pub mod common;
 #[tokio::test]
 async fn test_handshake() -> Result<()> {
     let server = TestServer::new().await?;
-    let controller = Controller::new(&server.endpoint()).await?;
+    let controller = Controller::new(&server.endpoint(), "/bin/bash").await?;
     controller.close().await?;
     Ok(())
 }
@@ -19,7 +19,7 @@ async fn test_handshake() -> Result<()> {
 async fn test_command() -> Result<()> {
     tracing_subscriber::fmt::try_init().ok();
     let server = TestServer::new().await?;
-    let mut controller = Controller::new(&server.endpoint()).await?;
+    let mut controller = Controller::new(&server.endpoint(), "/bin/bash").await?;
 
     let session = server
         .find_session(controller.name())

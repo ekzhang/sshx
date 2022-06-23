@@ -81,6 +81,8 @@
 
   onMount(async () => {
     const { Terminal } = await import("xterm");
+    const { WebLinksAddon } = await import("xterm-addon-web-links");
+
     await waitForFonts();
 
     term = new Terminal({
@@ -97,6 +99,8 @@
       scrollback: 5000,
       theme,
     });
+
+    term.loadAddon(new WebLinksAddon());
 
     term.open(termEl);
     term.resize(cols, rows);

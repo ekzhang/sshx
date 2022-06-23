@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+ansi_term = "0.12.1"
 anyhow = "1.0.53"
 clap = { version = "3.1.18", features = ["derive"] }
 close_fds = "0.3.2"

@@ -25,6 +25,7 @@ pub struct Controller {
     client: SshxServiceClient<Channel>,
     name: String,
     token: String,
+    url: String,
 
     /// Channels with backpressure routing messages to each shell task.
     shells_tx: HashMap<u32, mpsc::Sender<ShellData>>,
@@ -51,12 +52,12 @@ impl Controller {
             origin: origin.into(),
         };
         let resp = client.open(req).await?.into_inner();
-        info!(url = %resp.url, "opened new session");
         let (output_tx, output_rx) = mpsc::channel(64);
         Ok(Self {
             client,
             name: resp.name,
             token: resp.token,
+            url: resp.url,
             shells_tx: HashMap::new(),
             output_tx,
             output_rx,
@@ -66,6 +67,11 @@ impl Controller {
     /// Returns the name of the session.
     pub fn name(&self) -> &str {
         &self.name
+    }
+
+    /// Returns the URL of the session.
+    pub fn url(&self) -> &str {
+        &self.url
     }
 
     /// Run the controller forever, listening for requests from the server.

@@ -63,6 +63,7 @@
   let termEl: HTMLDivElement;
   let term: Terminal | null = null;
 
+  let loaded = false;
   let currentTitle = "Remote Terminal";
 
   const preloadBuffer: string[] = [];
@@ -103,6 +104,7 @@
       currentTitle = title;
     });
 
+    loaded = true;
     for (const data of preloadBuffer) {
       term.write(data);
     }
@@ -115,7 +117,11 @@
   onDestroy(() => term?.dispose());
 </script>
 
-<div class="inline-block rounded-lg" style:background={theme.background}>
+<div
+  class="inline-block rounded-lg transition-opacity duration-500"
+  style:background={theme.background}
+  style:opacity={loaded ? "90%" : "0%"}
+>
   <div class="flex">
     <div class="flex-1 flex items-center space-x-2 px-3">
       <div class="w-3 h-3 rounded-full bg-red-500" />

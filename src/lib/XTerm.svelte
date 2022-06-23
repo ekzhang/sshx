@@ -118,17 +118,17 @@
 </script>
 
 <div
-  class="inline-block rounded-lg transition-opacity duration-500"
+  class="inline-block rounded-lg border border-gray-600 transition-opacity duration-500"
   style:background={theme.background}
-  style:opacity={loaded ? "90%" : "0%"}
+  style:opacity={loaded ? "95%" : "0%"}
 >
-  <div class="flex">
+  <div class="flex cursor-pointer select-none">
     <div class="flex-1 flex items-center space-x-2 px-3">
       <div class="w-3 h-3 rounded-full bg-red-500" />
       <div class="w-3 h-3 rounded-full bg-yellow-500" />
       <div class="w-3 h-3 rounded-full bg-green-500" />
     </div>
-    <div class="flex-shrink-0 p-2 text-sm text-gray-400 font-bold">
+    <div class="flex-shrink-0 p-2 text-sm text-gray-300 font-bold">
       {currentTitle}
     </div>
     <div class="flex-1" />

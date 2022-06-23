@@ -6,6 +6,7 @@
   import { Srocket } from "$lib/srocket";
   import type { WsClient, WsServer } from "$lib/types";
   import XTerm from "$lib/XTerm.svelte";
+  import logotypeDark from "$lib/assets/logotype-dark.svg";
 
   let srocket: Srocket<WsServer, WsClient> | null = null;
 
@@ -39,13 +40,21 @@
   }
 </script>
 
-This is the page for session {$page.params.id}.
+<main class="p-8">
+  <img class="h-16 -mx-2 mb-2" src={logotypeDark} alt="sshx logo" />
 
-<div class="p-6">
-  <XTerm
-    rows={24}
-    cols={80}
-    bind:write={writers[0]}
-    on:key={({ detail }) => handleKey(0, detail)}
-  />
-</div>
+  <p>
+    This is the page for session <code class="text-violet-300"
+      >{$page.params.id}</code
+    >.
+  </p>
+
+  <div class="py-6">
+    <XTerm
+      rows={24}
+      cols={80}
+      bind:write={writers[0]}
+      on:key={({ detail }) => handleKey(0, detail)}
+    />
+  </div>
+</main>

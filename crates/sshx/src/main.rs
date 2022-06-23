@@ -1,5 +1,4 @@
-use ansi_term::Color::{Cyan, Yellow};
-use ansi_term::Style;
+use ansi_term::Color::{Cyan, Fixed, Yellow};
 use anyhow::Result;
 use clap::Parser;
 use sshx::controller::Controller;
@@ -34,9 +33,9 @@ fn print_greeting(controller: &Controller) {
 ╰───────────────────────────────────────────────────────────────╯
 "#,
         title = Cyan.paint(format!("sshx {version_str:54}")),
-        session = Style::new().dimmed().paint("session:"),
+        session = Fixed(8).paint("session:"),
         name = controller.name(),
-        web_url = Style::new().dimmed().paint("web url:"),
+        web_url = Fixed(8).paint("web url:"),
         url = Yellow.underline().paint(controller.url()),
         url_space = " ".repeat(50 - controller.url().len()),
     );

@@ -29,33 +29,11 @@
 
 <script lang="ts">
   import { createEventDispatcher, onDestroy, onMount } from "svelte";
-  import type { ITheme, Terminal } from "xterm";
+  import type { Terminal } from "xterm";
 
-  // VSCode default dark color theme.
-  const theme: ITheme = {
-    foreground: "#d8d8d8",
-    background: "#181818",
+  import themes from "./themes";
 
-    cursor: "#d8d8d8",
-
-    black: "#181818",
-    red: "#ab4642",
-    green: "#a1b56c",
-    yellow: "#f7ca88",
-    blue: "#7cafc2",
-    magenta: "#ba8baf",
-    cyan: "#86c1b9",
-    white: "#d8d8d8",
-
-    brightBlack: "#585858",
-    brightRed: "#ab4642",
-    brightGreen: "#a1b56c",
-    brightYellow: "#f7ca88",
-    brightBlue: "#7cafc2",
-    brightMagenta: "#ba8baf",
-    brightCyan: "#86c1b9",
-    brightWhite: "#f8f8f8",
-  };
+  const theme = themes.defaultDark;
 
   const dispatch = createEventDispatcher<{ key: string }>();
 

@@ -35,7 +35,7 @@
 
   const theme = themes.defaultDark;
 
-  const dispatch = createEventDispatcher<{ key: string }>();
+  const dispatch = createEventDispatcher<{ data: string }>();
 
   export let rows: number, cols: number;
   export let write: (data: string) => void; // bound function prop
@@ -93,8 +93,8 @@
       term.write(data);
     }
 
-    term.onKey(({ key }) => {
-      dispatch("key", key);
+    term.onData((data) => {
+      dispatch("data", data);
     });
   });
 

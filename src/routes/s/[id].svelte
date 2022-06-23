@@ -35,8 +35,8 @@
 
   onDestroy(() => srocket?.dispose());
 
-  function handleKey(id: number, key: string) {
-    srocket?.send({ data: [id, key] });
+  function handleData(id: number, data: string) {
+    srocket?.send({ data: [id, data] });
   }
 </script>
 
@@ -54,7 +54,7 @@
       rows={24}
       cols={80}
       bind:write={writers[0]}
-      on:key={({ detail }) => handleKey(0, detail)}
+      on:data={({ detail }) => handleData(0, detail)}
     />
   </div>
 </main>

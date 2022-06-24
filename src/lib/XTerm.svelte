@@ -76,12 +76,13 @@
 <script lang="ts">
   import { createEventDispatcher, onDestroy, onMount } from "svelte";
   import type { Terminal } from "xterm";
+  import { Buffer } from "buffer";
 
   import themes from "./themes";
 
   const theme = themes.defaultDark;
 
-  const dispatch = createEventDispatcher<{ data: string }>();
+  const dispatch = createEventDispatcher<{ data: Uint8Array }>();
 
   export let rows: number, cols: number;
   export let write: (data: string) => void; // bound function prop
@@ -140,8 +141,12 @@
       term.write(data);
     }
 
-    term.onData((data) => {
-      dispatch("data", data);
+    const utf8 = new TextEncoder();
+    term.onData((data: string) => {
+      dispatch("data", utf8.encode(data));
+    });
+    term.onBinary((data: string) => {
+      dispatch("data", Buffer.from(data, "binary"));
     });
   });
 

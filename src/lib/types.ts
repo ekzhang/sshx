@@ -8,6 +8,6 @@ export type WsServer = {
 export type WsClient = {
   create?: null;
   close?: number;
-  data?: [number, string];
+  data?: [number, Uint8Array];
   subscribe?: [number, number];
 };

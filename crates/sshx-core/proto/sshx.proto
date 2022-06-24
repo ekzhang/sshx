@@ -22,6 +22,12 @@ message TerminalData {
   uint64 seq = 3;  // Sequence number of the first byte.
 }
 
+// Details of bytes input to the terminal (not necessarily valid UTF-8).
+message TerminalInput {
+  uint32 id = 1;  // ID of the shell.
+  bytes data = 2; // Binary sequence of terminal data.
+}
+
 // Request to open an sshx session.
 message OpenRequest {
   string origin = 1; // Web origin of the server.
@@ -53,7 +59,7 @@ message ClientUpdate {
 // Bidirectional streaming update from the server.
 message ServerUpdate {
   oneof server_message {
-    TerminalData data = 1;    // Remote input bytes, `seq` field ignored.
+    TerminalInput input = 1;  // Remote input bytes, received from the user.
     uint32 create_shell = 2;  // ID of a new shell.
     uint32 close_shell = 3;   // ID of a shell to close.
     SequenceNumbers sync = 4; // Periodic sequence number sync.

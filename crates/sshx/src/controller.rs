@@ -39,8 +39,8 @@ pub struct Controller {
 
 /// Internal message routed to shell tasks.
 enum ShellData {
-    /// Sequence of commands from the server.
-    Data(String),
+    /// Sequence of input bytes from the server.
+    Data(Vec<u8>),
     /// Information about the server's current sequence number.
     Sync(u64),
 }
@@ -127,13 +127,13 @@ impl Controller {
             };
 
             match message {
-                ServerMessage::Data(data) => {
+                ServerMessage::Input(input) => {
                     // We ignore `data.seq` because it should be unused here.
-                    if let Some(sender) = self.shells_tx.get(&data.id) {
+                    if let Some(sender) = self.shells_tx.get(&input.id) {
                         // This line applies backpressure if the shell task is overloaded.
-                        sender.send(ShellData::Data(data.data)).await.ok();
+                        sender.send(ShellData::Data(input.data)).await.ok();
                     } else {
-                        warn!(%data.id, "received data for non-existing shell");
+                        warn!(%input.id, "received data for non-existing shell");
                     }
                 }
                 ServerMessage::CreateShell(id) => {
@@ -239,7 +239,7 @@ async fn shell_task(
             item = shell_rx.recv() => {
                 match item {
                     Some(ShellData::Data(data)) => {
-                        term.write_all(data.as_bytes()).await?;
+                        term.write_all(&data).await?;
                     }
                     Some(ShellData::Sync(seq2)) => {
                         if seq2 < seq as u64 {

@@ -35,7 +35,7 @@
 
   onDestroy(() => srocket?.dispose());
 
-  function handleData(id: number, data: string) {
+  function handleData(id: number, data: Uint8Array) {
     srocket?.send({ data: [id, data] });
   }
 </script>

@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
 use sshx::controller::Controller;
-use sshx_core::proto::{server_update::ServerMessage, TerminalData};
+use sshx_core::proto::{server_update::ServerMessage, TerminalInput};
 use tokio::time::{self, Duration};
 
 use crate::common::*;
@@ -28,12 +28,11 @@ async fn test_command() -> Result<()> {
     let updates = session.update_tx();
     updates.send(ServerMessage::CreateShell(1)).await?;
 
-    let data = TerminalData {
+    let data = TerminalInput {
         id: 1,
         data: "ls\r\n".into(),
-        seq: 0,
     };
-    updates.send(ServerMessage::Data(data)).await?;
+    updates.send(ServerMessage::Input(data)).await?;
 
     tokio::select! {
         _ = controller.run() => (),

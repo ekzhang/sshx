@@ -12,7 +12,7 @@ use axum::routing::{get, get_service};
 use axum::{Extension, Router};
 use hyper::StatusCode;
 use serde::{Deserialize, Serialize};
-use sshx_core::proto::{server_update::ServerMessage, TerminalData};
+use sshx_core::proto::{server_update::ServerMessage, TerminalInput};
 use tokio::sync::mpsc;
 use tokio_stream::StreamExt;
 use tower_http::services::{ServeDir, ServeFile};
@@ -75,7 +75,7 @@ pub enum WsClient {
     /// Close a specific shell.
     Close(u32),
     /// Add user data to a given shell.
-    Data(u32, String),
+    Data(u32, #[serde(with = "serde_bytes")] Vec<u8>),
     /// Subscribe to a shell, starting at a given chunk index.
     Subscribe(u32, u64),
 }
@@ -157,8 +157,8 @@ async fn handle_socket(mut socket: WebSocket, session: Arc<Session>) -> Result<(
                 update_tx.send(ServerMessage::CloseShell(id)).await?;
             }
             WsClient::Data(id, data) => {
-                let data = TerminalData { id, data, seq: 0 };
-                update_tx.send(ServerMessage::Data(data)).await?;
+                let data = TerminalInput { id, data };
+                update_tx.send(ServerMessage::Input(data)).await?;
             }
             WsClient::Subscribe(id, chunknum) => {
                 if subscribed.contains(&id) {

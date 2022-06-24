@@ -141,8 +141,6 @@
     }
 
     term.onData((data) => {
-      console.log(new Error()?.stack);
-      console.log(JSON.stringify(data));
       dispatch("data", data);
     });
   });

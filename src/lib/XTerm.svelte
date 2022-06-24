@@ -41,13 +41,14 @@
   const patchXTerm = (() => {
     let patched = false;
 
+    /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-empty-function */
     return function patchXTerm(term: any) {
       if (patched) return;
       patched = true;
 
       // Hack: This requires monkey-patching internal XTerm methods.
-      const Terminal = (term as any)._core.constructor;
-      const InputHandler = (term as any)._core._inputHandler.constructor;
+      const Terminal = term._core.constructor;
+      const InputHandler = term._core._inputHandler.constructor;
 
       Terminal.prototype._handleColorEvent = () => {};
       Terminal.prototype._reportFocus = () => {};
@@ -68,6 +69,7 @@
         }
       };
     };
+    /* eslint-enable @typescript-eslint/no-explicit-any, @typescript-eslint/no-empty-function */
   })();
 </script>
 

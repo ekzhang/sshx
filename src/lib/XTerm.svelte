@@ -25,6 +25,50 @@
       }
     };
   })();
+
+  // Patch xterm to remove data requests triggering spurious messages when replayed.
+  //
+  // This removes support for several commands, which is not great for full feature support, but
+  // without the patch the requests cause problems because they cause the terminal to send data
+  // before any user interactions, so the data is duplicated with multiple connections.
+  //
+  // Search the xterm.js source for calls to "triggerDataEvent" to understand why these specific
+  // functions were patched.
+  //
+  // I'm so sorry about this. In the future we should parse ANSI sequences correctly on the server
+  // side and pass them through a state machine that filters such status requests and replies to
+  // them exactly once, while being transparent to the sshx client.
+  const patchXTerm = (() => {
+    let patched = false;
+
+    return function patchXTerm(term: any) {
+      if (patched) return;
+      patched = true;
+
+      // Hack: This requires monkey-patching internal XTerm methods.
+      const Terminal = (term as any)._core.constructor;
+      const InputHandler = (term as any)._core._inputHandler.constructor;
+
+      Terminal.prototype._handleColorEvent = () => {};
+      Terminal.prototype._reportFocus = () => {};
+      InputHandler.prototype.unhook = function () {
+        this._data = new Uint32Array(0);
+        return true;
+      };
+      InputHandler.prototype.sendDeviceAttributesPrimary = () => {};
+      InputHandler.prototype.sendDeviceAttributesSecondary = () => {};
+      InputHandler.prototype.deviceStatus = () => {};
+      InputHandler.prototype.deviceStatusPrivate = () => {};
+      const windowOptions = InputHandler.prototype.windowOptions;
+      InputHandler.prototype.windowOptions = function (params: any): boolean {
+        if (params.params[0] === 18) {
+          return true; // GetWinSizeChars
+        } else {
+          return windowOptions.call(this, params);
+        }
+      };
+    };
+  })();
 </script>
 
 <script lang="ts">
@@ -79,6 +123,7 @@
       scrollback: 5000,
       theme,
     });
+    patchXTerm(term);
 
     term.loadAddon(new WebLinksAddon());
 
@@ -94,6 +139,8 @@
     }
 
     term.onData((data) => {
+      console.log(new Error()?.stack);
+      console.log(JSON.stringify(data));
       dispatch("data", data);
     });
   });

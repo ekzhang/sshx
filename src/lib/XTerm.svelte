@@ -18,9 +18,9 @@
         state = "loaded";
         for (const fn of waitlist) fn();
       } else {
-        await new Promise((resolve) => {
-          if (state === "loaded") resolve(null);
-          else waitlist.push(() => resolve(null));
+        await new Promise<void>((resolve) => {
+          if (state === "loaded") resolve();
+          else waitlist.push(resolve);
         });
       }
     };

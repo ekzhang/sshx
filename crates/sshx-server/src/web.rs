@@ -5,7 +5,7 @@ use std::io;
 use std::sync::Arc;
 
 use anyhow::Result;
-use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
+use axum::extract::ws::{CloseFrame, Message, WebSocket, WebSocketUpgrade};
 use axum::extract::Path;
 use axum::response::IntoResponse;
 use axum::routing::{get, get_service};
@@ -64,6 +64,8 @@ pub enum WsServer {
     Shells(Vec<u32>),
     /// Subscription results, chunks of terminal data.
     Chunks(u32, Vec<(u64, String)>),
+    /// The current session has been terminated.
+    Terminated(),
 }
 
 /// A real-time message sent from the client over WebSocket.
@@ -71,7 +73,7 @@ pub enum WsServer {
 #[serde(rename_all = "camelCase")]
 pub enum WsClient {
     /// Create a new shell.
-    Create,
+    Create(),
     /// Close a specific shell.
     Close(u32),
     /// Add user data to a given shell.
@@ -87,16 +89,22 @@ async fn get_session_ws(
 ) -> impl IntoResponse {
     if let Some(session) = state.store.get(&id) {
         let session = Arc::clone(&*session);
-        Ok(ws.on_upgrade(move |socket| {
+        ws.on_upgrade(move |socket| {
             async {
                 if let Err(err) = handle_socket(socket, session).await {
                     warn!(?err, "exiting early");
                 }
             }
             .instrument(info_span!("ws", %id))
-        }))
+        })
     } else {
-        Err(StatusCode::NOT_FOUND)
+        ws.on_upgrade(|mut socket| async move {
+            let frame = CloseFrame {
+                code: 4404,
+                reason: "could not find the requested session".into(),
+            };
+            socket.send(Message::Close(Some(frame))).await.ok();
+        })
     }
 }
 
@@ -131,7 +139,11 @@ async fn handle_socket(mut socket: WebSocket, session: Arc<Session>) -> Result<(
     send(&mut socket, WsServer::Shells(vec![])).await?;
     loop {
         let msg = tokio::select! {
-            _ = session.terminated() => break,
+            _ = session.terminated() => {
+                send(&mut socket, WsServer::Terminated()).await?;
+                socket.close().await?;
+                break;
+            }
             Some(shells) = shells_stream.next() => {
                 send(&mut socket, WsServer::Shells(shells)).await?;
                 continue;
@@ -149,7 +161,7 @@ async fn handle_socket(mut socket: WebSocket, session: Arc<Session>) -> Result<(
         };
 
         match msg {
-            WsClient::Create => {
+            WsClient::Create() => {
                 let id = session.next_id();
                 update_tx.send(ServerMessage::CreateShell(id)).await?;
             }

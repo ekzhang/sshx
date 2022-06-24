@@ -23,8 +23,8 @@ export type SrocketOptions<T> = {
   /** Called when a connected socket is closed. */
   onDisconnect?(): void;
 
-  /** Called when an incoming or existing connection is closed due to error. */
-  onError?(event: Event): void;
+  /** Called when an incoming or existing connection is closed. */
+  onClose?(event: CloseEvent): void;
 };
 
 /** A reconnecting WebSocket client for real-time communication. */
@@ -84,13 +84,11 @@ export class Srocket<T, U> {
     this.#ws.onopen = () => {
       this.#stateChange(true);
     };
-    this.#ws.onclose = () => {
+    this.#ws.onclose = (event) => {
+      this.#options.onClose?.(event);
       this.#ws = null;
       this.#stateChange(false);
       setTimeout(() => this.#reconnect(), RECONNECT_DELAY);
-    };
-    this.#ws.onerror = (event) => {
-      this.#options.onError?.(event);
     };
     this.#ws.onmessage = (event) => {
       if (event.data instanceof ArrayBuffer) {

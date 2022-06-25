@@ -94,6 +94,15 @@ impl Terminal {
         // Safety: This is called immediately before an execv(), and there are no other
         // threads in this process to interact with its file descriptor table.
         unsafe { CloseFdsBuilder::new().closefrom(3) };
+
+        // Set terminal environment variables appropriately, pretending to be a modern
+        // version of vscode, which is also based on xterm.js.
+        env::set_var("TERM", "xterm-256color");
+        env::set_var("TERM_PROGRAM", "vscode");
+        env::set_var("TERM_PROGRAM_VERSION", "1.68.1");
+        env::set_var("COLORTERM", "truecolor");
+
+        // Start the process.
         execvp(shell, &[shell])
     }
 

@@ -19,7 +19,6 @@
   onMount(() => {
     srocket = new Srocket<WsServer, WsClient>(`/api/s/${$page.params.id}`, {
       onMessage(message) {
-        console.log(message);
         if (message.chunks) {
           const [id, chunks] = message.chunks;
           for (const chunk of chunks) {
@@ -30,7 +29,6 @@
             srocket?.send({ subscribe: [0, 0] });
           }
         } else if (message.terminated) {
-          console.log("terminated!");
           exitReason = "The session has been terminated";
           srocket?.dispose();
         }
@@ -87,6 +85,7 @@
       cols={80}
       bind:write={writers[0]}
       on:data={({ detail }) => handleData(0, detail)}
+      on:move={({ detail }) => console.log(detail)}
     />
   </div>
 </main>

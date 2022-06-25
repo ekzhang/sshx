@@ -82,7 +82,10 @@
 
   const theme = themes.defaultDark;
 
-  const dispatch = createEventDispatcher<{ data: Uint8Array }>();
+  const dispatch = createEventDispatcher<{
+    data: Uint8Array;
+    move: { x: number; y: number };
+  }>();
 
   export let rows: number, cols: number;
   export let write: (data: string) => void; // bound function prop
@@ -151,14 +154,44 @@
   });
 
   onDestroy(() => term?.dispose());
+
+  // Mouse handler logic
+  let [dragging, prevMouseX, prevMouseY] = [false, 0, 0];
+
+  function handleDrag(event: MouseEvent, start: boolean = false) {
+    if (start) {
+      dragging = true;
+      [prevMouseX, prevMouseY] = [event.pageX, event.pageY];
+    } else if (dragging) {
+      const offset = {
+        x: event.pageX - prevMouseX,
+        y: event.pageY - prevMouseY,
+      };
+      if (offset.x !== 0 || offset.y !== 0) {
+        dispatch("move", offset);
+        [prevMouseX, prevMouseY] = [event.pageX, event.pageY];
+      }
+    }
+  }
+
+  function handleDragEnd() {
+    dragging = false;
+  }
 </script>
 
 <div
-  class="inline-block rounded-lg border border-gray-600 transition-opacity duration-500"
+  class="term-container"
+  class:dragging
   style:background={theme.background}
   style:opacity={loaded ? "95%" : "0%"}
 >
-  <div class="flex cursor-pointer select-none">
+  <div
+    class="flex select-none"
+    on:mousedown={(event) => handleDrag(event, true)}
+    on:mousemove={handleDrag}
+    on:mouseup={handleDragEnd}
+    on:mouseleave={handleDragEnd}
+  >
     <div class="flex-1 flex items-center space-x-2 px-3">
       <div class="w-3 h-3 rounded-full bg-red-500" />
       <div class="w-3 h-3 rounded-full bg-yellow-500" />
@@ -171,3 +204,14 @@
   </div>
   <div class="inline-block px-4 py-2" bind:this={termEl} />
 </div>
+
+<style lang="postcss">
+  .term-container {
+    @apply inline-block rounded-lg border border-gray-600;
+    transition: opacity 0.5s, transform 0.2s;
+  }
+
+  .term-container.dragging {
+    transform: scale(1.02);
+  }
+</style>

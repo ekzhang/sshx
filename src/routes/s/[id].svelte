@@ -10,11 +10,12 @@
 
   let srocket: Srocket<WsServer, WsClient> | null = null;
 
-  /** Bound "write" method for each terminal. */
-  const writers: ((data: string) => void)[] = [];
-
   let connected = false;
   let exitReason: string | null = null;
+
+  /** Bound "write" method for each terminal. */
+  const writers: Record<number, (data: string) => void> = {};
+  const pos: Record<number, { x: number; y: number }> = {};
 
   onMount(() => {
     srocket = new Srocket<WsServer, WsClient>(`/api/s/${$page.params.id}`, {
@@ -80,12 +81,19 @@
   </div>
 
   <div class="py-6">
-    <XTerm
-      rows={24}
-      cols={80}
-      bind:write={writers[0]}
-      on:data={({ detail }) => handleData(0, detail)}
-      on:move={({ detail }) => console.log(detail)}
-    />
+    <div style:transform="translate({[pos[0]?.x ?? 0]}px, {pos[0]?.y ?? 0}px)">
+      <XTerm
+        rows={24}
+        cols={80}
+        bind:write={writers[0]}
+        on:data={({ detail }) => handleData(0, detail)}
+        on:move={({ detail }) => {
+          pos[0] = {
+            x: (pos[0]?.x ?? 0) + detail.x,
+            y: (pos[0]?.y ?? 0) + detail.y,
+          };
+        }}
+      />
+    </div>
   </div>
 </main>

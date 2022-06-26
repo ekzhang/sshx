@@ -158,7 +158,7 @@
   // Mouse handler logic
   let [dragging, prevMouseX, prevMouseY] = [false, 0, 0];
 
-  function handleDrag(event: MouseEvent, start: boolean = false) {
+  function handleDrag(event: MouseEvent, start = false) {
     if (start) {
       dragging = true;
       [prevMouseX, prevMouseY] = [event.pageX, event.pageY];
@@ -184,13 +184,13 @@
   class:dragging
   style:background={theme.background}
   style:opacity={loaded ? "95%" : "0%"}
+  on:mousemove={handleDrag}
+  on:mouseup={handleDragEnd}
+  on:mouseleave={handleDragEnd}
 >
   <div
     class="flex select-none"
     on:mousedown={(event) => handleDrag(event, true)}
-    on:mousemove={handleDrag}
-    on:mouseup={handleDragEnd}
-    on:mouseleave={handleDragEnd}
   >
     <div class="flex-1 flex items-center space-x-2 px-3">
       <div class="w-3 h-3 rounded-full bg-red-500" />

@@ -17,6 +17,7 @@
   /** Bound "write" method for each terminal. */
   const writers: Record<number, (data: string) => void> = {};
   const seqnums: Record<number, number> = {};
+  let shells: number[] = [];
   let subscriptions = new Set<number>();
   const pos: Record<number, { x: number; y: number }> = {};
 
@@ -32,20 +33,14 @@
             }
           });
         } else if (message.shells) {
-          const deleted = new Set(subscriptions);
+          shells = message.shells;
           for (const id of message.shells) {
             if (!subscriptions.has(id)) {
               seqnums[id] ??= 0;
               subscriptions.add(id);
               srocket?.send({ subscribe: [id, seqnums[id]] });
-            } else {
-              deleted.delete(id);
             }
           }
-          for (const id of deleted) {
-            subscriptions.delete(id);
-          }
-          subscriptions = subscriptions;
         } else if (message.terminated) {
           exitReason = "The session has been terminated";
           srocket?.dispose();
@@ -106,7 +101,7 @@
   </div>
 
   <div class="py-6">
-    {#each [...subscriptions] as id (id)}
+    {#each shells as id (id)}
       <div
         class="inline-block"
         style:transform="translate({[pos[id]?.x ?? 0]}px, {pos[id]?.y ?? 0}px)"

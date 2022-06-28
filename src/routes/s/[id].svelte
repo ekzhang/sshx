@@ -2,6 +2,7 @@
   import { page } from "$app/stores";
 
   import { onDestroy, onMount, tick } from "svelte";
+  import { fade } from "svelte/transition";
 
   import { Srocket } from "$lib/srocket";
   import type { WsClient, WsServer } from "$lib/types";
@@ -31,14 +32,20 @@
             }
           });
         } else if (message.shells) {
+          const deleted = new Set(subscriptions);
           for (const id of message.shells) {
             if (!subscriptions.has(id)) {
               seqnums[id] ??= 0;
               subscriptions.add(id);
-              subscriptions = subscriptions;
               srocket?.send({ subscribe: [id, seqnums[id]] });
+            } else {
+              deleted.delete(id);
             }
           }
+          for (const id of deleted) {
+            subscriptions.delete(id);
+          }
+          subscriptions = subscriptions;
         } else if (message.terminated) {
           exitReason = "The session has been terminated";
           srocket?.dispose();
@@ -101,7 +108,9 @@
   <div class="py-6">
     {#each [...subscriptions] as id (id)}
       <div
+        class="inline-block"
         style:transform="translate({[pos[id]?.x ?? 0]}px, {pos[id]?.y ?? 0}px)"
+        transition:fade|local
       >
         <XTerm
           rows={24}
@@ -114,6 +123,7 @@
               y: (pos[id]?.y ?? 0) + detail.y,
             };
           }}
+          on:close={() => srocket?.send({ close: id })}
         />
       </div>
     {/each}

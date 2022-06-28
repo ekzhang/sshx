@@ -136,7 +136,6 @@ async fn handle_socket(mut socket: WebSocket, session: Arc<Session>) -> Result<(
     let update_tx = session.update_tx();
     let shells_stream = session.subscribe_shells();
     tokio::pin!(shells_stream);
-    send(&mut socket, WsServer::Shells(vec![])).await?;
     loop {
         let msg = tokio::select! {
             _ = session.terminated() => {

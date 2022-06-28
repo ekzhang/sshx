@@ -1,7 +1,7 @@
 <script lang="ts">
   import { page } from "$app/stores";
 
-  import { onDestroy, onMount } from "svelte";
+  import { onDestroy, onMount, tick } from "svelte";
 
   import { Srocket } from "$lib/srocket";
   import type { WsClient, WsServer } from "$lib/types";
@@ -15,6 +15,8 @@
 
   /** Bound "write" method for each terminal. */
   const writers: Record<number, (data: string) => void> = {};
+  const seqnums: Record<number, number> = {};
+  let subscriptions = new Set<number>();
   const pos: Record<number, { x: number; y: number }> = {};
 
   onMount(() => {
@@ -22,12 +24,20 @@
       onMessage(message) {
         if (message.chunks) {
           const [id, chunks] = message.chunks;
-          for (const chunk of chunks) {
-            writers[id](chunk[1]);
-          }
+          tick().then(() => {
+            seqnums[id] += chunks.length;
+            for (const chunk of chunks) {
+              writers[id](chunk[1]);
+            }
+          });
         } else if (message.shells) {
-          if (message.shells.includes(0)) {
-            srocket?.send({ subscribe: [0, 0] });
+          for (const id of message.shells) {
+            if (!subscriptions.has(id)) {
+              seqnums[id] ??= 0;
+              subscriptions.add(id);
+              subscriptions = subscriptions;
+              srocket?.send({ subscribe: [id, seqnums[id]] });
+            }
           }
         } else if (message.terminated) {
           exitReason = "The session has been terminated";
@@ -41,6 +51,7 @@
 
       onDisconnect() {
         connected = false;
+        subscriptions.clear();
       },
 
       onClose(event) {
@@ -49,9 +60,6 @@
         }
       },
     });
-
-    // TODO: Implement actual client logic.
-    srocket?.send({ create: [] });
   });
 
   onDestroy(() => srocket?.dispose());
@@ -80,20 +88,34 @@
     {/if}
   </div>
 
+  <div class="py-2">
+    <button
+      class="px-3 py-1 bg-gray-800 hover:bg-gray-700"
+      disabled={!connected}
+      on:click={() => srocket?.send({ create: [] })}
+    >
+      Create Shell
+    </button>
+  </div>
+
   <div class="py-6">
-    <div style:transform="translate({[pos[0]?.x ?? 0]}px, {pos[0]?.y ?? 0}px)">
-      <XTerm
-        rows={24}
-        cols={80}
-        bind:write={writers[0]}
-        on:data={({ detail }) => handleData(0, detail)}
-        on:move={({ detail }) => {
-          pos[0] = {
-            x: (pos[0]?.x ?? 0) + detail.x,
-            y: (pos[0]?.y ?? 0) + detail.y,
-          };
-        }}
-      />
-    </div>
+    {#each [...subscriptions] as id (id)}
+      <div
+        style:transform="translate({[pos[id]?.x ?? 0]}px, {pos[id]?.y ?? 0}px)"
+      >
+        <XTerm
+          rows={24}
+          cols={80}
+          bind:write={writers[id]}
+          on:data={({ detail }) => handleData(id, detail)}
+          on:move={({ detail }) => {
+            pos[id] = {
+              x: (pos[id]?.x ?? 0) + detail.x,
+              y: (pos[id]?.y ?? 0) + detail.y,
+            };
+          }}
+        />
+      </div>
+    {/each}
   </div>
 </main>

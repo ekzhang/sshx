@@ -117,7 +117,7 @@
     await waitForFonts();
 
     term = new Terminal({
-      allowTransparency: true,
+      allowTransparency: false,
       cursorBlink: false,
       cursorStyle: "block",
       // This is the monospace font family configured in Tailwind.
@@ -181,7 +181,7 @@
 </script>
 
 <div
-  class="term-container"
+  class="term-container opacity-95"
   class:dragging
   style:background={theme.background}
   on:mousemove={handleDrag}
@@ -209,7 +209,7 @@
   <div
     class="inline-block px-4 py-2 transition-opacity duration-500"
     bind:this={termEl}
-    style:opacity={loaded ? "95%" : "0%"}
+    style:opacity={loaded ? 1.0 : 0.0}
   />
 </div>
 

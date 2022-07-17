@@ -189,6 +189,7 @@ async fn handle_update(tx: &ServerTx, session: &Session, update: ClientUpdate) -
             }
         }
         Some(ClientMessage::Error(err)) => {
+            // TODO: Propagate these errors to listeners on the web interface?
             error!(?err, "error received from client");
         }
         None => (), // Heartbeat message, ignored.

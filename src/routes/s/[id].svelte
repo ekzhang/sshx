@@ -8,7 +8,6 @@
   import type { WsClient, WsServer, WsWinsize } from "$lib/types";
   import Toolbar from "$lib/Toolbar.svelte";
   import XTerm from "$lib/XTerm.svelte";
-  import logotypeDark from "$lib/assets/logotype-dark.svg";
 
   let srocket: Srocket<WsServer, WsClient> | null = null;
 
@@ -76,15 +75,9 @@
 </script>
 
 <main class="p-8">
-  <Toolbar />
-
-  <img class="h-16 -mx-2 mb-2" src={logotypeDark} alt="sshx logo" />
-
-  <p>
-    This is the page for session <code class="text-violet-300"
-      >{$page.params.id}</code
-    >.
-  </p>
+  <div class="absolute top-8 left-1/2 -translate-x-1/2 inline-block z-10">
+    <Toolbar {connected} on:create={() => srocket?.send({ create: [] })} />
+  </div>
 
   <div class="py-2">
     {#if exitReason !== null}
@@ -94,16 +87,6 @@
     {:else}
       <div class="text-yellow-400">Connecting…</div>
     {/if}
-  </div>
-
-  <div class="py-2">
-    <button
-      class="px-3 py-1 bg-gray-800 hover:bg-gray-700"
-      disabled={!connected}
-      on:click={() => srocket?.send({ create: [] })}
-    >
-      Create Shell
-    </button>
   </div>
 
   <div class="py-6">

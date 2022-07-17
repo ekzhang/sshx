@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { createEventDispatcher } from "svelte";
   import {
     MessageSquareIcon,
     PlusCircleIcon,
@@ -7,10 +8,14 @@
   } from "svelte-feather-icons";
 
   import logo from "$lib/assets/logo.svg";
+
+  export let connected: boolean;
+
+  const dispatch = createEventDispatcher<{ create: void }>();
 </script>
 
 <div
-  class="inline-block border border-zinc-800 bg-zinc-900/80 backdrop-blur-md rounded-xl p-2"
+  class="inline-block border border-zinc-800 bg-zinc-900/60 backdrop-blur-sm rounded-xl p-2"
 >
   <div class="flex items-center select-none">
     <a href="/"><img src={logo} alt="sshx logo" class="h-10" /></a>
@@ -19,7 +24,11 @@
     <div class="v-divider" />
 
     <div class="flex space-x-1">
-      <button class="icon-button">
+      <button
+        class="icon-button"
+        on:click={() => dispatch("create")}
+        disabled={!connected}
+      >
         <PlusCircleIcon strokeWidth={1.5} class="p-0.5" />
       </button>
       <button class="icon-button">
@@ -47,5 +56,6 @@
 
   .icon-button {
     @apply rounded-md p-1 hover:bg-zinc-700 active:bg-indigo-700;
+    @apply disabled:opacity-50 disabled:bg-transparent;
   }
 </style>

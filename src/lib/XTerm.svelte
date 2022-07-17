@@ -77,6 +77,7 @@
   import { createEventDispatcher, onDestroy, onMount } from "svelte";
   import type { Terminal } from "xterm";
   import { Buffer } from "buffer";
+  import { MinusIcon, PlusIcon, XIcon } from "svelte-feather-icons";
 
   import themes from "./themes";
 
@@ -192,14 +193,28 @@
     class="flex select-none"
     on:mousedown={(event) => handleDrag(event, true)}
   >
-    <div class="flex-1 flex items-center space-x-2 px-3">
-      <button
-        class="w-3 h-3 rounded-full bg-red-500"
-        on:mousedown|stopPropagation
-        on:click={() => dispatch("close")}
-      />
-      <button class="w-3 h-3 rounded-full bg-yellow-500" />
-      <button class="w-3 h-3 rounded-full bg-green-500" />
+    <div class="flex-1 flex items-center px-3">
+      <div class="flex space-x-2 text-transparent hover:text-black/75">
+        <button
+          class="w-3 h-3 p-[1px] rounded-full bg-red-500 active:bg-red-700"
+          on:mousedown|stopPropagation
+          on:click={() => dispatch("close")}
+        >
+          <XIcon class="w-full h-full" strokeWidth={3} />
+        </button>
+        <button
+          class="w-3 h-3 p-[1px] rounded-full bg-yellow-500 active:bg-yellow-700"
+          on:mousedown|stopPropagation
+        >
+          <MinusIcon class="w-full h-full" strokeWidth={3} />
+        </button>
+        <button
+          class="w-3 h-3 p-[1px] rounded-full bg-green-500 active:bg-green-700"
+          on:mousedown|stopPropagation
+        >
+          <PlusIcon class="w-full h-full" strokeWidth={3} />
+        </button>
+      </div>
     </div>
     <div class="flex-shrink-0 p-2 text-sm text-gray-300 font-bold">
       {currentTitle}

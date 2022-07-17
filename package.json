@@ -20,6 +20,7 @@
     "firacode": "^6.2.0",
     "fontfaceobserver": "^2.3.0",
     "svelte": "^3.48.0",
+    "svelte-feather-icons": "^4.0.0",
     "xterm": "^4.18.0",
     "xterm-addon-web-links": "^0.5.1"
   },

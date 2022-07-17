@@ -5,7 +5,7 @@
   import { fade } from "svelte/transition";
 
   import { Srocket } from "$lib/srocket";
-  import type { WsClient, WsServer } from "$lib/types";
+  import type { WsClient, WsServer, WsWinsize } from "$lib/types";
   import XTerm from "$lib/XTerm.svelte";
   import logotypeDark from "$lib/assets/logotype-dark.svg";
 
@@ -17,7 +17,7 @@
   /** Bound "write" method for each terminal. */
   const writers: Record<number, (data: string) => void> = {};
   const seqnums: Record<number, number> = {};
-  let shells: number[] = [];
+  let shells: [number, WsWinsize][] = [];
   let subscriptions = new Set<number>();
   const pos: Record<number, { x: number; y: number }> = {};
 
@@ -28,13 +28,13 @@
           const [id, chunks] = message.chunks;
           tick().then(() => {
             seqnums[id] += chunks.length;
-            for (const chunk of chunks) {
-              writers[id](chunk[1]);
+            for (const [, data] of chunks) {
+              writers[id](data);
             }
           });
         } else if (message.shells) {
           shells = message.shells;
-          for (const id of message.shells) {
+          for (const [id, _winsize] of message.shells) {
             if (!subscriptions.has(id)) {
               seqnums[id] ??= 0;
               subscriptions.add(id);
@@ -44,6 +44,9 @@
         } else if (message.terminated) {
           exitReason = "The session has been terminated";
           srocket?.dispose();
+        } else if (message.error) {
+          // TODO: Add an actual toast notification.
+          console.error("Server error: " + message.error);
         }
       },
 
@@ -101,7 +104,7 @@
   </div>
 
   <div class="py-6">
-    {#each shells as id (id)}
+    {#each shells as [id, _winsize] (id)}
       <div
         class="inline-block"
         style:transform="translate({[pos[id]?.x ?? 0]}px, {pos[id]?.y ?? 0}px)"

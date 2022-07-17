@@ -12,7 +12,7 @@ use axum::routing::{get, get_service};
 use axum::{Extension, Router};
 use hyper::StatusCode;
 use serde::{Deserialize, Serialize};
-use sshx_core::proto::{server_update::ServerMessage, TerminalInput};
+use sshx_core::proto::{server_update::ServerMessage, TerminalInput, TerminalSize};
 use tokio::sync::mpsc;
 use tokio_stream::StreamExt;
 use tower_http::services::{ServeDir, ServeFile};
@@ -56,16 +56,43 @@ fn backend(state: Arc<ServerState>) -> Router {
         .layer(Extension(state))
 }
 
+/// Real-time message conveying the position and size of a terminal.
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct WsWinsize {
+    /// The top-left x-coordinate of the window, offset from origin.
+    pub x: f32,
+    /// The top-left y-coordinate of the window, offset from origin.
+    pub y: f32,
+    /// The number of rows in the window.
+    pub rows: u16,
+    /// The number of columns in the terminal.
+    pub cols: u16,
+}
+
+impl Default for WsWinsize {
+    fn default() -> Self {
+        WsWinsize {
+            x: 0.0,
+            y: 0.0,
+            rows: 24,
+            cols: 80,
+        }
+    }
+}
+
 /// A real-time message sent from the server over WebSocket.
 #[derive(Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub enum WsServer {
     /// Notification when the set of open shells has changed.
-    Shells(Vec<u32>),
+    Shells(Vec<(u32, WsWinsize)>),
     /// Subscription results, chunks of terminal data.
     Chunks(u32, Vec<(u64, String)>),
     /// The current session has been terminated.
     Terminated(),
+    /// Send an error message to the client.
+    Error(String),
 }
 
 /// A real-time message sent from the client over WebSocket.
@@ -76,6 +103,8 @@ pub enum WsClient {
     Create(),
     /// Close a specific shell.
     Close(u32),
+    /// Move a shell window to a new position.
+    Move(u32, WsWinsize),
     /// Add user data to a given shell.
     Data(u32, #[serde(with = "serde_bytes")] Vec<u8>),
     /// Subscribe to a shell, starting at a given chunk index.
@@ -166,6 +195,18 @@ async fn handle_socket(mut socket: WebSocket, session: Arc<Session>) -> Result<(
             }
             WsClient::Close(id) => {
                 update_tx.send(ServerMessage::CloseShell(id)).await?;
+            }
+            WsClient::Move(id, winsize) => {
+                if let Err(err) = session.move_shell(id, winsize) {
+                    send(&mut socket, WsServer::Error(err.to_string())).await?;
+                } else {
+                    let msg = ServerMessage::Resize(TerminalSize {
+                        id,
+                        rows: winsize.rows as u32,
+                        cols: winsize.cols as u32,
+                    });
+                    session.update_tx().send(msg).await?;
+                }
             }
             WsClient::Data(id, data) => {
                 let data = TerminalInput { id, data };

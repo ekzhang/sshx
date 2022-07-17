@@ -1,6 +1,7 @@
 //! Core logic for sshx sessions, independent of message transport.
 
 use std::collections::HashMap;
+use std::ops::DerefMut;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
 
@@ -14,6 +15,7 @@ use tokio_stream::{wrappers::WatchStream, Stream};
 use tracing::debug;
 
 use crate::utils::Shutdown;
+use crate::web::WsWinsize;
 
 /// In-memory state for a single sshx session.
 #[derive(Debug)]
@@ -30,8 +32,8 @@ pub struct Session {
     /// Timestamp of the last client message from an active connection.
     updated: Mutex<Instant>,
 
-    /// Watch channel source for the sorted list of open shells.
-    ids: watch::Sender<Vec<u32>>,
+    /// Watch channel source for the sorted list of open shells and sizes.
+    source: watch::Sender<Vec<(u32, WsWinsize)>>,
 
     /// Sender end of a channel that buffers messages for the client.
     update_tx: async_channel::Sender<ServerMessage>,
@@ -69,7 +71,7 @@ impl Session {
             counter: AtomicU32::new(0),
             created: now,
             updated: Mutex::new(now),
-            ids: watch::channel(Vec::new()).0,
+            source: watch::channel(Vec::new()).0,
             update_tx,
             update_rx,
             shutdown: Shutdown::new(),
@@ -93,8 +95,8 @@ impl Session {
     }
 
     /// Receive a notification every time the set of shells is changed.
-    pub fn subscribe_shells(&self) -> impl Stream<Item = Vec<u32>> + 'static {
-        WatchStream::new(self.ids.subscribe())
+    pub fn subscribe_shells(&self) -> impl Stream<Item = Vec<(u32, WsWinsize)>> + 'static {
+        WatchStream::new(self.source.subscribe())
     }
 
     /// Subscribe for chunks from a shell, until it is closed.
@@ -134,13 +136,13 @@ impl Session {
     /// Add a new shell to the session.
     pub fn add_shell(&self, id: u32) -> Result<()> {
         use dashmap::mapref::entry::Entry::*;
-        match self.shells.entry(id) {
+        let _guard = match self.shells.entry(id) {
             Occupied(_) => bail!("shell already exists with id={id}"),
             Vacant(v) => v.insert(State::default()),
         };
-        self.ids.send_modify(|ids| {
-            let index = ids.partition_point(|&x| x < id);
-            ids.insert(index, id);
+        self.source.send_modify(|source| {
+            let index = source.partition_point(|&(x, _)| x < id);
+            source.insert(index, (id, WsWinsize::default()));
         });
         Ok(())
     }
@@ -155,21 +157,37 @@ impl Session {
             Some(_) => return Ok(()),
             None => bail!("cannot close shell with id={id}, does not exist"),
         }
-        self.ids.send_modify(|ids| {
-            ids.retain(|&x| x != id);
+        self.source.send_modify(|source| {
+            source.retain(|&(x, _)| x != id);
+        });
+        Ok(())
+    }
+
+    fn get_shell_mut(&self, id: u32) -> Result<impl DerefMut<Target = State> + '_> {
+        match self.shells.get_mut(&id) {
+            Some(shell) if !shell.closed => Ok(shell),
+            Some(_) => bail!("cannot mutate shell with id={id}, already closed"),
+            None => bail!("cannot mutate shell with id={id}, does not exist"),
+        }
+    }
+
+    /// Change the size of a terminal, notifying clients if necessary.
+    pub fn move_shell(&self, id: u32, winsize: WsWinsize) -> Result<()> {
+        let _guard = self.get_shell_mut(id)?; // Ensures mutual exclusion.
+        self.source.send_modify(|source| {
+            for (ref_id, ref_winsize) in source {
+                if *ref_id == id {
+                    *ref_winsize = winsize;
+                }
+            }
         });
         Ok(())
     }
 
     /// Receive new data into the session.
     pub fn add_data(&self, id: u32, data: &str, seq: u64) -> Result<()> {
-        let mut shell = match self.shells.get_mut(&id) {
-            Some(shell) if !shell.closed => shell,
-            Some(_) => bail!("cannot add data to shell with id={id}, already closed"),
-            None => bail!("cannot add data to shell with id={id}, does not exist"),
-        };
+        let mut shell = self.get_shell_mut(id)?;
 
-        debug_assert!(!shell.closed); // guaranteed by line above
         if seq <= shell.seqnum && seq + data.len() as u64 > shell.seqnum {
             let start = shell.seqnum - seq;
             let segment = data

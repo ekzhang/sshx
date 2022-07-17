@@ -43,6 +43,8 @@ enum ShellData {
     Data(Vec<u8>),
     /// Information about the server's current sequence number.
     Sync(u64),
+    /// Resize the shell to a different number of rows and columns.
+    Size(u32, u32),
 }
 
 impl Controller {
@@ -158,6 +160,13 @@ impl Controller {
                         }
                     }
                 }
+                ServerMessage::Resize(msg) => {
+                    if let Some(sender) = self.shells_tx.get(&msg.id) {
+                        sender.send(ShellData::Size(msg.rows, msg.cols)).await.ok();
+                    } else {
+                        warn!(%msg.id, "received resize for non-existing shell");
+                    }
+                }
                 ServerMessage::Error(err) => {
                     error!(?err, "error received from server");
                 }
@@ -215,7 +224,7 @@ async fn shell_task(
     output_tx.send(ClientMessage::CreatedShell(id)).await?;
 
     let mut term = Terminal::new(shell).await?;
-    term.set_winsize(24, 80)?; // TODO: Make this reactive.
+    term.set_winsize(24, 80)?;
 
     let mut content = String::new(); // content from the terminal
     let mut decoder = UTF_8.new_decoder(); // UTF-8 streaming decoder
@@ -248,6 +257,9 @@ async fn shell_task(
                                 seq = seq2 as usize;
                             }
                         }
+                    }
+                    Some(ShellData::Size(rows, cols)) => {
+                        term.set_winsize(rows as u16, cols as u16)?;
                     }
                     None => finished = true, // Server closed this shell.
                 }

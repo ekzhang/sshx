@@ -28,6 +28,13 @@ message TerminalInput {
   bytes data = 2; // Binary sequence of terminal data.
 }
 
+// Pair of a terminal ID and its associated size.
+message TerminalSize {
+  uint32 id = 1;   // ID of the shell.
+  uint32 rows = 2; // Number of rows for the terminal.
+  uint32 cols = 3; // Number of columns for the terminal.
+}
+
 // Request to open an sshx session.
 message OpenRequest {
   string origin = 1; // Web origin of the server.
@@ -63,6 +70,7 @@ message ServerUpdate {
     uint32 create_shell = 2;  // ID of a new shell.
     uint32 close_shell = 3;   // ID of a shell to close.
     SequenceNumbers sync = 4; // Periodic sequence number sync.
+    TerminalSize resize = 5;  // Resize a terminal window.
     string error = 15;
   }
 }

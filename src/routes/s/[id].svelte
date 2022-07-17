@@ -6,6 +6,7 @@
 
   import { Srocket } from "$lib/srocket";
   import type { WsClient, WsServer, WsWinsize } from "$lib/types";
+  import Toolbar from "$lib/Toolbar.svelte";
   import XTerm from "$lib/XTerm.svelte";
   import logotypeDark from "$lib/assets/logotype-dark.svg";
 
@@ -75,6 +76,8 @@
 </script>
 
 <main class="p-8">
+  <Toolbar />
+
   <img class="h-16 -mx-2 mb-2" src={logotypeDark} alt="sshx logo" />
 
   <p>

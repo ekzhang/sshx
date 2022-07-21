@@ -34,7 +34,7 @@
           });
         } else if (message.shells) {
           shells = message.shells;
-          for (const [id, _winsize] of message.shells) {
+          for (const [id] of message.shells) {
             if (!subscriptions.has(id)) {
               seqnums[id] ??= 0;
               subscriptions.add(id);

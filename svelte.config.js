@@ -16,18 +16,6 @@ const config = {
       fallback: "spa.html", // SPA mode
       precompress: true,
     }),
-
-    vite: {
-      server: {
-        proxy: {
-          "/api": {
-            target: "http://[::1]:8051",
-            changeOrigin: true,
-            ws: true,
-          },
-        },
-      },
-    },
   },
 };
 

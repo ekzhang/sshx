@@ -74,6 +74,8 @@
 </script>
 
 <script lang="ts">
+  import { browser } from "$app/env";
+
   import { createEventDispatcher, onDestroy, onMount } from "svelte";
   import type { Terminal } from "xterm";
   import { Buffer } from "buffer";
@@ -82,6 +84,9 @@
   import themes from "./themes";
 
   const theme = themes.defaultDark;
+
+  /** Used to determine Cmd versus Ctrl keyboard shortcuts. */
+  const isMac = browser && navigator.platform.startsWith("Mac");
 
   const dispatch = createEventDispatcher<{
     data: Uint8Array;
@@ -132,6 +137,26 @@
       theme,
     });
     patchXTerm(term);
+
+    // Keyboard shortcuts for natural text editing.
+    term.attachCustomKeyEventHandler((event) => {
+      if (
+        (isMac && event.metaKey && !event.ctrlKey && !event.altKey) ||
+        (!isMac && !event.metaKey && event.ctrlKey && !event.altKey)
+      ) {
+        if (event.key === "ArrowLeft") {
+          dispatch("data", new Uint8Array([0x01]));
+          return false;
+        } else if (event.key === "ArrowRight") {
+          dispatch("data", new Uint8Array([0x05]));
+          return false;
+        } else if (event.key === "Backspace") {
+          dispatch("data", new Uint8Array([0x15]));
+          return false;
+        }
+      }
+      return true;
+    });
 
     term.loadAddon(new WebLinksAddon());
 

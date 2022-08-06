@@ -91,6 +91,7 @@
   const dispatch = createEventDispatcher<{
     data: Uint8Array;
     move: { x: number; y: number };
+    moving: { x: number; y: number };
     close: void;
   }>();
 
@@ -190,29 +191,38 @@
       dragging = true;
       [prevMouseX, prevMouseY] = [event.pageX, event.pageY];
     } else if (dragging) {
-      const offset = {
+      dispatch("moving", {
         x: event.pageX - prevMouseX,
         y: event.pageY - prevMouseY,
-      };
-      if (offset.x !== 0 || offset.y !== 0) {
-        dispatch("move", offset);
-        [prevMouseX, prevMouseY] = [event.pageX, event.pageY];
-      }
+      });
     }
   }
 
-  function handleDragEnd() {
+  function handleDragEnd(event: MouseEvent) {
+    if (!dragging) return;
+    dispatch("move", {
+      x: event.pageX - prevMouseX,
+      y: event.pageY - prevMouseY,
+    });
     dragging = false;
   }
+
+  onMount(() => {
+    window.addEventListener("mousemove", handleDrag);
+    window.addEventListener("mouseup", handleDragEnd);
+    window.addEventListener("mouseleave", handleDragEnd);
+    return () => {
+      window.removeEventListener("mousemove", handleDrag);
+      window.removeEventListener("mouseup", handleDragEnd);
+      window.removeEventListener("mouseleave", handleDragEnd);
+    };
+  });
 </script>
 
 <div
   class="term-container opacity-95"
   class:dragging
   style:background={theme.background}
-  on:mousemove={handleDrag}
-  on:mouseup={handleDragEnd}
-  on:mouseleave={handleDragEnd}
 >
   <div
     class="flex select-none"

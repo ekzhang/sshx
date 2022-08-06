@@ -61,9 +61,9 @@ fn backend(state: Arc<ServerState>) -> Router {
 #[serde(rename_all = "camelCase")]
 pub struct WsWinsize {
     /// The top-left x-coordinate of the window, offset from origin.
-    pub x: f32,
+    pub x: i32,
     /// The top-left y-coordinate of the window, offset from origin.
-    pub y: f32,
+    pub y: i32,
     /// The number of rows in the window.
     pub rows: u16,
     /// The number of columns in the terminal.
@@ -73,8 +73,8 @@ pub struct WsWinsize {
 impl Default for WsWinsize {
     fn default() -> Self {
         WsWinsize {
-            x: 0.0,
-            y: 0.0,
+            x: 0,
+            y: 0,
             rows: 24,
             cols: 80,
         }

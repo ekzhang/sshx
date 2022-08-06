@@ -8,6 +8,7 @@
   import type { WsClient, WsServer, WsWinsize } from "$lib/types";
   import Toolbar from "$lib/Toolbar.svelte";
   import XTerm from "$lib/XTerm.svelte";
+  import Sliding from "$lib/Sliding.svelte";
 
   let srocket: Srocket<WsServer, WsClient> | null = null;
 
@@ -19,7 +20,8 @@
   const seqnums: Record<number, number> = {};
   let shells: [number, WsWinsize][] = [];
   let subscriptions = new Set<number>();
-  const pos: Record<number, { x: number; y: number }> = {};
+  let movingOffset = [-1, 0, 0];
+  let movingOffsetDone = false;
 
   onMount(() => {
     srocket = new Srocket<WsServer, WsClient>(`/api/s/${$page.params.id}`, {
@@ -34,6 +36,9 @@
           });
         } else if (message.shells) {
           shells = message.shells;
+          if (movingOffsetDone) {
+            movingOffset = [-1, 0, 0];
+          }
           for (const [id] of message.shells) {
             if (!subscriptions.has(id)) {
               seqnums[id] ??= 0;
@@ -89,26 +94,35 @@
     {/if}
   </div>
 
-  <div class="py-6">
-    {#each shells as [id, _winsize] (id)}
-      <div
-        class="inline-block"
-        style:transform="translate({[pos[id]?.x ?? 0]}px, {pos[id]?.y ?? 0}px)"
-        transition:fade|local
-      >
-        <XTerm
-          rows={24}
-          cols={80}
-          bind:write={writers[id]}
-          on:data={({ detail }) => handleData(id, detail)}
-          on:move={({ detail }) => {
-            pos[id] = {
-              x: (pos[id]?.x ?? 0) + detail.x,
-              y: (pos[id]?.y ?? 0) + detail.y,
-            };
-          }}
-          on:close={() => srocket?.send({ close: id })}
-        />
+  <div class="absolute inset-0 flex justify-center items-center">
+    {#each shells as [id, winsize] (id)}
+      <div class="absolute" transition:fade|local>
+        <Sliding
+          x={winsize.x + (id === movingOffset[0] ? movingOffset[1] : 0)}
+          y={winsize.y + (id === movingOffset[0] ? movingOffset[2] : 0)}
+        >
+          <XTerm
+            rows={winsize.rows}
+            cols={winsize.cols}
+            bind:write={writers[id]}
+            on:data={({ detail }) => handleData(id, detail)}
+            on:move={({ detail }) => {
+              movingOffsetDone = true;
+              const newWinsize = {
+                x: winsize.x + detail.x,
+                y: winsize.y + detail.y,
+                rows: winsize.rows,
+                cols: winsize.cols,
+              };
+              srocket?.send({ move: [id, newWinsize] });
+            }}
+            on:moving={({ detail }) => {
+              movingOffset = [id, detail.x, detail.y];
+              movingOffsetDone = false;
+            }}
+            on:close={() => srocket?.send({ close: id })}
+          />
+        </Sliding>
       </div>
     {/each}
   </div>

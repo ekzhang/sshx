@@ -1,7 +1,7 @@
 <script lang="ts">
   import { page } from "$app/stores";
 
-  import { onDestroy, onMount, tick } from "svelte";
+  import { onDestroy, onMount, tick, beforeUpdate, afterUpdate } from "svelte";
   import { fade } from "svelte/transition";
 
   import { Srocket } from "$lib/srocket";
@@ -74,9 +74,17 @@
 
   onDestroy(() => srocket?.dispose());
 
-  function handleData(id: number, data: Uint8Array) {
-    srocket?.send({ data: [id, data] });
-  }
+  // Stupid hack to preserve input focus when terminals are reordered.
+  // See: https://github.com/sveltejs/svelte/issues/3973
+  let activeElement: Element | null = null;
+
+  beforeUpdate(() => {
+    activeElement = document.activeElement;
+  });
+
+  afterUpdate(() => {
+    if (activeElement instanceof HTMLElement) activeElement.focus();
+  });
 </script>
 
 <main class="p-8">
@@ -108,7 +116,7 @@
           rows={winsize.rows}
           cols={winsize.cols}
           bind:write={writers[id]}
-          on:data={({ detail }) => handleData(id, detail)}
+          on:data={({ detail }) => srocket?.send({ data: [id, detail] })}
           on:move={({ detail }) => {
             movingOffsetDone = true;
             const newWinsize = {

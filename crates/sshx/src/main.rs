@@ -1,4 +1,4 @@
-use ansi_term::Color::{Cyan, Fixed, Yellow};
+use ansi_term::Color::{Cyan, Fixed, Green, Yellow};
 use anyhow::Result;
 use clap::Parser;
 use sshx::{controller::Controller, terminal::get_default_shell};
@@ -25,23 +25,19 @@ fn print_greeting(shell: &str, controller: &Controller) {
 
     println!(
         r#"
-╭───────────────────────────────────────────────────────────────╮
-│                                                               │
-│  {title}  │
-│                                                               │
-│  {shell}   {shell_v:50}  │
-│  {web_url} {url}{url_space}  │
-│                                                               │
-│  Your terminal is accessible on the web.                      │
-│                                                               │
-╰───────────────────────────────────────────────────────────────╯
+  {sshx} {version}
+
+  {arr}  Link:  {link_v}
+  {arr}  Shell: {shell_v}
+
+  {online_msg}
 "#,
-        title = Cyan.paint(format!("sshx {version_str:54}")),
-        shell = Fixed(8).paint("shell:"),
-        shell_v = shell,
-        web_url = Fixed(8).paint("web url:"),
-        url = Yellow.underline().paint(controller.url()),
-        url_space = " ".repeat(50 - controller.url().len()),
+        sshx = Green.bold().paint("sshx"),
+        version = Green.paint(&version_str),
+        arr = Green.paint("➜"),
+        link_v = Cyan.underline().paint(controller.url()),
+        shell_v = Fixed(8).paint(shell),
+        online_msg = Yellow.paint("Your terminal session is online!"),
     );
 }
 

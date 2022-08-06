@@ -20,7 +20,7 @@ use crate::terminal::Terminal;
 /// Interval for sending empty heartbeat messages to the server.
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(2);
 
-/// Handles a singel session's communication with the remote server.
+/// Handles a single session's communication with the remote server.
 pub struct Controller {
     client: SshxServiceClient<Channel>,
     shell: String,

@@ -18,7 +18,7 @@ export type WsServer = {
 export type WsClient = {
   create?: [];
   close?: number;
-  move?: [number, WsWinsize];
+  move?: [number, WsWinsize | null];
   data?: [number, Uint8Array];
   subscribe?: [number, number];
 };

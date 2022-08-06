@@ -93,6 +93,7 @@
     move: { x: number; y: number };
     moving: { x: number; y: number };
     close: void;
+    focus: void;
   }>();
 
   export let rows: number, cols: number;
@@ -219,7 +220,11 @@
   });
 </script>
 
-<div class="term-container opacity-95" style:background={theme.background}>
+<div
+  class="term-container opacity-95"
+  style:background={theme.background}
+  on:mousedown={() => dispatch("focus")}
+>
   <div
     class="flex select-none"
     on:mousedown={(event) => handleDrag(event, true)}

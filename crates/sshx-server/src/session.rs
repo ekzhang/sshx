@@ -32,7 +32,7 @@ pub struct Session {
     /// Timestamp of the last client message from an active connection.
     updated: Mutex<Instant>,
 
-    /// Watch channel source for the sorted list of open shells and sizes.
+    /// Watch channel source for the ordered list of open shells and sizes.
     source: watch::Sender<Vec<(u32, WsWinsize)>>,
 
     /// Sender end of a channel that buffers messages for the client.
@@ -141,8 +141,7 @@ impl Session {
             Vacant(v) => v.insert(State::default()),
         };
         self.source.send_modify(|source| {
-            let index = source.partition_point(|&(x, _)| x < id);
-            source.insert(index, (id, WsWinsize::default()));
+            source.push((id, WsWinsize::default()));
         });
         Ok(())
     }
@@ -172,13 +171,12 @@ impl Session {
     }
 
     /// Change the size of a terminal, notifying clients if necessary.
-    pub fn move_shell(&self, id: u32, winsize: WsWinsize) -> Result<()> {
+    pub fn move_shell(&self, id: u32, winsize: Option<WsWinsize>) -> Result<()> {
         let _guard = self.get_shell_mut(id)?; // Ensures mutual exclusion.
         self.source.send_modify(|source| {
-            for (ref_id, ref_winsize) in source {
-                if *ref_id == id {
-                    *ref_winsize = winsize;
-                }
+            if let Some(idx) = source.iter().position(|&(sid, _)| sid == id) {
+                let (_, oldsize) = source.remove(idx);
+                source.push((id, winsize.unwrap_or(oldsize)));
             }
         });
         Ok(())

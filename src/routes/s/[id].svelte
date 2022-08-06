@@ -124,6 +124,7 @@
             movingOffsetDone = false;
           }}
           on:close={() => srocket?.send({ close: id })}
+          on:focus={() => srocket?.send({ move: [id, null] })}
         />
       </div>
     {/each}

@@ -103,8 +103,8 @@ pub enum WsClient {
     Create(),
     /// Close a specific shell.
     Close(u32),
-    /// Move a shell window to a new position.
-    Move(u32, WsWinsize),
+    /// Move a shell window to a new position and focus it.
+    Move(u32, Option<WsWinsize>),
     /// Add user data to a given shell.
     Data(u32, #[serde(with = "serde_bytes")] Vec<u8>),
     /// Subscribe to a shell, starting at a given chunk index.
@@ -199,7 +199,9 @@ async fn handle_socket(mut socket: WebSocket, session: Arc<Session>) -> Result<(
             WsClient::Move(id, winsize) => {
                 if let Err(err) = session.move_shell(id, winsize) {
                     send(&mut socket, WsServer::Error(err.to_string())).await?;
-                } else {
+                    continue;
+                }
+                if let Some(winsize) = winsize {
                     let msg = ServerMessage::Resize(TerminalSize {
                         id,
                         rows: winsize.rows as u32,

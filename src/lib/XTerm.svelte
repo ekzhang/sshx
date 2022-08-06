@@ -219,11 +219,7 @@
   });
 </script>
 
-<div
-  class="term-container opacity-95"
-  class:dragging
-  style:background={theme.background}
->
+<div class="term-container opacity-95" style:background={theme.background}>
   <div
     class="flex select-none"
     on:mousedown={(event) => handleDrag(event, true)}
@@ -266,9 +262,5 @@
 <style lang="postcss">
   .term-container {
     @apply inline-block rounded-lg border border-gray-600 transition-transform duration-200;
-  }
-
-  .term-container.dragging {
-    transform: scale(1.02);
   }
 </style>

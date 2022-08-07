@@ -14,11 +14,11 @@
 
 use std::{error::Error as StdError, future::Future, net::SocketAddr, sync::Arc};
 
-use anyhow::{anyhow, Result};
-use axum::{body::HttpBody, http::uri::Scheme};
+use anyhow::Result;
+use axum::body::HttpBody;
 use grpc::GrpcServer;
 use hyper::{
-    header::{CONTENT_TYPE, HOST},
+    header::CONTENT_TYPE,
     server::{conn::AddrIncoming, Server as HyperServer},
     service::make_service_fn,
     Body, Request,
@@ -26,9 +26,8 @@ use hyper::{
 use nanoid::nanoid;
 use sshx_core::proto::{sshx_service_server::SshxServiceServer, FILE_DESCRIPTOR_SET};
 use tonic::transport::Server as TonicServer;
-use tower::{service_fn, steer::Steer, ServiceBuilder, ServiceExt};
-use tower_http::{services::Redirect, trace::TraceLayer};
-use tracing::info;
+use tower::{steer::Steer, ServiceBuilder, ServiceExt};
+use tower_http::trace::TraceLayer;
 use utils::Shutdown;
 
 use crate::state::ServerState;
@@ -116,31 +115,12 @@ async fn make_server(
         .map_response(|r| r.map(|b| b.map_err(BoxError::from).boxed_unsync()))
         .boxed_clone();
 
-    let tls_redirect_service = service_fn(|req: Request<Body>| async {
-        let uri = req.uri();
-        info!(method = ?req.method(), %uri, "redirecting to https");
-        let mut parts = uri.clone().into_parts();
-        parts.scheme = Some(Scheme::HTTPS);
-        parts.authority = Some(
-            req.headers()
-                .get(HOST)
-                .ok_or_else(|| anyhow!("tls redirect missing host"))?
-                .to_str()?
-                .parse()?,
-        );
-        Ok(Redirect::permanent(parts.try_into()?).oneshot(req).await?)
-    })
-    .boxed_clone();
-
     let svc = Steer::new(
-        [http_service, grpc_service, tls_redirect_service],
+        [http_service, grpc_service],
         |req: &Request<Body>, _services: &[_]| {
             let headers = req.headers();
-            match (headers.get("x-forwarded-proto"), headers.get(CONTENT_TYPE)) {
-                // Redirect proxied HTTP to HTTPS, see here for details:
-                // https://fly.io/blog/always-be-connecting-with-https/
-                (Some(proto), _) if proto == "http" => 2,
-                (_, Some(content)) if content == "application/grpc" => 1,
+            match headers.get(CONTENT_TYPE) {
+                Some(content) if content == "application/grpc" => 1,
                 _ => 0,
             }
         },

@@ -1,7 +1,7 @@
 use ansi_term::Color::{Cyan, Fixed, Green, Yellow};
 use anyhow::Result;
 use clap::Parser;
-use sshx::{controller::Controller, terminal::get_default_shell};
+use sshx::{controller::Controller, runner::Runner, terminal::get_default_shell};
 use tokio::signal;
 
 /// Web-based, real-time collaboration for your remote terminal.
@@ -48,7 +48,8 @@ async fn main() -> Result<()> {
     let args = Args::parse();
     let shell = args.shell.unwrap_or_else(get_default_shell);
 
-    let mut controller = Controller::new(&args.server, &shell).await?;
+    let runner = Runner::Shell(shell.clone());
+    let mut controller = Controller::new(&args.server, runner).await?;
     print_greeting(&shell, &controller);
 
     let exit_signal = signal::ctrl_c();

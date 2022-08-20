@@ -3,19 +3,17 @@
 use std::collections::HashMap;
 
 use anyhow::{Context, Result};
-use encoding_rs::{CoderResult, UTF_8};
 use sshx_core::proto::{
     client_update::ClientMessage, server_update::ServerMessage,
-    sshx_service_client::SshxServiceClient, ClientUpdate, CloseRequest, OpenRequest, TerminalData,
+    sshx_service_client::SshxServiceClient, ClientUpdate, CloseRequest, OpenRequest,
 };
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::mpsc;
 use tokio::time::{self, Duration, Instant, MissedTickBehavior};
 use tokio_stream::{wrappers::ReceiverStream, StreamExt};
 use tonic::transport::Channel;
 use tracing::{error, info, warn};
 
-use crate::terminal::Terminal;
+use crate::runner::{Runner, ShellData};
 
 /// Interval for sending empty heartbeat messages to the server.
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(2);
@@ -23,7 +21,7 @@ const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(2);
 /// Handles a single session's communication with the remote server.
 pub struct Controller {
     client: SshxServiceClient<Channel>,
-    shell: String,
+    runner: Runner,
 
     name: String,
     token: String,
@@ -37,19 +35,9 @@ pub struct Controller {
     output_rx: mpsc::Receiver<ClientMessage>,
 }
 
-/// Internal message routed to shell tasks.
-enum ShellData {
-    /// Sequence of input bytes from the server.
-    Data(Vec<u8>),
-    /// Information about the server's current sequence number.
-    Sync(u64),
-    /// Resize the shell to a different number of rows and columns.
-    Size(u32, u32),
-}
-
 impl Controller {
     /// Construct a new controller, connecting to the remote server.
-    pub async fn new(origin: &str, shell: &str) -> Result<Self> {
+    pub async fn new(origin: &str, runner: Runner) -> Result<Self> {
         info!(%origin, "connecting to server");
         let mut client = SshxServiceClient::connect(String::from(origin)).await?;
         let req = OpenRequest {
@@ -59,7 +47,7 @@ impl Controller {
         let (output_tx, output_rx) = mpsc::channel(64);
         Ok(Self {
             client,
-            shell: shell.into(),
+            runner,
             name: resp.name,
             token: resp.token,
             url: resp.url,
@@ -180,10 +168,15 @@ impl Controller {
         let opt = self.shells_tx.insert(id, shell_tx);
         debug_assert!(opt.is_none(), "shell ID cannot be in existing tasks");
 
-        let shell = self.shell.clone();
+        let runner = self.runner.clone();
         let output_tx = self.output_tx.clone();
         tokio::spawn(async move {
-            if let Err(err) = shell_task(id, &shell, shell_rx, output_tx.clone()).await {
+            info!(%id, "spawning new shell");
+            if let Err(err) = output_tx.send(ClientMessage::CreatedShell(id)).await {
+                error!(%id, ?err, "failed to send shell creation message");
+                return;
+            }
+            if let Err(err) = runner.run(id, shell_rx, output_tx.clone()).await {
                 let err = ClientMessage::Error(err.to_string());
                 output_tx.send(err).await.ok();
             }
@@ -203,7 +196,7 @@ impl Controller {
     }
 }
 
-/// Attempt to send a client message to the server.
+/// Attempt to send a client message over an update channel.
 async fn send_msg(tx: &mpsc::Sender<ClientUpdate>, message: ClientMessage) -> Result<()> {
     let update = ClientUpdate {
         client_message: Some(message),
@@ -211,87 +204,4 @@ async fn send_msg(tx: &mpsc::Sender<ClientUpdate>, message: ClientMessage) -> Re
     tx.send(update)
         .await
         .context("failed to send message to server")
-}
-
-/// Asynchronous task handling a single shell within the session.
-async fn shell_task(
-    id: u32,
-    shell: &str,
-    mut shell_rx: mpsc::Receiver<ShellData>,
-    output_tx: mpsc::Sender<ClientMessage>,
-) -> Result<()> {
-    info!(%shell, "spawning new shell");
-    output_tx.send(ClientMessage::CreatedShell(id)).await?;
-
-    let mut term = Terminal::new(shell).await?;
-    term.set_winsize(24, 80)?;
-
-    let mut content = String::new(); // content from the terminal
-    let mut decoder = UTF_8.new_decoder(); // UTF-8 streaming decoder
-    let mut seq = 0; // our log of the server's sequence number
-    let mut seq_outdated = 0; // number of times seq has been outdated
-    let mut buf = [0u8; 4096]; // buffer for reading
-    let mut finished = false; // set when this is done
-
-    while !finished {
-        tokio::select! {
-            result = term.read(&mut buf) => {
-                let n = result?;
-                if n == 0 {
-                    finished = true;
-                } else {
-                    content.reserve(decoder.max_utf8_buffer_length(n).unwrap());
-                    let (result, _, _) = decoder.decode_to_string(&buf[..n], &mut content, false);
-                    debug_assert!(result == CoderResult::InputEmpty);
-                }
-            }
-            item = shell_rx.recv() => {
-                match item {
-                    Some(ShellData::Data(data)) => {
-                        term.write_all(&data).await?;
-                    }
-                    Some(ShellData::Sync(seq2)) => {
-                        if seq2 < seq as u64 {
-                            seq_outdated += 1;
-                            if seq_outdated >= 3 {
-                                seq = seq2 as usize;
-                            }
-                        }
-                    }
-                    Some(ShellData::Size(rows, cols)) => {
-                        term.set_winsize(rows as u16, cols as u16)?;
-                    }
-                    None => finished = true, // Server closed this shell.
-                }
-            }
-        }
-
-        if finished {
-            content.reserve(decoder.max_utf8_buffer_length(0).unwrap());
-            let (result, _, _) = decoder.decode_to_string(&[], &mut content, true);
-            debug_assert!(result == CoderResult::InputEmpty);
-        }
-
-        // Send data if the server has fallen behind.
-        if content.len() > seq {
-            seq = prev_char_boundary(&content, seq);
-            let data = TerminalData {
-                id,
-                data: content[seq..].into(),
-                seq: seq as u64,
-            };
-            output_tx.send(ClientMessage::Data(data)).await?;
-            seq = content.len();
-            seq_outdated = 0;
-        }
-    }
-    Ok(())
-}
-
-/// Find the last char boundary before an index in O(1) time.
-fn prev_char_boundary(s: &str, i: usize) -> usize {
-    (0..=i)
-        .rev()
-        .find(|&j| s.is_char_boundary(j))
-        .expect("no previous char boundary")
 }

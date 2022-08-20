@@ -7,4 +7,5 @@
 #![warn(missing_docs)]
 
 pub mod controller;
+pub mod runner;
 pub mod terminal;

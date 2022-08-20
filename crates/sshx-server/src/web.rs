@@ -57,7 +57,7 @@ fn backend(state: Arc<ServerState>) -> Router {
 }
 
 /// Real-time message conveying the position and size of a terminal.
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct WsWinsize {
     /// The top-left x-coordinate of the window, offset from origin.

@@ -1,14 +1,18 @@
+use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
+use std::time::Duration;
 
 use anyhow::{ensure, Result};
 use futures_util::{SinkExt, StreamExt};
 use hyper::{server::conn::AddrIncoming, StatusCode};
 use sshx_core::proto::sshx_service_client::SshxServiceClient;
 use sshx_server::state::ServerState;
+use sshx_server::web::{WsServer, WsWinsize};
 use sshx_server::Server;
 use sshx_server::{session::Session, web::WsClient};
 use tokio::net::{TcpListener, TcpStream};
+use tokio::time;
 use tokio_tungstenite::{tungstenite::Message, MaybeTlsStream, WebSocketStream};
 use tonic::transport::Channel;
 
@@ -79,6 +83,10 @@ impl Drop for TestServer {
 /// A WebSocket client that interacts with the server, used for testing.
 pub struct ClientSocket {
     inner: WebSocketStream<MaybeTlsStream<TcpStream>>,
+
+    pub shells: Vec<(u32, WsWinsize)>,
+    pub data: HashMap<u32, String>,
+    pub terminated: bool,
 }
 
 impl ClientSocket {
@@ -86,7 +94,12 @@ impl ClientSocket {
     pub async fn connect(uri: &str) -> Result<Self> {
         let (stream, resp) = tokio_tungstenite::connect_async(uri).await?;
         ensure!(resp.status() == StatusCode::SWITCHING_PROTOCOLS);
-        Ok(Self { inner: stream })
+        Ok(Self {
+            inner: stream,
+            shells: Vec::new(),
+            data: HashMap::new(),
+            terminated: false,
+        })
     }
 
     pub async fn send(&mut self, msg: WsClient) {
@@ -95,7 +108,7 @@ impl ClientSocket {
         self.inner.send(Message::Binary(buf)).await.unwrap();
     }
 
-    pub async fn recv(&mut self) -> Option<WsClient> {
+    async fn recv(&mut self) -> Option<WsServer> {
         loop {
             match self.inner.next().await.transpose().unwrap() {
                 Some(Message::Text(_)) => panic!("unexpected text message over WebSocket"),
@@ -114,5 +127,29 @@ impl ClientSocket {
             Message::Close(Some(frame)) => assert!(frame.code == code.into()),
             _ => panic!("unexpected non-close message over WebSocket: {:?}", msg),
         }
+    }
+
+    pub async fn flush(&mut self) {
+        const FLUSH_DURATION: Duration = Duration::from_millis(10);
+        let flush_task = async {
+            while let Some(msg) = self.recv().await {
+                match msg {
+                    WsServer::Shells(shells) => self.shells = shells,
+                    WsServer::Chunks(id, chunks) => {
+                        let value = self.data.entry(id).or_default();
+                        for (_, buf) in chunks {
+                            value.push_str(&buf);
+                        }
+                    }
+                    WsServer::Terminated() => self.terminated = true,
+                    WsServer::Error(err) => panic!("error received: {err}"),
+                }
+            }
+        };
+        time::timeout(FLUSH_DURATION, flush_task).await.ok();
+    }
+
+    pub fn read(&self, id: u32) -> &str {
+        self.data.get(&id).map(|s| &**s).unwrap_or("")
     }
 }

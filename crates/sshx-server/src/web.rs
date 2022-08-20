@@ -82,7 +82,7 @@ impl Default for WsWinsize {
 }
 
 /// A real-time message sent from the server over WebSocket.
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub enum WsServer {
     /// Notification when the set of open shells has changed.
@@ -96,7 +96,7 @@ pub enum WsServer {
 }
 
 /// A real-time message sent from the client over WebSocket.
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub enum WsClient {
     /// Create a new shell.

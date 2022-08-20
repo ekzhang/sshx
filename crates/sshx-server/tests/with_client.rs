@@ -17,7 +17,6 @@ async fn test_handshake() -> Result<()> {
 
 #[tokio::test]
 async fn test_command() -> Result<()> {
-    tracing_subscriber::fmt::try_init().ok();
     let server = TestServer::new().await?;
     let runner = Runner::Shell("/bin/bash".into());
     let mut controller = Controller::new(&server.endpoint(), runner).await?;
@@ -40,5 +39,18 @@ async fn test_command() -> Result<()> {
         _ = time::sleep(Duration::from_millis(1000)) => (),
     };
     controller.close().await?;
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_ws_missing() -> Result<()> {
+    let server = TestServer::new().await?;
+
+    let bad_endpoint = format!("ws://{}/not/an/endpoint", server.local_addr());
+    assert!(ClientSocket::connect(&bad_endpoint).await.is_err());
+
+    let mut stream = ClientSocket::connect(&server.ws_endpoint("foobar")).await?;
+    stream.expect_close(4404).await;
+
     Ok(())
 }

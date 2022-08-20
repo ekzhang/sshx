@@ -1,13 +1,15 @@
 use std::net::SocketAddr;
 use std::sync::Arc;
 
-use anyhow::Result;
-use hyper::server::conn::AddrIncoming;
+use anyhow::{ensure, Result};
+use futures_util::{SinkExt, StreamExt};
+use hyper::{server::conn::AddrIncoming, StatusCode};
 use sshx_core::proto::sshx_service_client::SshxServiceClient;
-use sshx_server::session::Session;
 use sshx_server::state::ServerState;
 use sshx_server::Server;
-use tokio::net::TcpListener;
+use sshx_server::{session::Session, web::WsClient};
+use tokio::net::{TcpListener, TcpStream};
+use tokio_tungstenite::{tungstenite::Message, MaybeTlsStream, WebSocketStream};
 use tonic::transport::Channel;
 
 /// An ephemeral, isolated server that is created for each test.
@@ -47,6 +49,11 @@ impl TestServer {
         format!("http://{}", self.local_addr)
     }
 
+    /// Returns the WebSocket endpoint for streaming connections to a session.
+    pub fn ws_endpoint(&self, name: &str) -> String {
+        format!("ws://{}/api/s/{}", self.local_addr, name)
+    }
+
     /// Creates a gRPC client connected to this server.
     pub async fn grpc_client(&self) -> Result<SshxServiceClient<Channel>> {
         Ok(SshxServiceClient::connect(self.endpoint()).await?)
@@ -66,5 +73,46 @@ impl TestServer {
 impl Drop for TestServer {
     fn drop(&mut self) {
         self.server.shutdown();
+    }
+}
+
+/// A WebSocket client that interacts with the server, used for testing.
+pub struct ClientSocket {
+    inner: WebSocketStream<MaybeTlsStream<TcpStream>>,
+}
+
+impl ClientSocket {
+    /// Connect to a WebSocket endpoint.
+    pub async fn connect(uri: &str) -> Result<Self> {
+        let (stream, resp) = tokio_tungstenite::connect_async(uri).await?;
+        ensure!(resp.status() == StatusCode::SWITCHING_PROTOCOLS);
+        Ok(Self { inner: stream })
+    }
+
+    pub async fn send(&mut self, msg: WsClient) {
+        let mut buf = Vec::new();
+        ciborium::ser::into_writer(&msg, &mut buf).unwrap();
+        self.inner.send(Message::Binary(buf)).await.unwrap();
+    }
+
+    pub async fn recv(&mut self) -> Option<WsClient> {
+        loop {
+            match self.inner.next().await.transpose().unwrap() {
+                Some(Message::Text(_)) => panic!("unexpected text message over WebSocket"),
+                Some(Message::Binary(msg)) => {
+                    break Some(ciborium::de::from_reader(&msg[..]).unwrap())
+                }
+                Some(_) => (), // ignore other message types, keep looping
+                None => break None,
+            }
+        }
+    }
+
+    pub async fn expect_close(&mut self, code: u16) {
+        let msg = self.inner.next().await.unwrap().unwrap();
+        match msg {
+            Message::Close(Some(frame)) => assert!(frame.code == code.into()),
+            _ => panic!("unexpected non-close message over WebSocket: {:?}", msg),
+        }
     }
 }

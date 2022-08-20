@@ -1,7 +1,3 @@
-<script lang="ts" context="module">
-  export const prerender = true;
-</script>
-
 <script lang="ts">
   import logotypeDark from "$lib/assets/logotype-dark.svg";
   import landingGraphic from "$lib/assets/landing-graphic.svg";

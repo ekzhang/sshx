@@ -9,8 +9,8 @@ export type SlideParams = {
 /** An action for spring-y transitions with global transformations. */
 export const slide: Action<HTMLElement, SlideParams> = (node, params) => {
   const pos = params ?? { x: 0, y: 0 };
-  const xpos = spring(pos.x, { stiffness: 0.3, damping: 0.8 });
-  const ypos = spring(pos.y, { stiffness: 0.3, damping: 0.8 });
+  const xpos = spring(pos.x, { stiffness: 0.6, damping: 1.6 });
+  const ypos = spring(pos.y, { stiffness: 0.6, damping: 1.6 });
 
   const callbackX = xpos.subscribe((x) => {
     pos.x = x;

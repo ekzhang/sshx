@@ -165,8 +165,8 @@ impl Session {
     fn get_shell_mut(&self, id: u32) -> Result<impl DerefMut<Target = State> + '_> {
         match self.shells.get_mut(&id) {
             Some(shell) if !shell.closed => Ok(shell),
-            Some(_) => bail!("cannot mutate shell with id={id}, already closed"),
-            None => bail!("cannot mutate shell with id={id}, does not exist"),
+            Some(_) => bail!("cannot update shell with id={id}, already closed"),
+            None => bail!("cannot update shell with id={id}, does not exist"),
         }
     }
 

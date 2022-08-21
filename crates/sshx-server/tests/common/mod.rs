@@ -7,10 +7,12 @@ use anyhow::{ensure, Result};
 use futures_util::{SinkExt, StreamExt};
 use hyper::{server::conn::AddrIncoming, StatusCode};
 use sshx_core::proto::sshx_service_client::SshxServiceClient;
-use sshx_server::state::ServerState;
-use sshx_server::web::{WsServer, WsWinsize};
-use sshx_server::Server;
-use sshx_server::{session::Session, web::WsClient};
+use sshx_server::{
+    session::Session,
+    state::ServerState,
+    web::{WsClient, WsServer, WsWinsize},
+    Server,
+};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::time;
 use tokio_tungstenite::{tungstenite::Message, MaybeTlsStream, WebSocketStream};
@@ -86,6 +88,7 @@ pub struct ClientSocket {
 
     pub shells: Vec<(u32, WsWinsize)>,
     pub data: HashMap<u32, String>,
+    pub errors: Vec<String>,
     pub terminated: bool,
 }
 
@@ -98,6 +101,7 @@ impl ClientSocket {
             inner: stream,
             shells: Vec::new(),
             data: HashMap::new(),
+            errors: Vec::new(),
             terminated: false,
         })
     }
@@ -142,7 +146,7 @@ impl ClientSocket {
                         }
                     }
                     WsServer::Terminated() => self.terminated = true,
-                    WsServer::Error(err) => panic!("error received: {err}"),
+                    WsServer::Error(err) => self.errors.push(err),
                 }
             }
         };

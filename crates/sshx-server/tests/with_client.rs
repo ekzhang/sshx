@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use sshx::{controller::Controller, runner::Runner};
 use sshx_core::proto::{server_update::ServerMessage, TerminalInput};
-use sshx_server::web::WsClient;
+use sshx_server::web::{WsClient, WsWinsize};
 use tokio::time::{self, Duration};
 
 use crate::common::*;
@@ -81,6 +81,49 @@ async fn test_ws_basic() -> Result<()> {
     stream.send(WsClient::Data(0, b" 123".to_vec())).await;
     stream.flush().await;
     assert_eq!(stream.read(0), "hello! 123");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_ws_resize() -> Result<()> {
+    let server = TestServer::new().await?;
+
+    let mut controller = Controller::new(&server.endpoint(), Runner::Echo).await?;
+    let name = controller.name().to_owned();
+    tokio::spawn(async move { controller.run().await });
+
+    let mut stream = ClientSocket::connect(&server.ws_endpoint(&name)).await?;
+
+    stream.send(WsClient::Move(0, None)).await; // error: does not exist yet!
+    stream.flush().await;
+    assert_eq!(stream.errors.len(), 1);
+
+    stream.send(WsClient::Create()).await;
+    stream.flush().await;
+    assert_eq!(stream.shells.len(), 1);
+    assert_eq!(stream.shells[0].1, WsWinsize::default());
+
+    let new_size = WsWinsize {
+        x: 42,
+        y: 105,
+        rows: 200,
+        cols: 20,
+    };
+    stream.send(WsClient::Move(0, Some(new_size))).await;
+    stream.send(WsClient::Move(1, Some(new_size))).await; // error: does not exist
+    stream.flush().await;
+    assert_eq!(stream.shells.len(), 1);
+    assert_eq!(stream.shells[0].1, new_size);
+    assert_eq!(stream.errors.len(), 2);
+
+    stream.send(WsClient::Close(0)).await;
+    stream.flush().await;
+    assert_eq!(stream.shells.len(), 0);
+
+    stream.send(WsClient::Move(0, None)).await; // error: shell was closed
+    stream.flush().await;
+    assert_eq!(stream.errors.len(), 3);
 
     Ok(())
 }

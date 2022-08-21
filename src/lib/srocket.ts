@@ -7,7 +7,7 @@
 
 import { encode, decode } from "cbor-x";
 
-/** How long to wait between reconnections. */
+/** How long to wait between reconnections (in milliseconds). */
 const RECONNECT_DELAY = 500;
 
 /** Number of messages to queue while disconnected. */

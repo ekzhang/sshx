@@ -3,7 +3,7 @@
   import { fade } from "svelte/transition";
 
   import { Srocket } from "./srocket";
-  import type { WsClient, WsServer, WsWinsize } from "./types";
+  import type { WsClient, WsServer, WsWinsize } from "./protocol";
   import Toolbar from "./ui/Toolbar.svelte";
   import XTerm from "./ui/XTerm.svelte";
   import { slide } from "./ui/slide";

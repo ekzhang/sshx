@@ -86,6 +86,7 @@ impl Drop for TestServer {
 pub struct ClientSocket {
     inner: WebSocketStream<MaybeTlsStream<TcpStream>>,
 
+    pub user_id: u32,
     pub shells: Vec<(u32, WsWinsize)>,
     pub data: HashMap<u32, String>,
     pub errors: Vec<String>,
@@ -99,6 +100,7 @@ impl ClientSocket {
         ensure!(resp.status() == StatusCode::SWITCHING_PROTOCOLS);
         Ok(Self {
             inner: stream,
+            user_id: 0,
             shells: Vec::new(),
             data: HashMap::new(),
             errors: Vec::new(),
@@ -138,6 +140,7 @@ impl ClientSocket {
         let flush_task = async {
             while let Some(msg) = self.recv().await {
                 match msg {
+                    WsServer::Hello(user_id) => self.user_id = user_id,
                     WsServer::Shells(shells) => self.shells = shells,
                     WsServer::Chunks(id, chunks) => {
                         let value = self.data.entry(id).or_default();

@@ -23,7 +23,7 @@ pub struct Session {
     /// In-memory state for the session.
     shells: DashMap<u32, State>,
 
-    /// Atomic counter to get new, unique shell IDs.
+    /// Atomic counter to get new, unique IDs.
     counter: AtomicU32,
 
     /// Read-only timestamp when the session was started.
@@ -68,7 +68,7 @@ impl Session {
         let (update_tx, update_rx) = async_channel::bounded(256);
         Session {
             shells: Default::default(),
-            counter: AtomicU32::new(0),
+            counter: AtomicU32::new(1),
             created: now,
             updated: Mutex::new(now),
             source: watch::channel(Vec::new()).0,
@@ -78,7 +78,7 @@ impl Session {
         }
     }
 
-    /// Returns the next shell ID.
+    /// Returns the next unique ID (used for shells and users).
     pub fn next_id(&self) -> u32 {
         self.counter.fetch_add(1, Ordering::Relaxed)
     }
@@ -95,7 +95,7 @@ impl Session {
     }
 
     /// Receive a notification every time the set of shells is changed.
-    pub fn subscribe_shells(&self) -> impl Stream<Item = Vec<(u32, WsWinsize)>> + 'static {
+    pub fn subscribe_shells(&self) -> impl Stream<Item = Vec<(u32, WsWinsize)>> + Unpin {
         WatchStream::new(self.source.subscribe())
     }
 

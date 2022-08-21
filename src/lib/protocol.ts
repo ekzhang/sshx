@@ -8,6 +8,7 @@ export type WsWinsize = {
 
 /** Server message type, see the Rust version. */
 export type WsServer = {
+  hello?: number;
   shells?: [number, WsWinsize][];
   chunks?: [number, [number, string][]];
   terminated?: [];

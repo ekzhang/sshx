@@ -18,6 +18,7 @@
   /** Bound "write" method for each terminal. */
   const writers: Record<number, (data: string) => void> = {};
   const seqnums: Record<number, number> = {};
+  let userId = 0;
   let shells: [number, WsWinsize][] = [];
   let subscriptions = new Set<number>();
   let movingOffset = [-1, 0, 0];
@@ -26,7 +27,10 @@
   onMount(() => {
     srocket = new Srocket<WsServer, WsClient>(`/api/s/${id}`, {
       onMessage(message) {
-        if (message.chunks) {
+        if (message.hello) {
+          userId = message.hello;
+          console.log(`Connected to the server as user ${userId}`);
+        } else if (message.chunks) {
           const [id, chunks] = message.chunks;
           tick().then(() => {
             seqnums[id] += chunks.length;

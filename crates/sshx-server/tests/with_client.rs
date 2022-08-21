@@ -65,22 +65,24 @@ async fn test_ws_basic() -> Result<()> {
     tokio::spawn(async move { controller.run().await });
 
     let mut stream = ClientSocket::connect(&server.ws_endpoint(&name)).await?;
+    stream.flush().await;
+    assert_eq!(stream.user_id, 1);
 
     stream.send(WsClient::Create()).await;
     stream.flush().await;
     assert_eq!(stream.shells.len(), 1);
-    assert_eq!(stream.shells[0].0, 0);
+    assert_eq!(stream.shells[0].0, 2);
 
-    stream.send(WsClient::Subscribe(0, 0)).await;
-    assert_eq!(stream.read(0), "");
+    stream.send(WsClient::Subscribe(2, 0)).await;
+    assert_eq!(stream.read(2), "");
 
-    stream.send(WsClient::Data(0, b"hello!".to_vec())).await;
+    stream.send(WsClient::Data(2, b"hello!".to_vec())).await;
     stream.flush().await;
-    assert_eq!(stream.read(0), "hello!");
+    assert_eq!(stream.read(2), "hello!");
 
-    stream.send(WsClient::Data(0, b" 123".to_vec())).await;
+    stream.send(WsClient::Data(2, b" 123".to_vec())).await;
     stream.flush().await;
-    assert_eq!(stream.read(0), "hello! 123");
+    assert_eq!(stream.read(2), "hello! 123");
 
     Ok(())
 }
@@ -95,13 +97,14 @@ async fn test_ws_resize() -> Result<()> {
 
     let mut stream = ClientSocket::connect(&server.ws_endpoint(&name)).await?;
 
-    stream.send(WsClient::Move(0, None)).await; // error: does not exist yet!
+    stream.send(WsClient::Move(2, None)).await; // error: does not exist yet!
     stream.flush().await;
     assert_eq!(stream.errors.len(), 1);
 
     stream.send(WsClient::Create()).await;
     stream.flush().await;
     assert_eq!(stream.shells.len(), 1);
+    assert_eq!(stream.shells[0].0, 2);
     assert_eq!(stream.shells[0].1, WsWinsize::default());
 
     let new_size = WsWinsize {
@@ -110,18 +113,18 @@ async fn test_ws_resize() -> Result<()> {
         rows: 200,
         cols: 20,
     };
-    stream.send(WsClient::Move(0, Some(new_size))).await;
-    stream.send(WsClient::Move(1, Some(new_size))).await; // error: does not exist
+    stream.send(WsClient::Move(2, Some(new_size))).await;
+    stream.send(WsClient::Move(3, Some(new_size))).await; // error: does not exist
     stream.flush().await;
     assert_eq!(stream.shells.len(), 1);
     assert_eq!(stream.shells[0].1, new_size);
     assert_eq!(stream.errors.len(), 2);
 
-    stream.send(WsClient::Close(0)).await;
+    stream.send(WsClient::Close(2)).await;
     stream.flush().await;
     assert_eq!(stream.shells.len(), 0);
 
-    stream.send(WsClient::Move(0, None)).await; // error: shell was closed
+    stream.send(WsClient::Move(2, None)).await; // error: shell was closed
     stream.flush().await;
     assert_eq!(stream.errors.len(), 3);
 

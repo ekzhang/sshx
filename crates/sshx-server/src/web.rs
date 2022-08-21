@@ -85,13 +85,15 @@ impl Default for WsWinsize {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub enum WsServer {
+    /// Initial server message, informing the ID of the user.
+    Hello(u32),
     /// Notification when the set of open shells has changed.
     Shells(Vec<(u32, WsWinsize)>),
     /// Subscription results, chunks of terminal data.
     Chunks(u32, Vec<(u64, String)>),
     /// The current session has been terminated.
     Terminated(),
-    /// Send an error message to the client.
+    /// Alert the client of an application error.
     Error(String),
 }
 
@@ -159,12 +161,14 @@ async fn handle_socket(mut socket: WebSocket, session: Arc<Session>) -> Result<(
         })
     }
 
+    let user_id = session.next_id();
+    send(&mut socket, WsServer::Hello(user_id)).await?;
+
     let mut subscribed = HashSet::new(); // prevent duplicate subscriptions
     let (chunks_tx, mut chunks_rx) = mpsc::channel::<(u32, Vec<(u64, String)>)>(1);
 
     let update_tx = session.update_tx();
-    let shells_stream = session.subscribe_shells();
-    tokio::pin!(shells_stream);
+    let mut shells_stream = session.subscribe_shells();
     loop {
         let msg = tokio::select! {
             _ = session.terminated() => {

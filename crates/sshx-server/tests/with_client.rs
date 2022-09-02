@@ -130,3 +130,28 @@ async fn test_ws_resize() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_users_join() -> Result<()> {
+    let server = TestServer::new().await?;
+
+    let mut controller = Controller::new(&server.endpoint(), Runner::Echo).await?;
+    let name = controller.name().to_owned();
+    tokio::spawn(async move { controller.run().await });
+
+    let endpoint = server.ws_endpoint(&name);
+    let mut stream1 = ClientSocket::connect(&endpoint).await?;
+    stream1.flush().await;
+    assert_eq!(stream1.users.len(), 1);
+
+    let mut stream2 = ClientSocket::connect(&endpoint).await?;
+    stream2.flush().await;
+    assert_eq!(stream2.users.len(), 2);
+
+    drop(stream2);
+    let mut stream3 = ClientSocket::connect(&endpoint).await?;
+    stream3.flush().await;
+    assert_eq!(stream3.users.len(), 2);
+
+    Ok(())
+}

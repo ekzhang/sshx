@@ -81,15 +81,37 @@ impl Default for WsWinsize {
     }
 }
 
+/// Real-time message providing information about a user.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct WsUser {
+    /// The user's display name.
+    pub name: String,
+    /// Live coordinates of the mouse cursor, if available.
+    pub cursor_pos: Option<(i32, i32)>,
+}
+
+impl WsUser {
+    /// Create a new user with the given name.
+    pub fn new(name: &str) -> Self {
+        Self {
+            name: name.into(),
+            cursor_pos: None,
+        }
+    }
+}
+
 /// A real-time message sent from the server over WebSocket.
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub enum WsServer {
-    /// Initial server message, informing the ID of the user.
+    /// Initial server message, informing the user of their ID.
     Hello(u32),
+    /// A snapshot of all current users in the session.
+    Users(Vec<(u32, WsUser)>),
     /// Notification when the set of open shells has changed.
     Shells(Vec<(u32, WsWinsize)>),
-    /// Subscription results, chunks of terminal data.
+    /// Subscription results, in the form of terminal data chunks.
     Chunks(u32, Vec<(u64, String)>),
     /// The current session has been terminated.
     Terminated(),
@@ -163,6 +185,9 @@ async fn handle_socket(mut socket: WebSocket, session: Arc<Session>) -> Result<(
 
     let user_id = session.next_id();
     send(&mut socket, WsServer::Hello(user_id)).await?;
+
+    let _user_guard = session.user_scope(user_id)?;
+    send(&mut socket, WsServer::Users(session.list_users())).await?;
 
     let mut subscribed = HashSet::new(); // prevent duplicate subscriptions
     let (chunks_tx, mut chunks_rx) = mpsc::channel::<(u32, Vec<(u64, String)>)>(1);

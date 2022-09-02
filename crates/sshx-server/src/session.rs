@@ -6,22 +6,24 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
 
 use anyhow::{bail, Context, Result};
-use dashmap::DashMap;
-use parking_lot::Mutex;
+use parking_lot::{Mutex, RwLock, RwLockWriteGuard};
 use sshx_core::proto::server_update::ServerMessage;
 use tokio::sync::{watch, Notify};
 use tokio::time::Instant;
 use tokio_stream::{wrappers::WatchStream, Stream};
-use tracing::debug;
+use tracing::{debug, warn};
 
 use crate::utils::Shutdown;
-use crate::web::WsWinsize;
+use crate::web::{WsUser, WsWinsize};
 
 /// In-memory state for a single sshx session.
 #[derive(Debug)]
 pub struct Session {
     /// In-memory state for the session.
-    shells: DashMap<u32, State>,
+    shells: RwLock<HashMap<u32, State>>,
+
+    /// Metadata for currently connected users.
+    users: RwLock<HashMap<u32, WsUser>>,
 
     /// Atomic counter to get new, unique IDs.
     counter: AtomicU32,
@@ -67,7 +69,8 @@ impl Session {
         let now = Instant::now();
         let (update_tx, update_rx) = async_channel::bounded(256);
         Session {
-            shells: Default::default(),
+            shells: RwLock::new(HashMap::new()),
+            users: RwLock::new(HashMap::new()),
             counter: AtomicU32::new(1),
             created: now,
             updated: Mutex::new(now),
@@ -85,10 +88,11 @@ impl Session {
 
     /// Return the sequence numbers for current shells.
     pub fn sequence_numbers(&self) -> HashMap<u32, u64> {
-        let mut seqnums = HashMap::with_capacity(self.shells.len());
-        for entry in &self.shells {
-            if !entry.value().closed {
-                seqnums.insert(*entry.key(), entry.value().seqnum);
+        let shells = self.shells.read();
+        let mut seqnums = HashMap::with_capacity(shells.len());
+        for (key, value) in &*shells {
+            if !value.closed {
+                seqnums.insert(*key, value.seqnum);
             }
         }
         seqnums
@@ -108,23 +112,27 @@ impl Session {
         let mut chunknum = chunknum as usize;
         async_stream::stream! {
             while !self.shutdown.is_terminated() {
-                // We absolutely cannot hold `shell` across an await point,
+                // We absolutely cannot hold `shells` across an await point,
                 // since that would cause deadlocks.
-                let shell = match self.shells.get(&id) {
-                    Some(shell) if !shell.closed => shell,
-                    _ => return,
+                let (chunks, notified) = {
+                    let shells = self.shells.read();
+                    let shell = match shells.get(&id) {
+                        Some(shell) if !shell.closed => shell,
+                        _ => return,
+                    };
+                    let notify = Arc::clone(&shell.notify);
+                    let notified = async move { notify.notified().await };
+                    let mut chunks = Vec::new();
+                    if chunknum < shell.data.len() {
+                        chunks.extend_from_slice(&shell.data[chunknum..]);
+                        chunknum = shell.data.len();
+                    }
+                    (chunks, notified)
                 };
-                let notify = Arc::clone(&shell.notify);
-                let notified = notify.notified();
-                if chunknum < shell.data.len() {
-                    let chunks = shell.data[chunknum..].to_vec();
-                    chunknum = shell.data.len();
-                    drop(shell);
-                    yield chunks;
-                } else {
-                    drop(shell);
-                }
 
+                if !chunks.is_empty() {
+                    yield chunks;
+                }
                 tokio::select! {
                     _ = notified => (),
                     _ = self.terminated() => return,
@@ -135,8 +143,8 @@ impl Session {
 
     /// Add a new shell to the session.
     pub fn add_shell(&self, id: u32) -> Result<()> {
-        use dashmap::mapref::entry::Entry::*;
-        let _guard = match self.shells.entry(id) {
+        use std::collections::hash_map::Entry::*;
+        let _guard = match self.shells.write().entry(id) {
             Occupied(_) => bail!("shell already exists with id={id}"),
             Vacant(v) => v.insert(State::default()),
         };
@@ -148,7 +156,7 @@ impl Session {
 
     /// Terminates an existing shell.
     pub fn close_shell(&self, id: u32) -> Result<()> {
-        match self.shells.get_mut(&id) {
+        match self.shells.write().get_mut(&id) {
             Some(mut shell) if !shell.closed => {
                 shell.closed = true;
                 shell.notify.notify_waiters();
@@ -163,8 +171,11 @@ impl Session {
     }
 
     fn get_shell_mut(&self, id: u32) -> Result<impl DerefMut<Target = State> + '_> {
-        match self.shells.get_mut(&id) {
-            Some(shell) if !shell.closed => Ok(shell),
+        let shells = self.shells.write();
+        match shells.get(&id) {
+            Some(shell) if !shell.closed => {
+                Ok(RwLockWriteGuard::map(shells, |s| s.get_mut(&id).unwrap()))
+            }
             Some(_) => bail!("cannot update shell with id={id}, already closed"),
             None => bail!("cannot update shell with id={id}, does not exist"),
         }
@@ -201,6 +212,46 @@ impl Session {
         }
 
         Ok(())
+    }
+
+    /// List all the users in the session.
+    pub fn list_users(&self) -> Vec<(u32, WsUser)> {
+        self.users
+            .read()
+            .iter()
+            .map(|(k, v)| (*k, v.clone()))
+            .collect()
+    }
+
+    /// Add a new user, and return a guard that removes the user when dropped.
+    pub fn user_scope(&self, id: u32) -> Result<impl Drop + '_> {
+        use std::collections::hash_map::Entry::*;
+
+        #[must_use]
+        struct UserGuard<'a>(&'a Session, u32);
+        impl Drop for UserGuard<'_> {
+            fn drop(&mut self) {
+                self.0.remove_user(self.1);
+            }
+        }
+
+        match self.users.write().entry(id) {
+            Occupied(_) => bail!("user already exists with id={id}"),
+            Vacant(v) => {
+                // TODO: Use a real name.
+                v.insert(WsUser::new("anonymous user"));
+                // TODO: Send "user joined" message.
+                Ok(UserGuard(self, id))
+            }
+        }
+    }
+
+    /// Remove an existing user.
+    fn remove_user(&self, id: u32) {
+        if self.users.write().remove(&id).is_none() {
+            warn!(%id, "invariant violation: removed user that does not exist");
+        }
+        // TODO: Send a "user left" message.
     }
 
     /// Register a client message, refreshing the last update timestamp.

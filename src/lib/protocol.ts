@@ -6,9 +6,16 @@ export type WsWinsize = {
   cols: number;
 };
 
+/** Information about a user, see the Rust version */
+export type WsUser = {
+  name: string;
+  cursorPos: [number, number] | null;
+};
+
 /** Server message type, see the Rust version. */
 export type WsServer = {
   hello?: number;
+  users?: [number, WsUser][];
   shells?: [number, WsWinsize][];
   chunks?: [number, [number, string][]];
   terminated?: [];

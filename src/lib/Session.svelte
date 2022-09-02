@@ -42,6 +42,8 @@
               writers[id](data);
             }
           });
+        } else if (message.users) {
+          console.log("users", message.users);
         } else if (message.shells) {
           shells = message.shells;
           if (movingOffsetDone) {

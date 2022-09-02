@@ -10,7 +10,7 @@ use sshx_core::proto::sshx_service_client::SshxServiceClient;
 use sshx_server::{
     session::Session,
     state::ServerState,
-    web::{WsClient, WsServer, WsWinsize},
+    web::{WsClient, WsServer, WsUser, WsWinsize},
     Server,
 };
 use tokio::net::{TcpListener, TcpStream};
@@ -87,6 +87,7 @@ pub struct ClientSocket {
     inner: WebSocketStream<MaybeTlsStream<TcpStream>>,
 
     pub user_id: u32,
+    pub users: Vec<(u32, WsUser)>,
     pub shells: Vec<(u32, WsWinsize)>,
     pub data: HashMap<u32, String>,
     pub errors: Vec<String>,
@@ -101,6 +102,7 @@ impl ClientSocket {
         Ok(Self {
             inner: stream,
             user_id: 0,
+            users: Vec::new(),
             shells: Vec::new(),
             data: HashMap::new(),
             errors: Vec::new(),
@@ -141,6 +143,7 @@ impl ClientSocket {
             while let Some(msg) = self.recv().await {
                 match msg {
                     WsServer::Hello(user_id) => self.user_id = user_id,
+                    WsServer::Users(users) => self.users = users,
                     WsServer::Shells(shells) => self.shells = shells,
                     WsServer::Chunks(id, chunks) => {
                         let value = self.data.entry(id).or_default();

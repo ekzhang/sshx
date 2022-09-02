@@ -16,7 +16,7 @@
   export let message: string;
 
   /** An optional action to provide as a button on the toast. */
-  export let action: string = "";
+  export let action = "";
 </script>
 
 <div class="toast-box">

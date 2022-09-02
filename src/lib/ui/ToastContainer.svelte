@@ -32,7 +32,7 @@
             kind={toast.kind}
             message={toast.message}
             action={toast.action}
-            on:action={toast.onAction ?? (() => {})}
+            on:action={toast.onAction ?? (() => null)}
           />
         </div>
       {/each}

@@ -44,6 +44,8 @@
           });
         } else if (message.users) {
           console.log("users", message.users);
+        } else if (message.userDiff) {
+          console.log("userDiff", message.userDiff);
         } else if (message.shells) {
           shells = message.shells;
           if (movingOffsetDone) {

@@ -153,5 +153,8 @@ async fn test_users_join() -> Result<()> {
     stream3.flush().await;
     assert_eq!(stream3.users.len(), 2);
 
+    stream1.flush().await;
+    assert_eq!(stream1.users.len(), 2);
+
     Ok(())
 }

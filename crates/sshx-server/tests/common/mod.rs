@@ -144,6 +144,12 @@ impl ClientSocket {
                 match msg {
                     WsServer::Hello(user_id) => self.user_id = user_id,
                     WsServer::Users(users) => self.users = users,
+                    WsServer::UserDiff(id, maybe_user) => {
+                        self.users.retain(|&(user_id, _)| user_id != id);
+                        if let Some(user) = maybe_user {
+                            self.users.push((id, user));
+                        }
+                    }
                     WsServer::Shells(shells) => self.shells = shells,
                     WsServer::Chunks(id, chunks) => {
                         let value = self.data.entry(id).or_default();

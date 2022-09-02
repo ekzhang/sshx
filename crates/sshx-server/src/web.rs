@@ -4,7 +4,7 @@ use std::collections::HashSet;
 use std::io;
 use std::sync::Arc;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use axum::extract::ws::{CloseFrame, Message, WebSocket, WebSocketUpgrade};
 use axum::extract::Path;
 use axum::response::IntoResponse;
@@ -102,13 +102,15 @@ impl WsUser {
 }
 
 /// A real-time message sent from the server over WebSocket.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub enum WsServer {
     /// Initial server message, informing the user of their ID.
     Hello(u32),
     /// A snapshot of all current users in the session.
     Users(Vec<(u32, WsUser)>),
+    /// Info about a single user in the session: joined, left, or changed.
+    UserDiff(u32, Option<WsUser>),
     /// Notification when the set of open shells has changed.
     Shells(Vec<(u32, WsWinsize)>),
     /// Subscription results, in the form of terminal data chunks.
@@ -120,7 +122,7 @@ pub enum WsServer {
 }
 
 /// A real-time message sent from the client over WebSocket.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub enum WsClient {
     /// Create a new shell.
@@ -187,6 +189,7 @@ async fn handle_socket(mut socket: WebSocket, session: Arc<Session>) -> Result<(
     send(&mut socket, WsServer::Hello(user_id)).await?;
 
     let _user_guard = session.user_scope(user_id)?;
+    let mut broadcast_stream = session.subscribe_broadcast();
     send(&mut socket, WsServer::Users(session.list_users())).await?;
 
     let mut subscribed = HashSet::new(); // prevent duplicate subscriptions
@@ -200,6 +203,11 @@ async fn handle_socket(mut socket: WebSocket, session: Arc<Session>) -> Result<(
                 send(&mut socket, WsServer::Terminated()).await?;
                 socket.close().await?;
                 break;
+            }
+            Some(result) = broadcast_stream.next() => {
+                let msg = result.context("client fell behind on broadcast stream")?;
+                send(&mut socket, msg).await?;
+                continue;
             }
             Some(shells) = shells_stream.next() => {
                 send(&mut socket, WsServer::Shells(shells)).await?;

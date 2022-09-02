@@ -8,13 +8,15 @@ use std::sync::Arc;
 use anyhow::{bail, Context, Result};
 use parking_lot::{Mutex, RwLock, RwLockWriteGuard};
 use sshx_core::proto::server_update::ServerMessage;
-use tokio::sync::{watch, Notify};
+use tokio::sync::{broadcast, watch, Notify};
 use tokio::time::Instant;
-use tokio_stream::{wrappers::WatchStream, Stream};
+use tokio_stream::wrappers::errors::BroadcastStreamRecvError;
+use tokio_stream::wrappers::{BroadcastStream, WatchStream};
+use tokio_stream::Stream;
 use tracing::{debug, warn};
 
 use crate::utils::Shutdown;
-use crate::web::{WsUser, WsWinsize};
+use crate::web::{WsServer, WsUser, WsWinsize};
 
 /// In-memory state for a single sshx session.
 #[derive(Debug)]
@@ -36,6 +38,13 @@ pub struct Session {
 
     /// Watch channel source for the ordered list of open shells and sizes.
     source: watch::Sender<Vec<(u32, WsWinsize)>>,
+
+    /// Broadcasts updates to all WebSocket clients.
+    ///
+    /// Every update inside this channel must be of idempotent form, since
+    /// messages may arrive before or after any snapshot of the current session
+    /// state. Duplicated events should remain consistent.
+    broadcast: broadcast::Sender<WsServer>,
 
     /// Sender end of a channel that buffers messages for the client.
     update_tx: async_channel::Sender<ServerMessage>,
@@ -75,6 +84,7 @@ impl Session {
             created: now,
             updated: Mutex::new(now),
             source: watch::channel(Vec::new()).0,
+            broadcast: broadcast::channel(32).0,
             update_tx,
             update_rx,
             shutdown: Shutdown::new(),
@@ -96,6 +106,13 @@ impl Session {
             }
         }
         seqnums
+    }
+
+    /// Receive a notification on broadcasted message events.
+    pub fn subscribe_broadcast(
+        &self,
+    ) -> impl Stream<Item = Result<WsServer, BroadcastStreamRecvError>> + Unpin {
+        BroadcastStream::new(self.broadcast.subscribe())
     }
 
     /// Receive a notification every time the set of shells is changed.
@@ -239,8 +256,9 @@ impl Session {
             Occupied(_) => bail!("user already exists with id={id}"),
             Vacant(v) => {
                 // TODO: Use a real name.
-                v.insert(WsUser::new("anonymous user"));
-                // TODO: Send "user joined" message.
+                let user = WsUser::new("anonymous user");
+                v.insert(user.clone());
+                self.broadcast.send(WsServer::UserDiff(id, Some(user))).ok();
                 Ok(UserGuard(self, id))
             }
         }
@@ -251,7 +269,7 @@ impl Session {
         if self.users.write().remove(&id).is_none() {
             warn!(%id, "invariant violation: removed user that does not exist");
         }
-        // TODO: Send a "user left" message.
+        self.broadcast.send(WsServer::UserDiff(id, None)).ok();
     }
 
     /// Register a client message, refreshing the last update timestamp.

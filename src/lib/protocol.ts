@@ -16,6 +16,7 @@ export type WsUser = {
 export type WsServer = {
   hello?: number;
   users?: [number, WsUser][];
+  userDiff?: [number, WsUser | null];
   shells?: [number, WsWinsize][];
   chunks?: [number, [number, string][]];
   terminated?: [];

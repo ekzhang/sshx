@@ -7,6 +7,7 @@
   import Toolbar from "./ui/Toolbar.svelte";
   import XTerm from "./ui/XTerm.svelte";
   import { slide } from "./ui/slide";
+  import { makeToast } from "./toast";
 
   export let id: string;
 
@@ -29,7 +30,10 @@
       onMessage(message) {
         if (message.hello) {
           userId = message.hello;
-          console.log(`Connected to the server as user ${userId}`);
+          makeToast({
+            kind: "success",
+            message: `Connected to the server as user ${userId}.`,
+          });
         } else if (message.chunks) {
           const [id, chunks] = message.chunks;
           tick().then(() => {
@@ -54,8 +58,10 @@
           exitReason = "The session has been terminated";
           srocket?.dispose();
         } else if (message.error) {
-          // TODO: Add an actual toast notification.
-          console.error("Server error: " + message.error);
+          makeToast({
+            kind: "error",
+            message: "Server error: " + message.error,
+          });
         }
       },
 
@@ -106,7 +112,9 @@
     {/if}
   </div>
 
-  <div class="absolute inset-0 flex justify-center items-center">
+  <div
+    class="absolute inset-0 overflow-hidden flex justify-center items-center"
+  >
     {#each shells as [id, winsize] (id)}
       <div
         class="absolute"

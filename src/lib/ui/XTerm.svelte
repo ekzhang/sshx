@@ -1,5 +1,7 @@
 <!-- @component Interactive terminal rendered with xterm.js -->
 <script lang="ts" context="module">
+  import { makeToast } from "$lib/toast";
+
   // Deduplicated terminal font loading.
   const waitForFonts = (() => {
     let state: "initial" | "loading" | "loaded" = "initial";
@@ -13,7 +15,10 @@
         try {
           await new FontFaceObserver("Fira Code VF").load();
         } catch (error) {
-          console.warn("Could not load terminal font", error);
+          makeToast({
+            kind: "error",
+            message: "Could not load terminal font",
+          });
         }
         state = "loaded";
         for (const fn of waitlist) fn();

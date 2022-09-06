@@ -14,11 +14,11 @@ export const slide: Action<HTMLElement, SlideParams> = (node, params) => {
 
   const callbackX = xpos.subscribe((x) => {
     pos.x = x;
-    node.style.transform = `translate(${pos.x}px, ${pos.y}px)`;
+    node.style.transform = `translate3d(${pos.x}px, ${pos.y}px, 0)`;
   });
   const callbackY = ypos.subscribe((y) => {
     pos.y = y;
-    node.style.transform = `translate(${pos.x}px, ${pos.y}px)`;
+    node.style.transform = `translate3d(${pos.x}px, ${pos.y}px, 0)`;
   });
 
   return {

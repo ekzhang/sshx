@@ -6,10 +6,10 @@ use std::sync::Arc;
 
 use anyhow::{Context, Result};
 use axum::extract::ws::{CloseFrame, Message, WebSocket, WebSocketUpgrade};
-use axum::extract::Path;
+use axum::extract::{Path, State};
 use axum::response::IntoResponse;
 use axum::routing::{get, get_service};
-use axum::{Extension, Router};
+use axum::Router;
 use hyper::StatusCode;
 use serde::{Deserialize, Serialize};
 use sshx_core::proto::{server_update::ServerMessage, TerminalInput, TerminalSize};
@@ -22,24 +22,20 @@ use crate::session::Session;
 use crate::state::ServerState;
 
 /// Returns the web application server, built with Axum.
-pub fn app(state: Arc<ServerState>) -> Router {
-    Router::new()
-        .nest("/api", backend(state))
-        .fallback(frontend())
-}
-
-/// Serves static SvelteKit build files.
-fn frontend() -> Router {
+pub fn app() -> Router<Arc<ServerState>> {
     let root_spa = ServeFile::new("build/spa.html")
         .precompressed_gzip()
         .precompressed_br();
 
+    // Serves static SvelteKit build files.
     let static_files = ServeDir::new("build")
         .precompressed_gzip()
         .precompressed_br()
         .fallback(root_spa);
 
-    Router::new().nest("/", get_service(static_files).handle_error(error_handler))
+    Router::new()
+        .nest("/api", backend())
+        .fallback_service(get_service(static_files).handle_error(error_handler))
 }
 
 /// Error handler for tower-http services.
@@ -50,10 +46,8 @@ async fn error_handler(error: io::Error) -> impl IntoResponse {
 }
 
 /// Runs the backend web API server.
-fn backend(state: Arc<ServerState>) -> Router {
-    Router::new()
-        .route("/s/:id", get(get_session_ws))
-        .layer(Extension(state))
+fn backend() -> Router<Arc<ServerState>> {
+    Router::new().route("/s/:id", get(get_session_ws))
 }
 
 /// Real-time message conveying the position and size of a terminal.
@@ -140,7 +134,7 @@ pub enum WsClient {
 async fn get_session_ws(
     Path(id): Path<String>,
     ws: WebSocketUpgrade,
-    Extension(state): Extension<Arc<ServerState>>,
+    State(state): State<Arc<ServerState>>,
 ) -> impl IntoResponse {
     if let Some(session) = state.store.get(&id) {
         let session = Arc::clone(&*session);

@@ -7,7 +7,7 @@ edition = "2021"
 anyhow = "1.0.62"
 async-channel = "1.6.1"
 async-stream = "0.3.3"
-axum = { version = "0.5.15", features = ["ws"] }
+axum = { version = "0.6.0", features = ["ws"] }
 base64 = "0.13.0"
 ciborium = "0.2.0"
 clap = { version = "3.2.17", features = ["derive"] }

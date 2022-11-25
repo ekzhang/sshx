@@ -94,7 +94,8 @@ async fn make_server(
 ) -> Result<()> {
     type BoxError = Box<dyn StdError + Send + Sync>;
 
-    let http_service = web::app(state.clone())
+    let http_service = web::app()
+        .with_state(state.clone())
         .layer(TraceLayer::new_for_http())
         .map_response(|r| r.map(|b| b.map_err(BoxError::from).boxed_unsync()))
         .map_err(BoxError::from)

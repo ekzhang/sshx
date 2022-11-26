@@ -1,6 +1,12 @@
 name: CI
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
   rustfmt:
@@ -33,9 +39,9 @@ jobs:
 
       - uses: Swatinem/rust-cache@v1
 
-      - run: cargo clippy --all-targets -- -D warnings
-
       - run: cargo test
+
+      - run: cargo clippy --all-targets -- -D warnings
 
   web:
     name: Web lint, check, and build

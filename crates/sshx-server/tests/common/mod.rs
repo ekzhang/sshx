@@ -138,7 +138,7 @@ impl ClientSocket {
     }
 
     pub async fn flush(&mut self) {
-        const FLUSH_DURATION: Duration = Duration::from_millis(10);
+        const FLUSH_DURATION: Duration = Duration::from_millis(50);
         let flush_task = async {
             while let Some(msg) = self.recv().await {
                 match msg {

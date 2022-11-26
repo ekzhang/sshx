@@ -39,9 +39,6 @@ jobs:
 
       - uses: Swatinem/rust-cache@v1
 
-      - name: Setup upterm session
-        uses: lhotari/action-upterm@v1
-
       - run: cargo test
 
       - run: cargo clippy --all-targets -- -D warnings

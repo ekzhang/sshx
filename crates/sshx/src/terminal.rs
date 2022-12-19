@@ -5,7 +5,7 @@
 use std::convert::Infallible;
 use std::env;
 use std::ffi::{CStr, CString};
-use std::os::unix::io::{AsRawFd, FromRawFd, RawFd};
+use std::os::fd::{AsRawFd, FromRawFd, OwnedFd, RawFd};
 use std::pin::Pin;
 use std::process::exit;
 use std::task::{Context, Poll};
@@ -31,7 +31,7 @@ pub fn get_default_shell() -> String {
 #[pin_project(PinnedDrop)]
 pub struct Terminal {
     child: Pid,
-    slave: File,
+    slave: OwnedFd,
     #[pin]
     master_read: File,
     #[pin]
@@ -49,9 +49,8 @@ impl Terminal {
         let master_read = unsafe { File::from_raw_fd(result.master) };
 
         // Safety: The slave file descriptor was created by openpty() and has its
-        // ownership transferred here. It is closed when the object is dropped. (This
-        // File object is only used for resource ownership.)
-        let slave = unsafe { File::from_raw_fd(result.slave) };
+        // ownership transferred here. It is closed when the object is dropped.
+        let slave = unsafe { OwnedFd::from_raw_fd(result.slave) };
 
         // The slave file descriptor was created by openpty() and has its ownership
         // transferred here. From the master side, it is closed on drop.

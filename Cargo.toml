@@ -1,5 +1,15 @@
 [workspace]
 members = ["crates/*"]
 
+[workspace.dependencies]
+anyhow = "1.0.62"
+clap = { version = "4.0.29", features = ["derive"] }
+prost = "0.11.3"
+tokio = { version = "1.23.0", features = ["full"] }
+tokio-stream = { version = "0.1.9", features = ["sync"] }
+tonic = { version = "0.8.3", features = ["tls", "tls-roots"] }
+tracing = "0.1.30"
+tracing-subscriber = "0.3.8"
+
 [profile.release]
 strip = true

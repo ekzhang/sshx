@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-prost = "0.11.0"
-tonic = { version = "0.8.0", features = ["tls", "tls-roots"] }
+prost.workspace = true
+tonic.workspace = true
 
 [build-dependencies]
 tonic-build = "0.8.0"

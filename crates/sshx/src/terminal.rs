@@ -7,7 +7,6 @@ use std::env;
 use std::ffi::{CStr, CString};
 use std::os::fd::{AsRawFd, FromRawFd, OwnedFd, RawFd};
 use std::pin::Pin;
-use std::process::exit;
 use std::task::{Context, Poll};
 
 use anyhow::Result;
@@ -82,7 +81,7 @@ impl Terminal {
             ForkResult::Parent { child } => Ok(child),
             ForkResult::Child => match Self::execv_child(&shell, slave_port) {
                 Ok(infallible) => match infallible {},
-                Err(_) => exit(1),
+                Err(_) => std::process::exit(1),
             },
         }
     }
@@ -106,19 +105,19 @@ impl Terminal {
 
     /// Get the window size of the TTY.
     pub fn get_winsize(&self) -> Result<(u16, u16)> {
-        nix::ioctl_read_bad!(ioctl_gwinsz, TIOCGWINSZ, Winsize);
+        nix::ioctl_read_bad!(ioctl_get_winsize, TIOCGWINSZ, Winsize);
         let mut winsize = make_winsize(0, 0);
         // Safety: The slave file descriptor was created by openpty().
-        unsafe { ioctl_gwinsz(self.slave.as_raw_fd(), &mut winsize) }?;
+        unsafe { ioctl_get_winsize(self.slave.as_raw_fd(), &mut winsize) }?;
         Ok((winsize.ws_row, winsize.ws_col))
     }
 
     /// Set the window size of the TTY.
     pub fn set_winsize(&self, rows: u16, cols: u16) -> Result<()> {
-        nix::ioctl_write_ptr_bad!(ioctl_swinsz, TIOCSWINSZ, Winsize);
+        nix::ioctl_write_ptr_bad!(ioctl_set_winsize, TIOCSWINSZ, Winsize);
         let winsize = make_winsize(rows, cols);
         // Safety: The slave file descriptor was created by openpty().
-        unsafe { ioctl_swinsz(self.slave.as_raw_fd(), &winsize) }?;
+        unsafe { ioctl_set_winsize(self.slave.as_raw_fd(), &winsize) }?;
         Ok(())
     }
 }

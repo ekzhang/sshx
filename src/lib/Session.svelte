@@ -18,6 +18,7 @@
 
   /** Bound "write" method for each terminal. */
   const writers: Record<number, (data: string) => void> = {};
+  const termElements: Record<number, HTMLDivElement> = {};
   const seqnums: Record<number, number> = {};
   let userId = 0;
   let shells: [number, WsWinsize][] = [];
@@ -26,10 +27,12 @@
   let moving = -1; // Terminal ID that is being dragged.
   let movingStart = [0, 0]; // Coordinates of mouse when drag started.
   let movingOffset = [0, 0]; // How much it has been moved so far.
-  let movingIsDone = false;
+  let movingIsDone = false; // Moving finished but hasn't been acknowledged.
 
   let resizing = -1; // Terminal ID that is being resized.
-  let resizingStart = [-1, 0, 0]; // Coordinates of mouse when resize started.
+  let resizingOrigin = [0, 0]; // Coordinates of top-left origin when resize started.
+  let resizingCell = [0, 0]; // Pixel dimensions of a single terminal cell.
+  let resizingSize: WsWinsize; // Last resize message sent.
 
   onMount(() => {
     srocket = new Srocket<WsServer, WsClient>(`/api/s/${id}`, {
@@ -115,6 +118,20 @@
           event.pageY - movingStart[1],
         ];
       }
+      if (resizing !== -1) {
+        const cols = Math.max(
+          Math.floor((event.pageX - resizingOrigin[0]) / resizingCell[0]),
+          60, // Minimum number of columns.
+        );
+        const rows = Math.max(
+          Math.floor((event.pageY - resizingOrigin[1]) / resizingCell[1]),
+          8, // Minimum number of rows.
+        );
+        if (rows !== resizingSize.rows || cols !== resizingSize.cols) {
+          resizingSize = { ...resizingSize, rows, cols };
+          srocket?.send({ move: [resizing, resizingSize] });
+        }
+      }
     }
     function handleDragEnd(event: MouseEvent) {
       if (moving !== -1) {
@@ -129,6 +146,9 @@
           };
           srocket?.send({ move: [moving, newWinsize] });
         }
+      }
+      if (resizing !== -1) {
+        resizing = -1;
       }
     }
     window.addEventListener("mousemove", handleDrag);
@@ -157,12 +177,17 @@
     {/if}
   </div>
 
-  <div
-    class="absolute inset-0 overflow-hidden flex justify-center items-center"
-  >
+  <div class="absolute inset-0 overflow-hidden">
     {#each shells as [id, winsize] (id)}
+      <!--
+        The magic numbers "left" and "top" are used to approximately center the
+        terminal at the time that it is first created.
+
+        For a default 80x24 terminal, this is half of the width and height on a
+        normal screen at 100% scale.
+      -->
       <div
-        class="absolute"
+        class="absolute left-[calc(50vw-357px)] top-[calc(50vh-258px)]"
         transition:fade|local
         use:slide={{
           x: winsize.x + (id === moving ? movingOffset[0] : 0),
@@ -173,7 +198,8 @@
           rows={winsize.rows}
           cols={winsize.cols}
           bind:write={writers[id]}
-          on:data={({ detail }) => srocket?.send({ data: [id, detail] })}
+          bind:termEl={termElements[id]}
+          on:data={({ detail: data }) => srocket?.send({ data: [id, data] })}
           on:startMove={({ detail: event }) => {
             moving = id;
             movingStart = [event.pageX, event.pageY];
@@ -184,8 +210,19 @@
           on:focus={() => srocket?.send({ move: [id, null] })}
         />
         <div
-          class="absolute w-4 h-4 -bottom-1 -right-1 cursor-nwse-resize"
-          on:mousedown={() => {}}
+          class="absolute w-5 h-5 -bottom-1 -right-1 cursor-nwse-resize"
+          on:mousedown={(event) => {
+            const canvasEl = termElements[id].querySelector(
+              "canvas.xterm-text-layer",
+            );
+            if (canvasEl) {
+              resizing = id;
+              const r = canvasEl.getBoundingClientRect();
+              resizingOrigin = [event.pageX - r.width, event.pageY - r.height];
+              resizingCell = [r.width / winsize.cols, r.height / winsize.rows];
+              resizingSize = winsize;
+            }
+          }}
         />
       </div>
     {/each}

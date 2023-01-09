@@ -103,7 +103,7 @@
   export let rows: number, cols: number;
   export let write: (data: string) => void; // bound function prop
 
-  let termEl: HTMLDivElement;
+  export let termEl: HTMLDivElement = null as any; // suppress "missing prop" warning
   let term: Terminal | null = null;
 
   let loaded = false;
@@ -221,7 +221,9 @@
         </button>
       </div>
     </div>
-    <div class="flex-shrink-0 p-2 text-sm text-gray-300 font-bold">
+    <div
+      class="p-2 text-sm text-gray-300 font-bold overflow-hidden text-ellipsis min-w-0"
+    >
       {currentTitle}
     </div>
     <div class="flex-1" />

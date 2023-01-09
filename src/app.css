@@ -10,3 +10,15 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  body {
+    color-scheme: dark;
+  }
+}
+
+@layer components {
+  .panel {
+    @apply border border-zinc-800 bg-zinc-900/90 backdrop-blur-sm rounded-xl pointer-events-auto;
+  }
+}

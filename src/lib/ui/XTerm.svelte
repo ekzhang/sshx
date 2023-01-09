@@ -84,9 +84,10 @@
   import { createEventDispatcher, onDestroy, onMount } from "svelte";
   import type { Terminal } from "xterm";
   import { Buffer } from "buffer";
-  import { MinusIcon, PlusIcon, XIcon } from "svelte-feather-icons";
 
   import themes from "./themes";
+  import CircleButton from "./CircleButton.svelte";
+  import CircleButtons from "./CircleButtons.svelte";
 
   const theme = themes.defaultDark;
 
@@ -199,27 +200,11 @@
     on:mousedown={(event) => dispatch("startMove", event)}
   >
     <div class="flex-1 flex items-center px-3">
-      <div class="flex space-x-2 text-transparent hover:text-black/75">
-        <button
-          class="w-3 h-3 p-[1px] rounded-full bg-red-500 active:bg-red-700"
-          on:mousedown|stopPropagation
-          on:click={() => dispatch("close")}
-        >
-          <XIcon class="w-full h-full" strokeWidth={3} />
-        </button>
-        <button
-          class="w-3 h-3 p-[1px] rounded-full bg-yellow-500 active:bg-yellow-700"
-          on:mousedown|stopPropagation
-        >
-          <MinusIcon class="w-full h-full" strokeWidth={3} />
-        </button>
-        <button
-          class="w-3 h-3 p-[1px] rounded-full bg-green-500 active:bg-green-700"
-          on:mousedown|stopPropagation
-        >
-          <PlusIcon class="w-full h-full" strokeWidth={3} />
-        </button>
-      </div>
+      <CircleButtons>
+        <CircleButton kind="red" on:click={() => dispatch("close")} />
+        <CircleButton kind="yellow" />
+        <CircleButton kind="green" />
+      </CircleButtons>
     </div>
     <div
       class="p-2 text-sm text-gray-300 font-bold overflow-hidden text-ellipsis min-w-0"

@@ -4,6 +4,7 @@
 
   import { Srocket } from "./srocket";
   import type { WsClient, WsServer, WsWinsize } from "./protocol";
+  import Chat from "./ui/Chat.svelte";
   import Toolbar from "./ui/Toolbar.svelte";
   import XTerm from "./ui/XTerm.svelte";
   import { slide } from "./ui/slide";
@@ -15,6 +16,8 @@
 
   let connected = false;
   let exitReason: string | null = null;
+
+  let showChat = false; // @hmr:keep
 
   /** Bound "write" method for each terminal. */
   const writers: Record<number, (data: string) => void> = {};
@@ -162,9 +165,23 @@
 </script>
 
 <main class="p-8" class:cursor-nwse-resize={resizing !== -1}>
-  <div class="absolute top-8 left-1/2 -translate-x-1/2 inline-block z-10">
-    <Toolbar {connected} on:create={() => srocket?.send({ create: [] })} />
+  <div
+    class="absolute top-8 left-1/2 -translate-x-1/2 pointer-events-none z-10"
+  >
+    <Toolbar
+      {connected}
+      on:create={() => srocket?.send({ create: [] })}
+      on:chat={() => (showChat = !showChat)}
+    />
   </div>
+
+  {#if showChat}
+    <div
+      class="absolute flex flex-col justify-end inset-y-8 right-8 w-80 pointer-events-none z-10"
+    >
+      <Chat on:close={() => (showChat = false)} />
+    </div>
+  {/if}
 
   <div class="py-2">
     {#if exitReason !== null}

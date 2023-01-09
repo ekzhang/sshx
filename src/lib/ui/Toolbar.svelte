@@ -11,12 +11,10 @@
 
   export let connected: boolean;
 
-  const dispatch = createEventDispatcher<{ create: void }>();
+  const dispatch = createEventDispatcher<{ create: void; chat: void }>();
 </script>
 
-<div
-  class="inline-block border border-zinc-800 bg-zinc-900/60 backdrop-blur-sm rounded-xl px-3 py-2"
->
+<div class="panel inline-block px-3 py-2">
   <div class="flex items-center select-none">
     <a href="/"><img src={logo} alt="sshx logo" class="h-10" /></a>
     <p class="ml-1.5 mr-2 font-medium">sshx</p>
@@ -31,7 +29,7 @@
       >
         <PlusCircleIcon strokeWidth={1.5} class="p-0.5" />
       </button>
-      <button class="icon-button">
+      <button class="icon-button" on:click={() => dispatch("chat")}>
         <MessageSquareIcon strokeWidth={1.5} class="p-0.5" />
       </button>
       <button class="icon-button">

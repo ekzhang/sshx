@@ -1522,6 +1522,7 @@ dependencies = [
  "hyper",
  "nanoid",
  "parking_lot",
+ "rand",
  "reqwest",
  "serde",
  "serde_bytes",

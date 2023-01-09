@@ -166,7 +166,11 @@ impl Session {
             Vacant(v) => v.insert(State::default()),
         };
         self.source.send_modify(|source| {
-            source.push((id, WsWinsize::default()));
+            let winsize = match source.len() {
+                0 => WsWinsize::default(),
+                _ => WsWinsize::new_random(),
+            };
+            source.push((id, winsize));
         });
         Ok(())
     }

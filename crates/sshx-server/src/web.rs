@@ -11,6 +11,7 @@ use axum::response::IntoResponse;
 use axum::routing::{get, get_service};
 use axum::Router;
 use hyper::StatusCode;
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 use sshx_core::proto::{server_update::ServerMessage, TerminalInput, TerminalSize};
 use tokio::sync::mpsc;
@@ -71,6 +72,19 @@ impl Default for WsWinsize {
             y: 0,
             rows: 24,
             cols: 80,
+        }
+    }
+}
+
+impl WsWinsize {
+    /// Create a new window with default size and random position in a range.
+    pub fn new_random() -> Self {
+        let x = rand::thread_rng().gen_range(-50..=50);
+        let y = rand::thread_rng().gen_range(-30..=30);
+        Self {
+            x,
+            y,
+            ..Default::default()
         }
     }
 }

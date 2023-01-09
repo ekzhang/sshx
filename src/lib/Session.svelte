@@ -25,8 +25,9 @@
   let subscriptions = new Set<number>();
 
   let moving = -1; // Terminal ID that is being dragged.
-  let movingStart = [0, 0]; // Coordinates of mouse when drag started.
-  let movingOffset = [0, 0]; // How much it has been moved so far.
+  let movingOrigin = [0, 0]; // Coordinates of mouse at origin when drag started.
+  let movingSize: WsWinsize; // New [x, y] position of the dragged terminal.
+  let movingLast = 0; // Time when the last move message was sent.
   let movingIsDone = false; // Moving finished but hasn't been acknowledged.
 
   let resizing = -1; // Terminal ID that is being resized.
@@ -113,10 +114,17 @@
   onMount(() => {
     function handleDrag(event: MouseEvent) {
       if (moving !== -1 && !movingIsDone) {
-        movingOffset = [
-          event.pageX - movingStart[0],
-          event.pageY - movingStart[1],
-        ];
+        movingSize = {
+          ...movingSize,
+          x: event.pageX - movingOrigin[0],
+          y: event.pageY - movingOrigin[1],
+        };
+        const now = Date.now();
+        if (now >= movingLast + 40) {
+          // 40 milliseconds between successive updates.
+          movingLast = now;
+          srocket?.send({ move: [moving, movingSize] });
+        }
       }
       if (resizing !== -1) {
         const cols = Math.max(
@@ -136,16 +144,7 @@
     function handleDragEnd(event: MouseEvent) {
       if (moving !== -1) {
         movingIsDone = true;
-        const winsize = shells.find(([id, _]) => id === moving)?.[1];
-        if (winsize) {
-          const newWinsize = {
-            x: winsize.x + movingOffset[0],
-            y: winsize.y + movingOffset[1],
-            rows: winsize.rows,
-            cols: winsize.cols,
-          };
-          srocket?.send({ move: [moving, newWinsize] });
-        }
+        srocket?.send({ move: [moving, movingSize] });
       }
       if (resizing !== -1) {
         resizing = -1;
@@ -179,6 +178,7 @@
 
   <div class="absolute inset-0 overflow-hidden">
     {#each shells as [id, winsize] (id)}
+      {@const ws = id === moving ? movingSize : winsize}
       <!--
         The magic numbers "left" and "top" are used to approximately center the
         terminal at the time that it is first created.
@@ -189,21 +189,18 @@
       <div
         class="absolute left-[calc(50vw-357px)] top-[calc(50vh-258px)]"
         transition:fade|local
-        use:slide={{
-          x: winsize.x + (id === moving ? movingOffset[0] : 0),
-          y: winsize.y + (id === moving ? movingOffset[1] : 0),
-        }}
+        use:slide={{ x: ws.x, y: ws.y }}
       >
         <XTerm
-          rows={winsize.rows}
-          cols={winsize.cols}
+          rows={ws.rows}
+          cols={ws.cols}
           bind:write={writers[id]}
           bind:termEl={termElements[id]}
           on:data={({ detail: data }) => srocket?.send({ data: [id, data] })}
           on:startMove={({ detail: event }) => {
             moving = id;
-            movingStart = [event.pageX, event.pageY];
-            movingOffset = [0, 0];
+            movingOrigin = [event.pageX - ws.x, event.pageY - ws.y];
+            movingSize = ws;
             movingIsDone = false;
           }}
           on:close={() => srocket?.send({ close: id })}
@@ -219,8 +216,8 @@
               resizing = id;
               const r = canvasEl.getBoundingClientRect();
               resizingOrigin = [event.pageX - r.width, event.pageY - r.height];
-              resizingCell = [r.width / winsize.cols, r.height / winsize.rows];
-              resizingSize = winsize;
+              resizingCell = [r.width / ws.cols, r.height / ws.rows];
+              resizingSize = ws;
             }
           }}
         />

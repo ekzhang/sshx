@@ -95,8 +95,7 @@
 
   const dispatch = createEventDispatcher<{
     data: Uint8Array;
-    move: { x: number; y: number };
-    moving: { x: number; y: number };
+    startMove: MouseEvent;
     close: void;
     focus: void;
   }>();
@@ -188,41 +187,6 @@
   });
 
   onDestroy(() => term?.dispose());
-
-  // Mouse handler logic
-  let [dragging, prevMouseX, prevMouseY] = [false, 0, 0];
-
-  function handleDrag(event: MouseEvent, start = false) {
-    if (start) {
-      dragging = true;
-      [prevMouseX, prevMouseY] = [event.pageX, event.pageY];
-    } else if (dragging) {
-      dispatch("moving", {
-        x: event.pageX - prevMouseX,
-        y: event.pageY - prevMouseY,
-      });
-    }
-  }
-
-  function handleDragEnd(event: MouseEvent) {
-    if (!dragging) return;
-    dispatch("move", {
-      x: event.pageX - prevMouseX,
-      y: event.pageY - prevMouseY,
-    });
-    dragging = false;
-  }
-
-  onMount(() => {
-    window.addEventListener("mousemove", handleDrag);
-    window.addEventListener("mouseup", handleDragEnd);
-    window.addEventListener("mouseleave", handleDragEnd);
-    return () => {
-      window.removeEventListener("mousemove", handleDrag);
-      window.removeEventListener("mouseup", handleDragEnd);
-      window.removeEventListener("mouseleave", handleDragEnd);
-    };
-  });
 </script>
 
 <div
@@ -232,7 +196,7 @@
 >
   <div
     class="flex select-none"
-    on:mousedown={(event) => handleDrag(event, true)}
+    on:mousedown={(event) => dispatch("startMove", event)}
   >
     <div class="flex-1 flex items-center px-3">
       <div class="flex space-x-2 text-transparent hover:text-black/75">

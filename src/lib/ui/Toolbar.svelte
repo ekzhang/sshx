@@ -15,7 +15,7 @@
 </script>
 
 <div
-  class="inline-block border border-zinc-800 bg-zinc-900/60 backdrop-blur-sm rounded-xl p-2"
+  class="inline-block border border-zinc-800 bg-zinc-900/60 backdrop-blur-sm rounded-xl px-3 py-2"
 >
   <div class="flex items-center select-none">
     <a href="/"><img src={logo} alt="sshx logo" class="h-10" /></a>
@@ -55,7 +55,7 @@
   }
 
   .icon-button {
-    @apply rounded-md p-1 hover:bg-zinc-700 active:bg-indigo-700;
+    @apply rounded-md p-1 hover:bg-zinc-700 active:bg-indigo-700 transition-colors;
     @apply disabled:opacity-50 disabled:bg-transparent;
   }
 </style>

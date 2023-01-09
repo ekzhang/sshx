@@ -22,8 +22,14 @@
   let userId = 0;
   let shells: [number, WsWinsize][] = [];
   let subscriptions = new Set<number>();
-  let movingOffset = [-1, 0, 0];
-  let movingOffsetDone = false;
+
+  let moving = -1; // Terminal ID that is being dragged.
+  let movingStart = [0, 0]; // Coordinates of mouse when drag started.
+  let movingOffset = [0, 0]; // How much it has been moved so far.
+  let movingIsDone = false;
+
+  let resizing = -1; // Terminal ID that is being resized.
+  let resizingStart = [-1, 0, 0]; // Coordinates of mouse when resize started.
 
   onMount(() => {
     srocket = new Srocket<WsServer, WsClient>(`/api/s/${id}`, {
@@ -48,8 +54,8 @@
           console.log("userDiff", message.userDiff);
         } else if (message.shells) {
           shells = message.shells;
-          if (movingOffsetDone) {
-            movingOffset = [-1, 0, 0];
+          if (movingIsDone) {
+            moving = -1;
           }
           for (const [id] of message.shells) {
             if (!subscriptions.has(id)) {
@@ -99,9 +105,44 @@
   afterUpdate(() => {
     if (activeElement instanceof HTMLElement) activeElement.focus();
   });
+
+  // Global mouse handler logic follows, attached to the window element for smoothness.
+  onMount(() => {
+    function handleDrag(event: MouseEvent) {
+      if (moving !== -1 && !movingIsDone) {
+        movingOffset = [
+          event.pageX - movingStart[0],
+          event.pageY - movingStart[1],
+        ];
+      }
+    }
+    function handleDragEnd(event: MouseEvent) {
+      if (moving !== -1) {
+        movingIsDone = true;
+        const winsize = shells.find(([id, _]) => id === moving)?.[1];
+        if (winsize) {
+          const newWinsize = {
+            x: winsize.x + movingOffset[0],
+            y: winsize.y + movingOffset[1],
+            rows: winsize.rows,
+            cols: winsize.cols,
+          };
+          srocket?.send({ move: [moving, newWinsize] });
+        }
+      }
+    }
+    window.addEventListener("mousemove", handleDrag);
+    window.addEventListener("mouseup", handleDragEnd);
+    window.addEventListener("mouseleave", handleDragEnd);
+    return () => {
+      window.removeEventListener("mousemove", handleDrag);
+      window.removeEventListener("mouseup", handleDragEnd);
+      window.removeEventListener("mouseleave", handleDragEnd);
+    };
+  });
 </script>
 
-<main class="p-8">
+<main class="p-8" class:cursor-nwse-resize={resizing !== -1}>
   <div class="absolute top-8 left-1/2 -translate-x-1/2 inline-block z-10">
     <Toolbar {connected} on:create={() => srocket?.send({ create: [] })} />
   </div>
@@ -124,8 +165,8 @@
         class="absolute"
         transition:fade|local
         use:slide={{
-          x: winsize.x + (id === movingOffset[0] ? movingOffset[1] : 0),
-          y: winsize.y + (id === movingOffset[0] ? movingOffset[2] : 0),
+          x: winsize.x + (id === moving ? movingOffset[0] : 0),
+          y: winsize.y + (id === moving ? movingOffset[1] : 0),
         }}
       >
         <XTerm
@@ -133,22 +174,18 @@
           cols={winsize.cols}
           bind:write={writers[id]}
           on:data={({ detail }) => srocket?.send({ data: [id, detail] })}
-          on:move={({ detail }) => {
-            movingOffsetDone = true;
-            const newWinsize = {
-              x: winsize.x + detail.x,
-              y: winsize.y + detail.y,
-              rows: winsize.rows,
-              cols: winsize.cols,
-            };
-            srocket?.send({ move: [id, newWinsize] });
-          }}
-          on:moving={({ detail }) => {
-            movingOffset = [id, detail.x, detail.y];
-            movingOffsetDone = false;
+          on:startMove={({ detail: event }) => {
+            moving = id;
+            movingStart = [event.pageX, event.pageY];
+            movingOffset = [0, 0];
+            movingIsDone = false;
           }}
           on:close={() => srocket?.send({ close: id })}
           on:focus={() => srocket?.send({ move: [id, null] })}
+        />
+        <div
+          class="absolute w-4 h-4 -bottom-1 -right-1 cursor-nwse-resize"
+          on:mousedown={() => {}}
         />
       </div>
     {/each}

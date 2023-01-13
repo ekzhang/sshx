@@ -8,7 +8,7 @@ anyhow.workspace = true
 async-channel = "1.6.1"
 async-stream = "0.3.3"
 axum = { version = "0.6.0", features = ["ws"] }
-base64 = "0.13.0"
+base64 = "0.21.0"
 ciborium = "0.2.0"
 clap.workspace = true
 dashmap = "5.2.0"
@@ -34,4 +34,4 @@ tracing-subscriber.workspace = true
 futures-util = { version = "0.3.23", features = ["sink"] }
 reqwest = "0.11.10"
 sshx = { path = "../sshx" }
-tokio-tungstenite = "0.17.2"
+tokio-tungstenite = "0.18.0"

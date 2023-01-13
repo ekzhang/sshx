@@ -3,6 +3,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
+use base64::prelude::{Engine as _, BASE64_STANDARD};
 use hmac::Mac;
 use nanoid::nanoid;
 use sshx_core::proto::{
@@ -62,7 +63,7 @@ impl SshxService for GrpcServer {
         let url = format!("{origin}/s/{name}");
         Ok(Response::new(OpenResponse {
             name,
-            token: base64::encode(token.into_bytes()),
+            token: BASE64_STANDARD.encode(token.into_bytes()),
             url,
         }))
     }
@@ -117,7 +118,7 @@ impl SshxService for GrpcServer {
 
 /// Validate the client token for a session.
 fn validate_token(mac: &(impl Mac + Clone), name: &str, token: &str) -> Result<(), Status> {
-    if let Ok(token) = base64::decode(token) {
+    if let Ok(token) = BASE64_STANDARD.decode(token) {
         if mac.clone().chain_update(name).verify_slice(&token).is_ok() {
             return Ok(());
         }

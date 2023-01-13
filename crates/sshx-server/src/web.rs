@@ -186,7 +186,7 @@ async fn handle_socket(mut socket: WebSocket, session: Arc<Session>) -> Result<(
         Ok(loop {
             match socket.recv().await.transpose()? {
                 Some(Message::Text(_)) => warn!("ignoring text message over WebSocket"),
-                Some(Message::Binary(msg)) => break Some(ciborium::de::from_reader(&msg[..])?),
+                Some(Message::Binary(msg)) => break Some(ciborium::de::from_reader(&*msg)?),
                 Some(_) => (), // ignore other message types, keep looping
                 None => break None,
             }

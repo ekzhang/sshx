@@ -121,7 +121,7 @@ impl ClientSocket {
             match self.inner.next().await.transpose().unwrap() {
                 Some(Message::Text(_)) => panic!("unexpected text message over WebSocket"),
                 Some(Message::Binary(msg)) => {
-                    break Some(ciborium::de::from_reader(&msg[..]).unwrap())
+                    break Some(ciborium::de::from_reader(&*msg).unwrap())
                 }
                 Some(_) => (), // ignore other message types, keep looping
                 None => break None,

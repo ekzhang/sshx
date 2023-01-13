@@ -24,7 +24,7 @@ sshx-core = { path = "../sshx-core" }
 tokio.workspace = true
 tokio-stream.workspace = true
 tonic.workspace = true
-tonic-reflection = "0.5.0"
+tonic-reflection = "0.6.0"
 tower = { version = "0.4.12", features = ["steer"] }
 tower-http = { version = "0.3.2", features = ["fs", "redirect", "trace"] }
 tracing.workspace = true

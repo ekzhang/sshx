@@ -96,9 +96,11 @@
 
   const dispatch = createEventDispatcher<{
     data: Uint8Array;
-    startMove: MouseEvent;
     close: void;
+    bringToFront: void;
+    startMove: MouseEvent;
     focus: void;
+    blur: void;
   }>();
 
   export let rows: number, cols: number;
@@ -173,6 +175,28 @@
       currentTitle = title;
     });
 
+    let currentlyFocused = false;
+    const focusObserver = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (
+          mutation.type === "attributes" &&
+          mutation.attributeName === "class"
+        ) {
+          // The "focus class is set directly by xterm.js, but there isn't any way to listen for it.
+          const target = mutation.target as HTMLElement;
+          const isFocused = target.classList.contains("focus");
+          if (isFocused && !currentlyFocused) {
+            currentlyFocused = isFocused;
+            dispatch("focus");
+          } else if (!isFocused && currentlyFocused) {
+            currentlyFocused = isFocused;
+            dispatch("blur");
+          }
+        }
+      }
+    });
+    focusObserver.observe(term.element!, { attributeFilter: ["class"] });
+
     loaded = true;
     for (const data of preloadBuffer) {
       term.write(data);
@@ -193,7 +217,7 @@
 <div
   class="term-container opacity-95"
   style:background={theme.background}
-  on:mousedown={() => dispatch("focus")}
+  on:mousedown={() => dispatch("bringToFront")}
 >
   <div
     class="flex select-none"

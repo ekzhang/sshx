@@ -31,6 +31,7 @@ export type WsServer = {
 export type WsClient = {
   setName?: string;
   setCursor?: [number, number] | null;
+  setFocus?: number | null;
   create?: [];
   close?: Sid;
   move?: [Sid, WsWinsize | null];

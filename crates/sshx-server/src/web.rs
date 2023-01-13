@@ -99,7 +99,7 @@ pub struct WsUser {
     /// Live coordinates of the mouse cursor, if available.
     pub cursor: Option<(i32, i32)>,
     /// Currently focused terminal window ID.
-    pub focus: Option<Sid>, // TODO: Use this field to display real-time focus.
+    pub focus: Option<Sid>,
 }
 
 /// A real-time message sent from the server over WebSocket.
@@ -130,6 +130,8 @@ pub enum WsClient {
     SetName(String),
     /// Send real-time information about the user's cursor.
     SetCursor(Option<(i32, i32)>),
+    /// Set the currently focused shell.
+    SetFocus(Option<Sid>),
     /// Create a new shell.
     Create(),
     /// Close a specific shell.
@@ -237,6 +239,9 @@ async fn handle_socket(mut socket: WebSocket, session: Arc<Session>) -> Result<(
             }
             WsClient::SetCursor(cursor) => {
                 session.update_user(user_id, |user| user.cursor = cursor)?;
+            }
+            WsClient::SetFocus(id) => {
+                session.update_user(user_id, |user| user.focus = id)?;
             }
             WsClient::Create() => {
                 let id = session.counter().next_sid();

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onDestroy, onMount, tick, beforeUpdate, afterUpdate } from "svelte";
   import { fade } from "svelte/transition";
-  import { throttle } from "lodash-es";
+  import { debounce, throttle } from "lodash-es";
 
   import { Srocket } from "./srocket";
   import type { WsClient, WsServer, WsUser, WsWinsize } from "./protocol";
@@ -205,6 +205,14 @@
       document.body.removeEventListener("mouseleave", handleMouseEnd);
     };
   });
+
+  let focused: number[] = [];
+  $: setFocus(focused);
+
+  // Wait a small amount of time, since blur events happen before focus events.
+  const setFocus = debounce((focused: number[]) => {
+    srocket?.send({ setFocus: focused[0] ?? null });
+  }, 20);
 </script>
 
 <main class="p-8" class:cursor-nwse-resize={resizing !== -1}>
@@ -252,14 +260,16 @@
           bind:write={writers[id]}
           bind:termEl={termElements[id]}
           on:data={({ detail: data }) => srocket?.send({ data: [id, data] })}
+          on:close={() => srocket?.send({ close: id })}
+          on:bringToFront={() => srocket?.send({ move: [id, null] })}
           on:startMove={({ detail: event }) => {
             moving = id;
             movingOrigin = [event.pageX - ws.x, event.pageY - ws.y];
             movingSize = ws;
             movingIsDone = false;
           }}
-          on:close={() => srocket?.send({ close: id })}
-          on:focus={() => srocket?.send({ move: [id, null] })}
+          on:focus={() => (focused = [...focused, id])}
+          on:blur={() => (focused = focused.filter((i) => i !== id))}
         />
         <div
           class="absolute w-5 h-5 -bottom-1 -right-1 cursor-nwse-resize"
@@ -280,6 +290,7 @@
     {/each}
 
     {#each users as [id, user] (id)}
+      {JSON.stringify(user)}
       {#if id !== userId && user.cursor !== null}
         <div
           class="absolute"

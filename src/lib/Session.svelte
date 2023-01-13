@@ -11,6 +11,7 @@
   import { slide } from "./ui/slide";
   import Avatars from "./ui/Avatars.svelte";
   import { makeToast } from "./toast";
+  import LiveCursor from "./ui/LiveCursor.svelte";
 
   export let id: string;
 
@@ -301,19 +302,16 @@
       </div>
     {/each}
 
-    {#each users as [id, user] (id)}
-      {JSON.stringify(user)}
-      {#if id !== userId && user.cursor !== null}
-        <div
-          class="absolute"
-          style:left={OFFSET_LEFT_CSS}
-          style:top={OFFSET_TOP_CSS}
-          transition:fade|local
-          use:slide={{ x: user.cursor[0], y: user.cursor[1] }}
-        >
-          🌟 {user.name}
-        </div>
-      {/if}
+    {#each users.filter(([id, user]) => id !== userId && user.cursor !== null) as [id, user] (id)}
+      <div
+        class="absolute"
+        style:left={OFFSET_LEFT_CSS}
+        style:top={OFFSET_TOP_CSS}
+        transition:fade|local
+        use:slide={{ x: user.cursor?.[0] ?? 0, y: user.cursor?.[1] ?? 0 }}
+      >
+        <LiveCursor {user} />
+      </div>
     {/each}
   </div>
 </main>

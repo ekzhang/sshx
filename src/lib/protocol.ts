@@ -9,7 +9,7 @@ export type WsWinsize = {
 /** Information about a user, see the Rust version */
 export type WsUser = {
   name: string;
-  cursorPos: [number, number] | null;
+  cursor: [number, number] | null;
 };
 
 /** Server message type, see the Rust version. */
@@ -25,6 +25,8 @@ export type WsServer = {
 
 /** Client message type, see the Rust version. */
 export type WsClient = {
+  setName?: string;
+  setCursor?: [number, number] | null;
   create?: [];
   close?: number;
   move?: [number, WsWinsize | null];

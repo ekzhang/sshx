@@ -71,7 +71,7 @@ async fn test_ws_basic() -> Result<()> {
     stream.send(WsClient::Create()).await;
     stream.flush().await;
     assert_eq!(stream.shells.len(), 1);
-    assert_eq!(stream.shells[0].0, 2);
+    assert!(stream.shells.contains_key(&2));
 
     stream.send(WsClient::Subscribe(2, 0)).await;
     assert_eq!(stream.read(2), "");
@@ -104,8 +104,7 @@ async fn test_ws_resize() -> Result<()> {
     stream.send(WsClient::Create()).await;
     stream.flush().await;
     assert_eq!(stream.shells.len(), 1);
-    assert_eq!(stream.shells[0].0, 2);
-    assert_eq!(stream.shells[0].1, WsWinsize::default());
+    assert_eq!(*stream.shells.get(&2).unwrap(), WsWinsize::default());
 
     let new_size = WsWinsize {
         x: 42,
@@ -117,7 +116,7 @@ async fn test_ws_resize() -> Result<()> {
     stream.send(WsClient::Move(3, Some(new_size))).await; // error: does not exist
     stream.flush().await;
     assert_eq!(stream.shells.len(), 1);
-    assert_eq!(stream.shells[0].1, new_size);
+    assert_eq!(*stream.shells.get(&2).unwrap(), new_size);
     assert_eq!(stream.errors.len(), 2);
 
     stream.send(WsClient::Close(2)).await;
@@ -155,6 +154,30 @@ async fn test_users_join() -> Result<()> {
 
     stream1.flush().await;
     assert_eq!(stream1.users.len(), 2);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_users_metadata() -> Result<()> {
+    let server = TestServer::new().await?;
+
+    let mut controller = Controller::new(&server.endpoint(), Runner::Echo).await?;
+    let name = controller.name().to_owned();
+    tokio::spawn(async move { controller.run().await });
+
+    let endpoint = server.ws_endpoint(&name);
+    let mut stream = ClientSocket::connect(&endpoint).await?;
+    stream.flush().await;
+    assert_eq!(stream.users.len(), 1);
+    assert_eq!(stream.users.get(&stream.user_id).unwrap().cursor, None);
+
+    stream.send(WsClient::SetName("mr. foo".into())).await;
+    stream.send(WsClient::SetCursor(Some((40, 524)))).await;
+    stream.flush().await;
+    let user = stream.users.get(&stream.user_id).unwrap();
+    assert_eq!(user.name, "mr. foo");
+    assert_eq!(user.cursor, Some((40, 524)));
 
     Ok(())
 }

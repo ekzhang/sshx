@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
@@ -87,8 +87,8 @@ pub struct ClientSocket {
     inner: WebSocketStream<MaybeTlsStream<TcpStream>>,
 
     pub user_id: u32,
-    pub users: Vec<(u32, WsUser)>,
-    pub shells: Vec<(u32, WsWinsize)>,
+    pub users: BTreeMap<u32, WsUser>,
+    pub shells: BTreeMap<u32, WsWinsize>,
     pub data: HashMap<u32, String>,
     pub errors: Vec<String>,
     pub terminated: bool,
@@ -102,8 +102,8 @@ impl ClientSocket {
         Ok(Self {
             inner: stream,
             user_id: 0,
-            users: Vec::new(),
-            shells: Vec::new(),
+            users: BTreeMap::new(),
+            shells: BTreeMap::new(),
             data: HashMap::new(),
             errors: Vec::new(),
             terminated: false,
@@ -143,14 +143,14 @@ impl ClientSocket {
             while let Some(msg) = self.recv().await {
                 match msg {
                     WsServer::Hello(user_id) => self.user_id = user_id,
-                    WsServer::Users(users) => self.users = users,
+                    WsServer::Users(users) => self.users = BTreeMap::from_iter(users),
                     WsServer::UserDiff(id, maybe_user) => {
-                        self.users.retain(|&(user_id, _)| user_id != id);
+                        self.users.remove(&id);
                         if let Some(user) = maybe_user {
-                            self.users.push((id, user));
+                            self.users.insert(id, user);
                         }
                     }
-                    WsServer::Shells(shells) => self.shells = shells,
+                    WsServer::Shells(shells) => self.shells = BTreeMap::from_iter(shells),
                     WsServer::Chunks(id, chunks) => {
                         let value = self.data.entry(id).or_default();
                         for (_, buf) in chunks {

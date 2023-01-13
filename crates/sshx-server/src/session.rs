@@ -244,6 +244,20 @@ impl Session {
             .collect()
     }
 
+    /// Update a user in place by ID, applying a callback to the object.
+    pub fn update_user(&self, id: u32, f: impl FnOnce(&mut WsUser)) -> Result<()> {
+        let updated_user = {
+            let mut users = self.users.write();
+            let user = users.get_mut(&id).context("user not found")?;
+            f(user);
+            user.clone()
+        };
+        self.broadcast
+            .send(WsServer::UserDiff(id, Some(updated_user)))
+            .ok();
+        Ok(())
+    }
+
     /// Add a new user, and return a guard that removes the user when dropped.
     pub fn user_scope(&self, id: u32) -> Result<impl Drop + '_> {
         use std::collections::hash_map::Entry::*;
@@ -259,8 +273,10 @@ impl Session {
         match self.users.write().entry(id) {
             Occupied(_) => bail!("user already exists with id={id}"),
             Vacant(v) => {
-                // TODO: Use a real name.
-                let user = WsUser::new("anonymous user");
+                let user = WsUser {
+                    name: format!("User {id}"),
+                    cursor: None,
+                };
                 v.insert(user.clone());
                 self.broadcast.send(WsServer::UserDiff(id, Some(user))).ok();
                 Ok(UserGuard(self, id))

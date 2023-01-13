@@ -96,17 +96,7 @@ pub struct WsUser {
     /// The user's display name.
     pub name: String,
     /// Live coordinates of the mouse cursor, if available.
-    pub cursor_pos: Option<(i32, i32)>,
-}
-
-impl WsUser {
-    /// Create a new user with the given name.
-    pub fn new(name: &str) -> Self {
-        Self {
-            name: name.into(),
-            cursor_pos: None,
-        }
-    }
+    pub cursor: Option<(i32, i32)>,
 }
 
 /// A real-time message sent from the server over WebSocket.
@@ -133,6 +123,10 @@ pub enum WsServer {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub enum WsClient {
+    /// Set the name of the current user.
+    SetName(String),
+    /// Send real-time information about the user's cursor.
+    SetCursor(Option<(i32, i32)>),
     /// Create a new shell.
     Create(),
     /// Close a specific shell.
@@ -155,7 +149,7 @@ async fn get_session_ws(
         ws.on_upgrade(move |socket| {
             async {
                 if let Err(err) = handle_socket(socket, session).await {
-                    warn!(?err, "exiting early");
+                    warn!(%err, "websocket exiting early");
                 }
             }
             .instrument(info_span!("ws", %id))
@@ -197,13 +191,14 @@ async fn handle_socket(mut socket: WebSocket, session: Arc<Session>) -> Result<(
     send(&mut socket, WsServer::Hello(user_id)).await?;
 
     let _user_guard = session.user_scope(user_id)?;
+
+    let update_tx = session.update_tx(); // start listening for updates before any state reads
     let mut broadcast_stream = session.subscribe_broadcast();
     send(&mut socket, WsServer::Users(session.list_users())).await?;
 
     let mut subscribed = HashSet::new(); // prevent duplicate subscriptions
     let (chunks_tx, mut chunks_rx) = mpsc::channel::<(u32, Vec<(u64, String)>)>(1);
 
-    let update_tx = session.update_tx();
     let mut shells_stream = session.subscribe_shells();
     loop {
         let msg = tokio::select! {
@@ -234,6 +229,12 @@ async fn handle_socket(mut socket: WebSocket, session: Arc<Session>) -> Result<(
         };
 
         match msg {
+            WsClient::SetName(name) => {
+                session.update_user(user_id, |user| user.name = name)?;
+            }
+            WsClient::SetCursor(cursor) => {
+                session.update_user(user_id, |user| user.cursor = cursor)?;
+            }
             WsClient::Create() => {
                 let id = session.next_id();
                 update_tx.send(ServerMessage::CreateShell(id)).await?;

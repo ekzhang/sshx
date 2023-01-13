@@ -12,6 +12,24 @@
 
   export let id: string;
 
+  // The magic numbers "left" and "top" are used to approximately center the
+  // terminal at the time that it is first created.
+  //
+  // For a default 80x24 terminal, this is half of the width and height on a
+  // normal screen at 100% scale.
+  const CONSTANT_OFFSET_LEFT = 357;
+  const CONSTANT_OFFSET_TOP = 258;
+
+  const OFFSET_LEFT_CSS = `calc(50vw - ${CONSTANT_OFFSET_LEFT}px)`;
+  const OFFSET_TOP_CSS = `calc(50vh - ${CONSTANT_OFFSET_TOP}px)`;
+
+  function getConstantOffset() {
+    return [
+      0.5 * window.innerWidth - CONSTANT_OFFSET_LEFT,
+      0.5 * window.innerHeight - CONSTANT_OFFSET_TOP,
+    ];
+  }
+
   let srocket: Srocket<WsServer, WsClient> | null = null;
 
   let connected = false;
@@ -45,7 +63,7 @@
           userId = message.hello;
           makeToast({
             kind: "success",
-            message: `Connected to the server as user ${userId}.`,
+            message: `Connected to the server.`,
           });
         } else if (message.chunks) {
           const [id, chunks] = message.chunks;
@@ -115,7 +133,9 @@
 
   // Global mouse handler logic follows, attached to the window element for smoothness.
   onMount(() => {
-    function handleDrag(event: MouseEvent) {
+    let lastCursorTime = 0;
+
+    function handleMouse(event: MouseEvent) {
       if (moving !== -1 && !movingIsDone) {
         movingSize = {
           ...movingSize,
@@ -129,6 +149,7 @@
           srocket?.send({ move: [moving, movingSize] });
         }
       }
+
       if (resizing !== -1) {
         const cols = Math.max(
           Math.floor((event.pageX - resizingOrigin[0]) / resizingCell[0]),
@@ -143,23 +164,37 @@
           srocket?.send({ move: [resizing, resizingSize] });
         }
       }
+
+      if (Date.now() - lastCursorTime >= 300) {
+        const [ox, oy] = getConstantOffset();
+        const mousePos: [number, number] = [event.pageX - ox, event.pageY - oy];
+        srocket?.send({ setCursor: mousePos });
+        lastCursorTime = Date.now();
+      }
     }
-    function handleDragEnd(event: MouseEvent) {
+
+    function handleMouseEnd(event: MouseEvent) {
       if (moving !== -1) {
         movingIsDone = true;
         srocket?.send({ move: [moving, movingSize] });
       }
+
       if (resizing !== -1) {
         resizing = -1;
       }
+
+      if (event.type === "mouseleave") {
+        srocket?.send({ setCursor: null });
+      }
     }
-    window.addEventListener("mousemove", handleDrag);
-    window.addEventListener("mouseup", handleDragEnd);
-    window.addEventListener("mouseleave", handleDragEnd);
+
+    window.addEventListener("mousemove", handleMouse);
+    window.addEventListener("mouseup", handleMouseEnd);
+    document.body.addEventListener("mouseleave", handleMouseEnd);
     return () => {
-      window.removeEventListener("mousemove", handleDrag);
-      window.removeEventListener("mouseup", handleDragEnd);
-      window.removeEventListener("mouseleave", handleDragEnd);
+      window.removeEventListener("mousemove", handleMouse);
+      window.removeEventListener("mouseup", handleMouseEnd);
+      document.body.removeEventListener("mouseleave", handleMouseEnd);
     };
   });
 </script>
@@ -196,15 +231,10 @@
   <div class="absolute inset-0 overflow-hidden">
     {#each shells as [id, winsize] (id)}
       {@const ws = id === moving ? movingSize : winsize}
-      <!--
-        The magic numbers "left" and "top" are used to approximately center the
-        terminal at the time that it is first created.
-
-        For a default 80x24 terminal, this is half of the width and height on a
-        normal screen at 100% scale.
-      -->
       <div
-        class="absolute left-[calc(50vw-357px)] top-[calc(50vh-258px)]"
+        class="absolute"
+        style:left={OFFSET_LEFT_CSS}
+        style:top={OFFSET_TOP_CSS}
         transition:fade|local
         use:slide={{ x: ws.x, y: ws.y }}
       >

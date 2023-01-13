@@ -17,7 +17,7 @@
         } catch (error) {
           makeToast({
             kind: "error",
-            message: "Could not load terminal font",
+            message: "Could not load terminal font.",
           });
         }
         state = "loaded";

@@ -9,6 +9,7 @@
   import Toolbar from "./ui/Toolbar.svelte";
   import XTerm from "./ui/XTerm.svelte";
   import { slide } from "./ui/slide";
+  import Avatars from "./ui/Avatars.svelte";
   import { makeToast } from "./toast";
 
   export let id: string;
@@ -34,7 +35,7 @@
   /** Returns the mouse position in infinite grid coordinates, offset transformations and zoom. */
   function normalizePosition(event: MouseEvent): [number, number] {
     const [ox, oy] = getConstantOffset();
-    return [Math.round(event.pageX) - ox, Math.round(event.pageY) - oy];
+    return [Math.round(event.pageX - ox), Math.round(event.pageY - oy)];
   }
 
   let srocket: Srocket<WsServer, WsClient> | null = null;
@@ -275,6 +276,13 @@
           on:focus={() => (focused = [...focused, id])}
           on:blur={() => (focused = focused.filter((i) => i !== id))}
         />
+        <div class="absolute bottom-3 right-3 pointer-events-none">
+          <Avatars
+            users={users
+              .filter(([uid, user]) => uid !== userId && user.focus === id)
+              .map(([_, user]) => user)}
+          />
+        </div>
         <div
           class="absolute w-5 h-5 -bottom-1 -right-1 cursor-nwse-resize"
           on:mousedown={(event) => {

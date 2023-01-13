@@ -31,6 +31,12 @@
     ];
   }
 
+  /** Returns the mouse position in infinite grid coordinates, offset transformations and zoom. */
+  function normalizePosition(event: MouseEvent): [number, number] {
+    const [ox, oy] = getConstantOffset();
+    return [Math.round(event.pageX) - ox, Math.round(event.pageY) - oy];
+  }
+
   let srocket: Srocket<WsServer, WsClient> | null = null;
 
   let connected = false;
@@ -153,8 +159,8 @@
       if (moving !== -1 && !movingIsDone) {
         movingSize = {
           ...movingSize,
-          x: event.pageX - movingOrigin[0],
-          y: event.pageY - movingOrigin[1],
+          x: Math.round(event.pageX - movingOrigin[0]),
+          y: Math.round(event.pageY - movingOrigin[1]),
         };
         sendMove({ move: [moving, movingSize] });
       }
@@ -174,9 +180,7 @@
         }
       }
 
-      const [ox, oy] = getConstantOffset();
-      const mousePos: [number, number] = [event.pageX - ox, event.pageY - oy];
-      sendCursor({ setCursor: mousePos });
+      sendCursor({ setCursor: normalizePosition(event) });
     }
 
     function handleMouseEnd(event: MouseEvent) {

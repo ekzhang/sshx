@@ -280,7 +280,7 @@
           <Avatars
             users={users
               .filter(([uid, user]) => uid !== userId && user.focus === id)
-              .map(([_, user]) => user)}
+              .map(([, user]) => user)}
           />
         </div>
         <div

@@ -25,6 +25,7 @@
           class="mb-2"
           on:click={() =>
             ($toastStore = $toastStore.filter((t) => t !== toast))}
+          on:keypress={() => null}
           animate:flip={{ duration: 500 }}
           transition:fly={{ x: 360, duration: 500 }}
         >

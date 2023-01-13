@@ -277,11 +277,11 @@
           on:focus={() => (focused = [...focused, id])}
           on:blur={() => (focused = focused.filter((i) => i !== id))}
         />
-        <div class="absolute bottom-3 right-3 pointer-events-none">
+        <div class="absolute bottom-2.5 right-2.5 pointer-events-none">
           <Avatars
-            users={users
-              .filter(([uid, user]) => uid !== userId && user.focus === id)
-              .map(([, user]) => user)}
+            users={users.filter(
+              ([uid, user]) => uid !== userId && user.focus === id,
+            )}
           />
         </div>
         <div
@@ -307,7 +307,7 @@
         class="absolute"
         style:left={OFFSET_LEFT_CSS}
         style:top={OFFSET_TOP_CSS}
-        transition:fade|local
+        transition:fade|local={{ duration: 200 }}
         use:slide={{ x: user.cursor?.[0] ?? 0, y: user.cursor?.[1] ?? 0 }}
       >
         <LiveCursor {user} />

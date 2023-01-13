@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 prost.workspace = true
+serde.workspace = true
 tonic.workspace = true
 
 [build-dependencies]

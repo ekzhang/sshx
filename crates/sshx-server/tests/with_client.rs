@@ -1,6 +1,9 @@
 use anyhow::{Context, Result};
 use sshx::{controller::Controller, runner::Runner};
-use sshx_core::proto::{server_update::ServerMessage, TerminalInput};
+use sshx_core::{
+    proto::{server_update::ServerMessage, TerminalInput},
+    Sid, Uid,
+};
 use sshx_server::web::{WsClient, WsWinsize};
 use tokio::time::{self, Duration};
 
@@ -66,23 +69,25 @@ async fn test_ws_basic() -> Result<()> {
 
     let mut stream = ClientSocket::connect(&server.ws_endpoint(&name)).await?;
     stream.flush().await;
-    assert_eq!(stream.user_id, 1);
+    assert_eq!(stream.user_id, Uid(1));
 
     stream.send(WsClient::Create()).await;
     stream.flush().await;
     assert_eq!(stream.shells.len(), 1);
-    assert!(stream.shells.contains_key(&2));
+    assert!(stream.shells.contains_key(&Sid(1)));
 
-    stream.send(WsClient::Subscribe(2, 0)).await;
-    assert_eq!(stream.read(2), "");
+    stream.send(WsClient::Subscribe(Sid(1), 0)).await;
+    assert_eq!(stream.read(Sid(1)), "");
 
-    stream.send(WsClient::Data(2, b"hello!".to_vec())).await;
+    stream
+        .send(WsClient::Data(Sid(1), b"hello!".to_vec()))
+        .await;
     stream.flush().await;
-    assert_eq!(stream.read(2), "hello!");
+    assert_eq!(stream.read(Sid(1)), "hello!");
 
-    stream.send(WsClient::Data(2, b" 123".to_vec())).await;
+    stream.send(WsClient::Data(Sid(1), b" 123".to_vec())).await;
     stream.flush().await;
-    assert_eq!(stream.read(2), "hello! 123");
+    assert_eq!(stream.read(Sid(1)), "hello! 123");
 
     Ok(())
 }
@@ -97,14 +102,14 @@ async fn test_ws_resize() -> Result<()> {
 
     let mut stream = ClientSocket::connect(&server.ws_endpoint(&name)).await?;
 
-    stream.send(WsClient::Move(2, None)).await; // error: does not exist yet!
+    stream.send(WsClient::Move(Sid(1), None)).await; // error: does not exist yet!
     stream.flush().await;
     assert_eq!(stream.errors.len(), 1);
 
     stream.send(WsClient::Create()).await;
     stream.flush().await;
     assert_eq!(stream.shells.len(), 1);
-    assert_eq!(*stream.shells.get(&2).unwrap(), WsWinsize::default());
+    assert_eq!(*stream.shells.get(&Sid(1)).unwrap(), WsWinsize::default());
 
     let new_size = WsWinsize {
         x: 42,
@@ -112,18 +117,18 @@ async fn test_ws_resize() -> Result<()> {
         rows: 200,
         cols: 20,
     };
-    stream.send(WsClient::Move(2, Some(new_size))).await;
-    stream.send(WsClient::Move(3, Some(new_size))).await; // error: does not exist
+    stream.send(WsClient::Move(Sid(1), Some(new_size))).await;
+    stream.send(WsClient::Move(Sid(2), Some(new_size))).await; // error: does not exist
     stream.flush().await;
     assert_eq!(stream.shells.len(), 1);
-    assert_eq!(*stream.shells.get(&2).unwrap(), new_size);
+    assert_eq!(*stream.shells.get(&Sid(1)).unwrap(), new_size);
     assert_eq!(stream.errors.len(), 2);
 
-    stream.send(WsClient::Close(2)).await;
+    stream.send(WsClient::Close(Sid(1))).await;
     stream.flush().await;
     assert_eq!(stream.shells.len(), 0);
 
-    stream.send(WsClient::Move(2, None)).await; // error: shell was closed
+    stream.send(WsClient::Move(Sid(1), None)).await; // error: shell was closed
     stream.flush().await;
     assert_eq!(stream.errors.len(), 3);
 

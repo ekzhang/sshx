@@ -8,9 +8,9 @@ use hmac::Mac;
 use nanoid::nanoid;
 use sshx_core::proto::{
     client_update::ClientMessage, server_update::ServerMessage, sshx_service_server::SshxService,
-    ClientUpdate, CloseRequest, CloseResponse, OpenRequest, OpenResponse, SequenceNumbers,
-    ServerUpdate,
+    ClientUpdate, CloseRequest, CloseResponse, OpenRequest, OpenResponse, ServerUpdate,
 };
+use sshx_core::Sid;
 use tokio::sync::mpsc;
 use tokio::time::{self, MissedTickBehavior};
 use tokio_stream::{wrappers::ReceiverStream, StreamExt};
@@ -140,8 +140,7 @@ async fn handle_streaming(
         tokio::select! {
             // Send periodic sync messages to the client.
             _ = interval.tick() => {
-                let map = session.sequence_numbers();
-                let msg = ServerMessage::Sync(SequenceNumbers { map });
+                let msg = ServerMessage::Sync(session.sequence_numbers());
                 if !send_msg(tx, msg).await {
                     return Err("failed to send sync message");
                 }
@@ -181,17 +180,17 @@ async fn handle_update(tx: &ServerTx, session: &Session, update: ClientUpdate) -
             return send_err(tx, "unexpected hello".into()).await;
         }
         Some(ClientMessage::Data(data)) => {
-            if let Err(err) = session.add_data(data.id, &data.data, data.seq) {
+            if let Err(err) = session.add_data(Sid(data.id), &data.data, data.seq) {
                 return send_err(tx, format!("add data: {:?}", err)).await;
             }
         }
         Some(ClientMessage::CreatedShell(id)) => {
-            if let Err(err) = session.add_shell(id) {
+            if let Err(err) = session.add_shell(Sid(id)) {
                 return send_err(tx, format!("add shell: {:?}", err)).await;
             }
         }
         Some(ClientMessage::ClosedShell(id)) => {
-            if let Err(err) = session.close_shell(id) {
+            if let Err(err) = session.close_shell(Sid(id)) {
                 return send_err(tx, format!("close shell: {:?}", err)).await;
             }
         }

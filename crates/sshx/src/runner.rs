@@ -3,6 +3,7 @@
 use anyhow::Result;
 use encoding_rs::{CoderResult, UTF_8};
 use sshx_core::proto::{client_update::ClientMessage, TerminalData};
+use sshx_core::Sid;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     sync::mpsc,
@@ -34,7 +35,7 @@ impl Runner {
     /// Asynchronous task to run a single shell with process I/O.
     pub async fn run(
         &self,
-        id: u32,
+        id: Sid,
         shell_rx: mpsc::Receiver<ShellData>,
         output_tx: mpsc::Sender<ClientMessage>,
     ) -> Result<()> {
@@ -47,7 +48,7 @@ impl Runner {
 
 /// Asynchronous task handling a single shell within the session.
 async fn shell_task(
-    id: u32,
+    id: Sid,
     shell: &str,
     mut shell_rx: mpsc::Receiver<ShellData>,
     output_tx: mpsc::Sender<ClientMessage>,
@@ -105,7 +106,7 @@ async fn shell_task(
         if content.len() > seq {
             seq = prev_char_boundary(&content, seq);
             let data = TerminalData {
-                id,
+                id: id.0,
                 data: content[seq..].into(),
                 seq: seq as u64,
             };
@@ -126,7 +127,7 @@ fn prev_char_boundary(s: &str, i: usize) -> usize {
 }
 
 async fn echo_task(
-    id: u32,
+    id: Sid,
     mut shell_rx: mpsc::Receiver<ShellData>,
     output_tx: mpsc::Sender<ClientMessage>,
 ) -> Result<()> {
@@ -136,7 +137,7 @@ async fn echo_task(
             ShellData::Data(data) => {
                 let msg = String::from_utf8_lossy(&data);
                 let term_data = TerminalData {
-                    id,
+                    id: id.0,
                     data: msg.to_string(),
                     seq,
                 };

@@ -14,6 +14,7 @@ use hyper::StatusCode;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use sshx_core::proto::{server_update::ServerMessage, TerminalInput, TerminalSize};
+use sshx_core::{Sid, Uid};
 use tokio::sync::mpsc;
 use tokio_stream::StreamExt;
 use tower_http::services::{ServeDir, ServeFile};
@@ -98,7 +99,7 @@ pub struct WsUser {
     /// Live coordinates of the mouse cursor, if available.
     pub cursor: Option<(i32, i32)>,
     /// Currently focused terminal window ID.
-    pub focus: Option<u32>, // TODO: Use this field to display real-time focus.
+    pub focus: Option<Sid>, // TODO: Use this field to display real-time focus.
 }
 
 /// A real-time message sent from the server over WebSocket.
@@ -106,15 +107,15 @@ pub struct WsUser {
 #[serde(rename_all = "camelCase")]
 pub enum WsServer {
     /// Initial server message, informing the user of their ID.
-    Hello(u32),
+    Hello(Uid),
     /// A snapshot of all current users in the session.
-    Users(Vec<(u32, WsUser)>),
+    Users(Vec<(Uid, WsUser)>),
     /// Info about a single user in the session: joined, left, or changed.
-    UserDiff(u32, Option<WsUser>),
+    UserDiff(Uid, Option<WsUser>),
     /// Notification when the set of open shells has changed.
-    Shells(Vec<(u32, WsWinsize)>),
+    Shells(Vec<(Sid, WsWinsize)>),
     /// Subscription results, in the form of terminal data chunks.
-    Chunks(u32, Vec<(u64, String)>),
+    Chunks(Sid, Vec<(u64, String)>),
     /// The current session has been terminated.
     Terminated(),
     /// Alert the client of an application error.
@@ -132,13 +133,13 @@ pub enum WsClient {
     /// Create a new shell.
     Create(),
     /// Close a specific shell.
-    Close(u32),
+    Close(Sid),
     /// Move a shell window to a new position and focus it.
-    Move(u32, Option<WsWinsize>),
+    Move(Sid, Option<WsWinsize>),
     /// Add user data to a given shell.
-    Data(u32, #[serde(with = "serde_bytes")] Vec<u8>),
+    Data(Sid, #[serde(with = "serde_bytes")] Vec<u8>),
     /// Subscribe to a shell, starting at a given chunk index.
-    Subscribe(u32, u64),
+    Subscribe(Sid, u64),
 }
 
 async fn get_session_ws(
@@ -189,7 +190,7 @@ async fn handle_socket(mut socket: WebSocket, session: Arc<Session>) -> Result<(
         })
     }
 
-    let user_id = session.next_id();
+    let user_id = session.counter().next_uid();
     send(&mut socket, WsServer::Hello(user_id)).await?;
 
     let _user_guard = session.user_scope(user_id)?;
@@ -199,7 +200,7 @@ async fn handle_socket(mut socket: WebSocket, session: Arc<Session>) -> Result<(
     send(&mut socket, WsServer::Users(session.list_users())).await?;
 
     let mut subscribed = HashSet::new(); // prevent duplicate subscriptions
-    let (chunks_tx, mut chunks_rx) = mpsc::channel::<(u32, Vec<(u64, String)>)>(1);
+    let (chunks_tx, mut chunks_rx) = mpsc::channel::<(Sid, Vec<(u64, String)>)>(1);
 
     let mut shells_stream = session.subscribe_shells();
     loop {
@@ -238,11 +239,11 @@ async fn handle_socket(mut socket: WebSocket, session: Arc<Session>) -> Result<(
                 session.update_user(user_id, |user| user.cursor = cursor)?;
             }
             WsClient::Create() => {
-                let id = session.next_id();
-                update_tx.send(ServerMessage::CreateShell(id)).await?;
+                let id = session.counter().next_sid();
+                update_tx.send(ServerMessage::CreateShell(id.0)).await?;
             }
             WsClient::Close(id) => {
-                update_tx.send(ServerMessage::CloseShell(id)).await?;
+                update_tx.send(ServerMessage::CloseShell(id.0)).await?;
             }
             WsClient::Move(id, winsize) => {
                 if let Err(err) = session.move_shell(id, winsize) {
@@ -251,7 +252,7 @@ async fn handle_socket(mut socket: WebSocket, session: Arc<Session>) -> Result<(
                 }
                 if let Some(winsize) = winsize {
                     let msg = ServerMessage::Resize(TerminalSize {
-                        id,
+                        id: id.0,
                         rows: winsize.rows as u32,
                         cols: winsize.cols as u32,
                     });
@@ -259,7 +260,7 @@ async fn handle_socket(mut socket: WebSocket, session: Arc<Session>) -> Result<(
                 }
             }
             WsClient::Data(id, data) => {
-                let data = TerminalInput { id, data };
+                let data = TerminalInput { id: id.0, data };
                 update_tx.send(ServerMessage::Input(data)).await?;
             }
             WsClient::Subscribe(id, chunknum) => {

@@ -7,6 +7,7 @@ use anyhow::{ensure, Result};
 use futures_util::{SinkExt, StreamExt};
 use hyper::{server::conn::AddrIncoming, StatusCode};
 use sshx_core::proto::sshx_service_client::SshxServiceClient;
+use sshx_core::{Sid, Uid};
 use sshx_server::{
     session::Session,
     state::ServerState,
@@ -86,10 +87,10 @@ impl Drop for TestServer {
 pub struct ClientSocket {
     inner: WebSocketStream<MaybeTlsStream<TcpStream>>,
 
-    pub user_id: u32,
-    pub users: BTreeMap<u32, WsUser>,
-    pub shells: BTreeMap<u32, WsWinsize>,
-    pub data: HashMap<u32, String>,
+    pub user_id: Uid,
+    pub users: BTreeMap<Uid, WsUser>,
+    pub shells: BTreeMap<Sid, WsWinsize>,
+    pub data: HashMap<Sid, String>,
     pub errors: Vec<String>,
     pub terminated: bool,
 }
@@ -101,7 +102,7 @@ impl ClientSocket {
         ensure!(resp.status() == StatusCode::SWITCHING_PROTOCOLS);
         Ok(Self {
             inner: stream,
-            user_id: 0,
+            user_id: Uid(0),
             users: BTreeMap::new(),
             shells: BTreeMap::new(),
             data: HashMap::new(),
@@ -165,7 +166,7 @@ impl ClientSocket {
         time::timeout(FLUSH_DURATION, flush_task).await.ok();
     }
 
-    pub fn read(&self, id: u32) -> &str {
+    pub fn read(&self, id: Sid) -> &str {
         self.data.get(&id).map(|s| &**s).unwrap_or("")
     }
 }

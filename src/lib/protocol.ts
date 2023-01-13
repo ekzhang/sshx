@@ -1,3 +1,6 @@
+type Sid = number; // u32
+type Uid = number; // u32
+
 /** Position and size of a window, see the Rust version. */
 export type WsWinsize = {
   x: number;
@@ -15,11 +18,11 @@ export type WsUser = {
 
 /** Server message type, see the Rust version. */
 export type WsServer = {
-  hello?: number;
-  users?: [number, WsUser][];
-  userDiff?: [number, WsUser | null];
-  shells?: [number, WsWinsize][];
-  chunks?: [number, [number, string][]];
+  hello?: Uid;
+  users?: [Uid, WsUser][];
+  userDiff?: [Uid, WsUser | null];
+  shells?: [Sid, WsWinsize][];
+  chunks?: [Sid, [number, string][]];
   terminated?: [];
   error?: string;
 };
@@ -29,8 +32,8 @@ export type WsClient = {
   setName?: string;
   setCursor?: [number, number] | null;
   create?: [];
-  close?: number;
-  move?: [number, WsWinsize | null];
-  data?: [number, Uint8Array];
-  subscribe?: [number, number];
+  close?: Sid;
+  move?: [Sid, WsWinsize | null];
+  data?: [Sid, Uint8Array];
+  subscribe?: [Sid, number];
 };

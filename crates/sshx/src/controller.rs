@@ -7,6 +7,7 @@ use sshx_core::proto::{
     client_update::ClientMessage, server_update::ServerMessage,
     sshx_service_client::SshxServiceClient, ClientUpdate, CloseRequest, OpenRequest,
 };
+use sshx_core::Sid;
 use tokio::sync::mpsc;
 use tokio::time::{self, Duration, Instant, MissedTickBehavior};
 use tokio_stream::{wrappers::ReceiverStream, StreamExt};
@@ -28,7 +29,7 @@ pub struct Controller {
     url: String,
 
     /// Channels with backpressure routing messages to each shell task.
-    shells_tx: HashMap<u32, mpsc::Sender<ShellData>>,
+    shells_tx: HashMap<Sid, mpsc::Sender<ShellData>>,
     /// Channel shared with tasks to allow them to output client messages.
     output_tx: mpsc::Sender<ClientMessage>,
     /// Owned receiving end of the `output_tx` channel.
@@ -119,7 +120,7 @@ impl Controller {
             match message {
                 ServerMessage::Input(input) => {
                     // We ignore `data.seq` because it should be unused here.
-                    if let Some(sender) = self.shells_tx.get(&input.id) {
+                    if let Some(sender) = self.shells_tx.get(&Sid(input.id)) {
                         // This line applies backpressure if the shell task is overloaded.
                         sender.send(ShellData::Data(input.data)).await.ok();
                     } else {
@@ -127,20 +128,20 @@ impl Controller {
                     }
                 }
                 ServerMessage::CreateShell(id) => {
-                    if !self.shells_tx.contains_key(&id) {
-                        self.spawn_shell_task(id);
+                    if !self.shells_tx.contains_key(&Sid(id)) {
+                        self.spawn_shell_task(Sid(id));
                     } else {
                         warn!(%id, "server asked to create duplicate shell");
                     }
                 }
                 ServerMessage::CloseShell(id) => {
                     // Closes the channel when it is dropped, notifying the task to shut down.
-                    self.shells_tx.remove(&id);
+                    self.shells_tx.remove(&Sid(id));
                     send_msg(&tx, ClientMessage::ClosedShell(id)).await?;
                 }
                 ServerMessage::Sync(seqnums) => {
                     for (id, seq) in seqnums.map {
-                        if let Some(sender) = self.shells_tx.get(&id) {
+                        if let Some(sender) = self.shells_tx.get(&Sid(id)) {
                             sender.send(ShellData::Sync(seq)).await.ok();
                         } else {
                             warn!(%id, "received sequence number for non-existing shell");
@@ -149,7 +150,7 @@ impl Controller {
                     }
                 }
                 ServerMessage::Resize(msg) => {
-                    if let Some(sender) = self.shells_tx.get(&msg.id) {
+                    if let Some(sender) = self.shells_tx.get(&Sid(msg.id)) {
                         sender.send(ShellData::Size(msg.rows, msg.cols)).await.ok();
                     } else {
                         warn!(%msg.id, "received resize for non-existing shell");
@@ -163,7 +164,7 @@ impl Controller {
     }
 
     /// Entry point to start a new terminal task on the client.
-    fn spawn_shell_task(&mut self, id: u32) {
+    fn spawn_shell_task(&mut self, id: Sid) {
         let (shell_tx, shell_rx) = mpsc::channel(16);
         let opt = self.shells_tx.insert(id, shell_tx);
         debug_assert!(opt.is_none(), "shell ID cannot be in existing tasks");
@@ -172,7 +173,7 @@ impl Controller {
         let output_tx = self.output_tx.clone();
         tokio::spawn(async move {
             info!(%id, "spawning new shell");
-            if let Err(err) = output_tx.send(ClientMessage::CreatedShell(id)).await {
+            if let Err(err) = output_tx.send(ClientMessage::CreatedShell(id.0)).await {
                 error!(%id, ?err, "failed to send shell creation message");
                 return;
             }
@@ -180,7 +181,7 @@ impl Controller {
                 let err = ClientMessage::Error(err.to_string());
                 output_tx.send(err).await.ok();
             }
-            output_tx.send(ClientMessage::ClosedShell(id)).await.ok();
+            output_tx.send(ClientMessage::ClosedShell(id.0)).await.ok();
         });
     }
 

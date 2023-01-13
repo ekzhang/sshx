@@ -17,7 +17,7 @@ hyper = { version = "0.14.18", features = ["full"] }
 nanoid = "0.4.0"
 parking_lot = "0.12.0"
 rand = "0.8.5"
-serde = { version = "1.0.143", features = ["derive"] }
+serde.workspace = true
 serde_bytes = "0.11.6"
 sha2 = "0.10.2"
 sshx-core = { path = "../sshx-core" }

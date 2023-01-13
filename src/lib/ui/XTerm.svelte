@@ -46,7 +46,7 @@
   const patchXTerm = (() => {
     let patched = false;
 
-    /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-empty-function */
+    /* eslint-disable @typescript-eslint/no-empty-function */
     return function patchXTerm(term: any) {
       if (patched) return;
       patched = true;
@@ -61,10 +61,12 @@
         this._data = new Uint32Array(0);
         return true;
       };
-      InputHandler.prototype.sendDeviceAttributesPrimary = () => {};
-      InputHandler.prototype.sendDeviceAttributesSecondary = () => {};
-      InputHandler.prototype.deviceStatus = () => {};
-      InputHandler.prototype.deviceStatusPrivate = () => {};
+      InputHandler.prototype.sendDeviceAttributesPrimary = () => true;
+      InputHandler.prototype.sendDeviceAttributesSecondary = () => true;
+      InputHandler.prototype.requestMode = () => true;
+      InputHandler.prototype.deviceStatus = () => true;
+      InputHandler.prototype.deviceStatusPrivate = () => true;
+      InputHandler.prototype.requestStatusString = () => true;
       const windowOptions = InputHandler.prototype.windowOptions;
       InputHandler.prototype.windowOptions = function (params: any): boolean {
         if (params.params[0] === 18) {
@@ -74,7 +76,7 @@
         }
       };
     };
-    /* eslint-enable @typescript-eslint/no-explicit-any, @typescript-eslint/no-empty-function */
+    /* eslint-enable @typescript-eslint/no-empty-function */
   })();
 </script>
 
@@ -128,6 +130,7 @@
   onMount(async () => {
     const { Terminal } = await import("xterm");
     const { WebLinksAddon } = await import("xterm-addon-web-links");
+    const { WebglAddon } = await import("xterm-addon-webgl");
 
     await waitForFonts();
 
@@ -168,6 +171,7 @@
     });
 
     term.loadAddon(new WebLinksAddon());
+    term.loadAddon(new WebglAddon());
 
     term.open(termEl);
     term.resize(cols, rows);

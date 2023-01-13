@@ -287,7 +287,7 @@
           class="absolute w-5 h-5 -bottom-1 -right-1 cursor-nwse-resize"
           on:mousedown={(event) => {
             const canvasEl = termElements[id].querySelector(
-              "canvas.xterm-text-layer",
+              "canvas.xterm-cursor-layer",
             );
             if (canvasEl) {
               resizing = id;

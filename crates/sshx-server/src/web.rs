@@ -97,6 +97,8 @@ pub struct WsUser {
     pub name: String,
     /// Live coordinates of the mouse cursor, if available.
     pub cursor: Option<(i32, i32)>,
+    /// Currently focused terminal window ID.
+    pub focus: Option<u32>, // TODO: Use this field to display real-time focus.
 }
 
 /// A real-time message sent from the server over WebSocket.

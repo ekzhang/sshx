@@ -10,6 +10,7 @@ export type WsWinsize = {
 export type WsUser = {
   name: string;
   cursor: [number, number] | null;
+  focus: number | null;
 };
 
 /** Server message type, see the Rust version. */

@@ -276,6 +276,7 @@ impl Session {
                 let user = WsUser {
                     name: format!("User {id}"),
                     cursor: None,
+                    focus: None,
                 };
                 v.insert(user.clone());
                 self.broadcast.send(WsServer::UserDiff(id, Some(user))).ok();

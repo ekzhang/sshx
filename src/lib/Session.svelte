@@ -1,9 +1,10 @@
 <script lang="ts">
   import { onDestroy, onMount, tick, beforeUpdate, afterUpdate } from "svelte";
   import { fade } from "svelte/transition";
+  import { throttle } from "lodash-es";
 
   import { Srocket } from "./srocket";
-  import type { WsClient, WsServer, WsWinsize } from "./protocol";
+  import type { WsClient, WsServer, WsUser, WsWinsize } from "./protocol";
   import Chat from "./ui/Chat.svelte";
   import Toolbar from "./ui/Toolbar.svelte";
   import XTerm from "./ui/XTerm.svelte";
@@ -42,13 +43,13 @@
   const termElements: Record<number, HTMLDivElement> = {};
   const seqnums: Record<number, number> = {};
   let userId = 0;
+  let users: [number, WsUser][] = [];
   let shells: [number, WsWinsize][] = [];
   let subscriptions = new Set<number>();
 
   let moving = -1; // Terminal ID that is being dragged.
   let movingOrigin = [0, 0]; // Coordinates of mouse at origin when drag started.
   let movingSize: WsWinsize; // New [x, y] position of the dragged terminal.
-  let movingLast = 0; // Time when the last move message was sent.
   let movingIsDone = false; // Moving finished but hasn't been acknowledged.
 
   let resizing = -1; // Terminal ID that is being resized.
@@ -74,9 +75,13 @@
             }
           });
         } else if (message.users) {
-          console.log("users", message.users);
+          users = message.users;
         } else if (message.userDiff) {
-          console.log("userDiff", message.userDiff);
+          const [id, update] = message.userDiff;
+          users = users.filter(([uid]) => uid !== id);
+          if (update !== null) {
+            users = [...users, [id, update]];
+          }
         } else if (message.shells) {
           shells = message.shells;
           if (movingIsDone) {
@@ -107,6 +112,7 @@
       onDisconnect() {
         connected = false;
         subscriptions.clear();
+        users = [];
       },
 
       onClose(event) {
@@ -133,7 +139,15 @@
 
   // Global mouse handler logic follows, attached to the window element for smoothness.
   onMount(() => {
-    let lastCursorTime = 0;
+    // 50 milliseconds between successive terminal move updates.
+    const sendMove = throttle((message: WsClient) => {
+      srocket?.send(message);
+    }, 50);
+
+    // 80 milliseconds between successive cursor updates.
+    const sendCursor = throttle((message: WsClient) => {
+      srocket?.send(message);
+    }, 80);
 
     function handleMouse(event: MouseEvent) {
       if (moving !== -1 && !movingIsDone) {
@@ -142,12 +156,7 @@
           x: event.pageX - movingOrigin[0],
           y: event.pageY - movingOrigin[1],
         };
-        const now = Date.now();
-        if (now >= movingLast + 40) {
-          // 40 milliseconds between successive updates.
-          movingLast = now;
-          srocket?.send({ move: [moving, movingSize] });
-        }
+        sendMove({ move: [moving, movingSize] });
       }
 
       if (resizing !== -1) {
@@ -165,17 +174,15 @@
         }
       }
 
-      if (Date.now() - lastCursorTime >= 300) {
-        const [ox, oy] = getConstantOffset();
-        const mousePos: [number, number] = [event.pageX - ox, event.pageY - oy];
-        srocket?.send({ setCursor: mousePos });
-        lastCursorTime = Date.now();
-      }
+      const [ox, oy] = getConstantOffset();
+      const mousePos: [number, number] = [event.pageX - ox, event.pageY - oy];
+      sendCursor({ setCursor: mousePos });
     }
 
     function handleMouseEnd(event: MouseEvent) {
       if (moving !== -1) {
         movingIsDone = true;
+        sendMove.cancel();
         srocket?.send({ move: [moving, movingSize] });
       }
 
@@ -184,6 +191,7 @@
       }
 
       if (event.type === "mouseleave") {
+        sendCursor.cancel();
         srocket?.send({ setCursor: null });
       }
     }
@@ -269,6 +277,20 @@
           }}
         />
       </div>
+    {/each}
+
+    {#each users as [id, user] (id)}
+      {#if id !== userId && user.cursor !== null}
+        <div
+          class="absolute"
+          style:left={OFFSET_LEFT_CSS}
+          style:top={OFFSET_TOP_CSS}
+          transition:fade|local
+          use:slide={{ x: user.cursor[0], y: user.cursor[1] }}
+        >
+          🌟 {user.name}
+        </div>
+      {/if}
     {/each}
   </div>
 </main>

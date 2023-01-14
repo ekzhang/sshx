@@ -1,7 +1,20 @@
+<script lang="ts" context="module">
+  import type { WsUser } from "$lib/protocol";
+
+  /** Convert a string into a unique, hashed hue from 0 to 360. */
+  export function nameToHue(name: string): number {
+    // Hashes the string with FNV.
+    let hash = 2166136261;
+    for (let i = 0; i < name.length; i++) {
+      hash = (hash ^ name.charCodeAt(i)) * 16777619;
+    }
+    hash = (hash * 16777619) ^ -1;
+    return 360 * (hash / (1 << 31));
+  }
+</script>
+
 <script lang="ts">
   import { fade } from "svelte/transition";
-
-  import type { WsUser } from "$lib/protocol";
 
   export let user: WsUser;
   export let showName = false;
@@ -25,16 +38,20 @@
 </script>
 
 <div
-  class="flex items-center"
+  class="flex items-start"
   on:mouseenter={() => (hovering = true)}
   on:mouseleave={() => (hovering = false)}
 >
-  <svg width="27" height="27" viewBox="0 0 27 27">
-    <path d="M14 26L2 2L26 14H14V26Z" fill="#76FF84" stroke="#111111" />
+  <svg width="23" height="23" viewBox="0 0 23 23">
+    <path
+      d="M11 22L2 2L22 11L14 14Z"
+      fill="hsl({nameToHue(user.name)}, 100%, 50%)"
+      stroke="white"
+    />
   </svg>
   {#if showName || hovering || time - lastMove < 1500}
     <p
-      class="ml-1 bg-zinc-600 text-sm px-1.5 py-[1px] rounded-sm font-bold"
+      class="mt-4 bg-zinc-700 text-xs px-1.5 py-[1px] rounded font-bold"
       transition:fade|local={{ duration: 150 }}
     >
       {user.name}

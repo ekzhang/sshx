@@ -2,6 +2,7 @@
   import { fade } from "svelte/transition";
 
   import type { WsUser } from "$lib/protocol";
+  import { nameToHue } from "./LiveCursor.svelte";
 
   export let users: [number, WsUser][];
 
@@ -19,7 +20,11 @@
 
 <div class="flex flex-row-reverse">
   {#each users as [id, user] (id)}
-    <div class="avatar" transition:fade|local={{ duration: 200 }}>
+    <div
+      class="avatar"
+      style:background="hsla({nameToHue(user.name)}, 80%, 30%, 90%)"
+      transition:fade|local={{ duration: 200 }}
+    >
       {nameToInitials(user.name)}
     </div>
   {/each}
@@ -27,7 +32,7 @@
 
 <style lang="postcss">
   .avatar {
-    @apply w-7 h-7 rounded-full bg-zinc-600 text-xs font-bold flex justify-center items-center;
+    @apply w-7 h-7 rounded-full text-xs font-bold flex justify-center items-center;
     @apply mr-1 first:mr-0;
   }
 </style>

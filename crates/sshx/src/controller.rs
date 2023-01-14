@@ -78,7 +78,7 @@ impl Controller {
                     retries = 0;
                 }
                 let secs = 2_u64.pow(retries.min(5));
-                error!(?err, "disconnected, retrying in {secs}s...");
+                error!(%err, "disconnected, retrying in {secs}s...");
                 time::sleep(Duration::from_secs(secs)).await;
                 retries += 1;
             }
@@ -110,8 +110,7 @@ impl Controller {
                     continue;
                 }
                 item = messages.next() => {
-                    item.context("server closed connection")?
-                        .context("error from server")?
+                    item.context("server closed connection")??
                         .server_message
                         .context("server message is missing")?
                 }

@@ -106,10 +106,7 @@
           exitReason = "The session has been terminated";
           srocket?.dispose();
         } else if (message.error) {
-          makeToast({
-            kind: "error",
-            message: "Server error: " + message.error,
-          });
+          console.warn("Server error: " + message.error);
         }
       },
 

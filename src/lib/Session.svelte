@@ -5,13 +5,13 @@
 
   import { Srocket } from "./srocket";
   import type { WsClient, WsServer, WsUser, WsWinsize } from "./protocol";
+  import { makeToast } from "./toast";
   import Chat from "./ui/Chat.svelte";
   import Toolbar from "./ui/Toolbar.svelte";
   import XTerm from "./ui/XTerm.svelte";
-  import { slide } from "./ui/slide";
   import Avatars from "./ui/Avatars.svelte";
-  import { makeToast } from "./toast";
   import LiveCursor from "./ui/LiveCursor.svelte";
+  import { slide } from "./ui/slide";
 
   export let id: string;
 

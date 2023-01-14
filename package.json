@@ -19,6 +19,7 @@
     "firacode": "^6.2.0",
     "fontfaceobserver": "^2.3.0",
     "lodash-es": "^4.17.21",
+    "perfect-cursors": "^1.0.5",
     "svelte": "^3.55.1",
     "svelte-feather-icons": "^4.0.0",
     "xterm": "^5.1.0",

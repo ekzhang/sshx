@@ -266,7 +266,13 @@
     {/if}
   </div>
 
-  <div class="absolute inset-0 overflow-hidden touch-none" bind:this={fabricEl}>
+  <div
+    class="absolute inset-0 overflow-hidden touch-none"
+    bind:this={fabricEl}
+    style:background-image="radial-gradient(#333 {zoom}px, transparent 0)"
+    style:background-size="{24 * zoom}px {24 * zoom}px"
+    style:background-position="{-zoom * center[0]}px {-zoom * center[1]}px"
+  >
     {#each shells as [id, winsize] (id)}
       {@const ws = id === moving ? movingSize : winsize}
       <div

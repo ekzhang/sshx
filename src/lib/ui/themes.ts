@@ -1,4 +1,4 @@
-import type { ITheme } from "xterm";
+import type { ITheme } from "sshx-xterm";
 
 /** VSCode default dark theme, from https://glitchbone.github.io/vscode-base16-term/. */
 export const defaultDark: ITheme = {

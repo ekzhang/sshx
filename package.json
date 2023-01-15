@@ -14,15 +14,17 @@
   "dependencies": {
     "@fontsource/inter": "^4.5.14",
     "@rgossiaux/svelte-headlessui": "^1.0.2",
+    "@tldraw/vec": "^1.8.0",
+    "@use-gesture/vanilla": "^10.2.23",
     "buffer": "^6.0.3",
     "cbor-x": "^1.5.0",
     "firacode": "^6.2.0",
     "fontfaceobserver": "^2.3.0",
     "lodash-es": "^4.17.21",
     "perfect-cursors": "^1.0.5",
+    "sshx-xterm": "^5.1.3",
     "svelte": "^3.55.1",
     "svelte-feather-icons": "^4.0.0",
-    "xterm": "^5.1.0",
     "xterm-addon-web-links": "^0.8.0",
     "xterm-addon-webgl": "^0.14.0"
   },

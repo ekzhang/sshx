@@ -11,7 +11,8 @@
   import XTerm from "./ui/XTerm.svelte";
   import Avatars from "./ui/Avatars.svelte";
   import LiveCursor from "./ui/LiveCursor.svelte";
-  import { slide } from "./ui/slide";
+  import { slide } from "./action/slide";
+  import { TouchZoom } from "./action/touchZoom";
 
   export let id: string;
 
@@ -25,6 +26,7 @@
 
   const OFFSET_LEFT_CSS = `calc(50vw - ${CONSTANT_OFFSET_LEFT}px)`;
   const OFFSET_TOP_CSS = `calc(50vh - ${CONSTANT_OFFSET_TOP}px)`;
+  const OFFSET_TRANSFORM_ORIGIN_CSS = `calc(-1 * ${OFFSET_LEFT_CSS}) calc(-1 * ${OFFSET_TOP_CSS})`;
 
   function getConstantOffset() {
     return [
@@ -33,10 +35,26 @@
     ];
   }
 
+  let fabricEl: HTMLElement;
+  let touchZoom: TouchZoom;
+  let center = [0, 0];
+  let zoom = 1;
+
+  onMount(() => {
+    touchZoom = new TouchZoom(fabricEl);
+    touchZoom.onMove(() => {
+      center = touchZoom.center;
+      zoom = touchZoom.zoom;
+    });
+  });
+
   /** Returns the mouse position in infinite grid coordinates, offset transformations and zoom. */
   function normalizePosition(event: MouseEvent): [number, number] {
     const [ox, oy] = getConstantOffset();
-    return [Math.round(event.pageX - ox), Math.round(event.pageY - oy)];
+    return [
+      Math.round(center[0] + event.pageX / zoom - ox),
+      Math.round(center[1] + event.pageY / zoom - oy),
+    ];
   }
 
   let srocket: Srocket<WsServer, WsClient> | null = null;
@@ -156,10 +174,11 @@
 
     function handleMouse(event: MouseEvent) {
       if (moving !== -1 && !movingIsDone) {
+        const [x, y] = normalizePosition(event);
         movingSize = {
           ...movingSize,
-          x: Math.round(event.pageX - movingOrigin[0]),
-          y: Math.round(event.pageY - movingOrigin[1]),
+          x: Math.round(x - movingOrigin[0]),
+          y: Math.round(y - movingOrigin[1]),
         };
         sendMove({ move: [moving, movingSize] });
       }
@@ -247,15 +266,16 @@
     {/if}
   </div>
 
-  <div class="absolute inset-0 overflow-hidden">
+  <div class="absolute inset-0 overflow-hidden touch-none" bind:this={fabricEl}>
     {#each shells as [id, winsize] (id)}
       {@const ws = id === moving ? movingSize : winsize}
       <div
         class="absolute"
         style:left={OFFSET_LEFT_CSS}
         style:top={OFFSET_TOP_CSS}
+        style:transform-origin={OFFSET_TRANSFORM_ORIGIN_CSS}
         transition:fade|local
-        use:slide={{ x: ws.x, y: ws.y }}
+        use:slide={{ x: ws.x, y: ws.y, center, zoom }}
       >
         <XTerm
           rows={ws.rows}
@@ -266,14 +286,17 @@
           on:close={() => srocket?.send({ close: id })}
           on:bringToFront={() => srocket?.send({ move: [id, null] })}
           on:startMove={({ detail: event }) => {
+            const [x, y] = normalizePosition(event);
             moving = id;
-            movingOrigin = [event.pageX - ws.x, event.pageY - ws.y];
+            movingOrigin = [x - ws.x, y - ws.y];
             movingSize = ws;
             movingIsDone = false;
           }}
           on:focus={() => (focused = [...focused, id])}
           on:blur={() => (focused = focused.filter((i) => i !== id))}
         />
+
+        <!-- User avatars -->
         <div class="absolute bottom-2.5 right-2.5 pointer-events-none">
           <Avatars
             users={users.filter(
@@ -281,6 +304,8 @@
             )}
           />
         </div>
+
+        <!-- Interactable element for resizing -->
         <div
           class="absolute w-5 h-5 -bottom-1 -right-1 cursor-nwse-resize"
           on:mousedown={(event) => {
@@ -295,6 +320,7 @@
               resizingSize = ws;
             }
           }}
+          on:pointerdown={(event) => event.stopPropagation()}
         />
       </div>
     {/each}
@@ -304,8 +330,14 @@
         class="absolute"
         style:left={OFFSET_LEFT_CSS}
         style:top={OFFSET_TOP_CSS}
+        style:transform-origin={OFFSET_TRANSFORM_ORIGIN_CSS}
         transition:fade|local={{ duration: 200 }}
-        use:slide={{ x: user.cursor?.[0] ?? 0, y: user.cursor?.[1] ?? 0 }}
+        use:slide={{
+          x: user.cursor?.[0] ?? 0,
+          y: user.cursor?.[1] ?? 0,
+          center,
+          zoom,
+        }}
       >
         <LiveCursor {user} />
       </div>

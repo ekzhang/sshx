@@ -5,20 +5,28 @@ import { PerfectCursor } from "perfect-cursors";
 export type SlideParams = {
   x: number;
   y: number;
+  center: number[];
+  zoom: number;
 };
 
 /** An action for spring-y transitions with global transformations. */
 export const slide: Action<HTMLElement, SlideParams> = (node, params) => {
-  const pos = params ?? { x: 0, y: 0 };
+  let center = params?.center ?? [0, 0];
+  let zoom = params?.zoom ?? 1;
+
+  const pos = { x: params?.x ?? 0, y: params?.y ?? 0 };
   const spos = spring(pos, { stiffness: 0.6, damping: 1.6 });
 
   const disposeSub = spos.subscribe((pos) => {
-    node.style.transform = `translate3d(${pos.x}px, ${pos.y}px, 0)`;
+    node.style.transform = `scale(${(zoom * 100).toFixed(3)}%)
+      translate3d(${pos.x - center[0]}px, ${pos.y - center[1]}px, 0)`;
   });
 
   return {
     update(params) {
-      const pos = params ?? { x: 0, y: 0 };
+      center = params?.center ?? [0, 0];
+      zoom = params?.zoom ?? 1;
+      const pos = { x: params?.x ?? 0, y: params?.y ?? 0 };
       spos.set(pos);
     },
 

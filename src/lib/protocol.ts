@@ -23,6 +23,7 @@ export type WsServer = {
   userDiff?: [Uid, WsUser | null];
   shells?: [Sid, WsWinsize][];
   chunks?: [Sid, [number, string][]];
+  hear?: [Uid, string, string];
   terminated?: [];
   error?: string;
 };
@@ -37,4 +38,5 @@ export type WsClient = {
   move?: [Sid, WsWinsize | null];
   data?: [Sid, Uint8Array];
   subscribe?: [Sid, number];
+  chat?: string;
 };

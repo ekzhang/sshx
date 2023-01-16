@@ -6,7 +6,7 @@
   import { Srocket } from "./srocket";
   import type { WsClient, WsServer, WsUser, WsWinsize } from "./protocol";
   import { makeToast } from "./toast";
-  import Chat from "./ui/Chat.svelte";
+  import Chat, { type ChatMessage } from "./ui/Chat.svelte";
   import Toolbar from "./ui/Toolbar.svelte";
   import XTerm from "./ui/XTerm.svelte";
   import Avatars from "./ui/Avatars.svelte";
@@ -83,6 +83,8 @@
   let resizingCell = [0, 0]; // Pixel dimensions of a single terminal cell.
   let resizingSize: WsWinsize; // Last resize message sent.
 
+  let chatMessages: ChatMessage[] = [];
+
   onMount(() => {
     srocket = new Srocket<WsServer, WsClient>(`/api/s/${id}`, {
       onMessage(message) {
@@ -120,6 +122,10 @@
               srocket?.send({ subscribe: [id, seqnums[id]] });
             }
           }
+        } else if (message.hear) {
+          const [uid, name, msg] = message.hear;
+          chatMessages.push({ uid, name, msg, sentAt: new Date() });
+          chatMessages = chatMessages;
         } else if (message.terminated) {
           exitReason = "The session has been terminated";
           srocket?.dispose();
@@ -250,9 +256,14 @@
 
   {#if showChat}
     <div
-      class="absolute flex flex-col justify-end inset-y-8 right-8 w-80 pointer-events-none z-10"
+      class="absolute flex flex-col justify-end inset-y-4 right-4 w-80 pointer-events-none z-10"
     >
-      <Chat on:close={() => (showChat = false)} />
+      <Chat
+        {userId}
+        messages={chatMessages}
+        on:chat={(event) => srocket?.send({ chat: event.detail })}
+        on:close={() => (showChat = false)}
+      />
     </div>
   {/if}
 

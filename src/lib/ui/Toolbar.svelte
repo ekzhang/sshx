@@ -10,6 +10,7 @@
   import logo from "$lib/assets/logo.svg";
 
   export let connected: boolean;
+  export let newMessages: boolean;
 
   const dispatch = createEventDispatcher<{ create: void; chat: void }>();
 </script>
@@ -31,6 +32,9 @@
       </button>
       <button class="icon-button" on:click={() => dispatch("chat")}>
         <MessageSquareIcon strokeWidth={1.5} class="p-0.5" />
+        {#if newMessages}
+          <div class="activity" />
+        {/if}
       </button>
       <button class="icon-button">
         <SettingsIcon strokeWidth={1.5} class="p-0.5" />
@@ -53,7 +57,11 @@
   }
 
   .icon-button {
-    @apply rounded-md p-1 hover:bg-zinc-700 active:bg-indigo-700 transition-colors;
+    @apply relative rounded-md p-1 hover:bg-zinc-700 active:bg-indigo-700 transition-colors;
     @apply disabled:opacity-50 disabled:bg-transparent;
+  }
+
+  .activity {
+    @apply absolute top-1 right-0.5 text-xs p-[4.5px] bg-red-500 rounded-full;
   }
 </style>

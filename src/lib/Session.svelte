@@ -84,6 +84,7 @@
   let resizingSize: WsWinsize; // Last resize message sent.
 
   let chatMessages: ChatMessage[] = [];
+  let newMessages = false;
 
   onMount(() => {
     srocket = new Srocket<WsServer, WsClient>(`/api/s/${id}`, {
@@ -126,6 +127,7 @@
           const [uid, name, msg] = message.hear;
           chatMessages.push({ uid, name, msg, sentAt: new Date() });
           chatMessages = chatMessages;
+          if (!showChat) newMessages = true;
         } else if (message.terminated) {
           exitReason = "The session has been terminated";
           srocket?.dispose();
@@ -249,8 +251,9 @@
   >
     <Toolbar
       {connected}
+      {newMessages}
       on:create={() => srocket?.send({ create: [] })}
-      on:chat={() => (showChat = !showChat)}
+      on:chat={() => ((showChat = !showChat), (newMessages = false))}
     />
   </div>
 

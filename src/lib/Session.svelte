@@ -252,8 +252,14 @@
     <Toolbar
       {connected}
       {newMessages}
-      on:create={() => srocket?.send({ create: [] })}
-      on:chat={() => ((showChat = !showChat), (newMessages = false))}
+      on:create={() => {
+        srocket?.send({ create: [] });
+        touchZoom.moveTo([0, 0], 1);
+      }}
+      on:chat={() => {
+        showChat = !showChat;
+        newMessages = false;
+      }}
     />
   </div>
 

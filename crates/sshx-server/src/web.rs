@@ -116,6 +116,8 @@ pub enum WsServer {
     Shells(Vec<(Sid, WsWinsize)>),
     /// Subscription results, in the form of terminal data chunks.
     Chunks(Sid, Vec<(u64, String)>),
+    /// Get a chat message tuple `(uid, name, text)` from the room.
+    Hear(Uid, String, String),
     /// The current session has been terminated.
     Terminated(),
     /// Alert the client of an application error.
@@ -142,6 +144,8 @@ pub enum WsClient {
     Data(Sid, #[serde(with = "serde_bytes")] Vec<u8>),
     /// Subscribe to a shell, starting at a given chunk index.
     Subscribe(Sid, u64),
+    /// Send a a chat message to the room.
+    Chat(String),
 }
 
 async fn get_session_ws(
@@ -284,6 +288,9 @@ async fn handle_socket(mut socket: WebSocket, session: Arc<Session>) -> Result<(
                         }
                     }
                 });
+            }
+            WsClient::Chat(msg) => {
+                session.send_chat(user_id, &msg)?;
             }
         }
     }

@@ -30,11 +30,11 @@ impl TestServer {
     ///
     /// Returns an object with the local address, as well as a custom [`Drop`]
     /// implementation that gracefully shuts down the server.
-    pub async fn new() -> Result<Self> {
-        let listener = TcpListener::bind("[::1]:0").await?;
-        let local_addr = listener.local_addr()?;
+    pub async fn new() -> Self {
+        let listener = TcpListener::bind("[::1]:0").await.unwrap();
+        let local_addr = listener.local_addr().unwrap();
 
-        let incoming = AddrIncoming::from_listener(listener)?;
+        let incoming = AddrIncoming::from_listener(listener).unwrap();
         let server = Arc::new(Server::new());
         {
             let server = Arc::clone(&server);
@@ -43,7 +43,7 @@ impl TestServer {
             });
         }
 
-        Ok(TestServer { local_addr, server })
+        TestServer { local_addr, server }
     }
 
     /// Returns the local TCP address of this server.
@@ -62,8 +62,8 @@ impl TestServer {
     }
 
     /// Creates a gRPC client connected to this server.
-    pub async fn grpc_client(&self) -> Result<SshxServiceClient<Channel>> {
-        Ok(SshxServiceClient::connect(self.endpoint()).await?)
+    pub async fn grpc_client(&self) -> SshxServiceClient<Channel> {
+        SshxServiceClient::connect(self.endpoint()).await.unwrap()
     }
 
     /// Return the current server state object.
@@ -91,6 +91,7 @@ pub struct ClientSocket {
     pub users: BTreeMap<Uid, WsUser>,
     pub shells: BTreeMap<Sid, WsWinsize>,
     pub data: HashMap<Sid, String>,
+    pub messages: Vec<(Uid, String, String)>,
     pub errors: Vec<String>,
     pub terminated: bool,
 }
@@ -106,6 +107,7 @@ impl ClientSocket {
             users: BTreeMap::new(),
             shells: BTreeMap::new(),
             data: HashMap::new(),
+            messages: Vec::new(),
             errors: Vec::new(),
             terminated: false,
         })
@@ -157,6 +159,9 @@ impl ClientSocket {
                         for (_, buf) in chunks {
                             value.push_str(&buf);
                         }
+                    }
+                    WsServer::Hear(id, name, msg) => {
+                        self.messages.push((id, name, msg));
                     }
                     WsServer::Terminated() => self.terminated = true,
                     WsServer::Error(err) => self.errors.push(err),

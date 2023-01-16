@@ -13,7 +13,7 @@ pub mod common;
 
 #[tokio::test]
 async fn test_handshake() -> Result<()> {
-    let server = TestServer::new().await?;
+    let server = TestServer::new().await;
     let controller = Controller::new(&server.endpoint(), Runner::Echo).await?;
     controller.close().await?;
     Ok(())
@@ -21,7 +21,7 @@ async fn test_handshake() -> Result<()> {
 
 #[tokio::test]
 async fn test_command() -> Result<()> {
-    let server = TestServer::new().await?;
+    let server = TestServer::new().await;
     let runner = Runner::Shell("/bin/bash".into());
     let mut controller = Controller::new(&server.endpoint(), runner).await?;
 
@@ -48,68 +48,66 @@ async fn test_command() -> Result<()> {
 
 #[tokio::test]
 async fn test_ws_missing() -> Result<()> {
-    let server = TestServer::new().await?;
+    let server = TestServer::new().await;
 
     let bad_endpoint = format!("ws://{}/not/an/endpoint", server.local_addr());
     assert!(ClientSocket::connect(&bad_endpoint).await.is_err());
 
-    let mut stream = ClientSocket::connect(&server.ws_endpoint("foobar")).await?;
-    stream.expect_close(4404).await;
+    let mut s = ClientSocket::connect(&server.ws_endpoint("foobar")).await?;
+    s.expect_close(4404).await;
 
     Ok(())
 }
 
 #[tokio::test]
 async fn test_ws_basic() -> Result<()> {
-    let server = TestServer::new().await?;
+    let server = TestServer::new().await;
 
     let mut controller = Controller::new(&server.endpoint(), Runner::Echo).await?;
     let name = controller.name().to_owned();
     tokio::spawn(async move { controller.run().await });
 
-    let mut stream = ClientSocket::connect(&server.ws_endpoint(&name)).await?;
-    stream.flush().await;
-    assert_eq!(stream.user_id, Uid(1));
+    let mut s = ClientSocket::connect(&server.ws_endpoint(&name)).await?;
+    s.flush().await;
+    assert_eq!(s.user_id, Uid(1));
 
-    stream.send(WsClient::Create()).await;
-    stream.flush().await;
-    assert_eq!(stream.shells.len(), 1);
-    assert!(stream.shells.contains_key(&Sid(1)));
+    s.send(WsClient::Create()).await;
+    s.flush().await;
+    assert_eq!(s.shells.len(), 1);
+    assert!(s.shells.contains_key(&Sid(1)));
 
-    stream.send(WsClient::Subscribe(Sid(1), 0)).await;
-    assert_eq!(stream.read(Sid(1)), "");
+    s.send(WsClient::Subscribe(Sid(1), 0)).await;
+    assert_eq!(s.read(Sid(1)), "");
 
-    stream
-        .send(WsClient::Data(Sid(1), b"hello!".to_vec()))
-        .await;
-    stream.flush().await;
-    assert_eq!(stream.read(Sid(1)), "hello!");
+    s.send(WsClient::Data(Sid(1), b"hello!".to_vec())).await;
+    s.flush().await;
+    assert_eq!(s.read(Sid(1)), "hello!");
 
-    stream.send(WsClient::Data(Sid(1), b" 123".to_vec())).await;
-    stream.flush().await;
-    assert_eq!(stream.read(Sid(1)), "hello! 123");
+    s.send(WsClient::Data(Sid(1), b" 123".to_vec())).await;
+    s.flush().await;
+    assert_eq!(s.read(Sid(1)), "hello! 123");
 
     Ok(())
 }
 
 #[tokio::test]
 async fn test_ws_resize() -> Result<()> {
-    let server = TestServer::new().await?;
+    let server = TestServer::new().await;
 
     let mut controller = Controller::new(&server.endpoint(), Runner::Echo).await?;
     let name = controller.name().to_owned();
     tokio::spawn(async move { controller.run().await });
 
-    let mut stream = ClientSocket::connect(&server.ws_endpoint(&name)).await?;
+    let mut s = ClientSocket::connect(&server.ws_endpoint(&name)).await?;
 
-    stream.send(WsClient::Move(Sid(1), None)).await; // error: does not exist yet!
-    stream.flush().await;
-    assert_eq!(stream.errors.len(), 1);
+    s.send(WsClient::Move(Sid(1), None)).await; // error: does not exist yet!
+    s.flush().await;
+    assert_eq!(s.errors.len(), 1);
 
-    stream.send(WsClient::Create()).await;
-    stream.flush().await;
-    assert_eq!(stream.shells.len(), 1);
-    assert_eq!(*stream.shells.get(&Sid(1)).unwrap(), WsWinsize::default());
+    s.send(WsClient::Create()).await;
+    s.flush().await;
+    assert_eq!(s.shells.len(), 1);
+    assert_eq!(*s.shells.get(&Sid(1)).unwrap(), WsWinsize::default());
 
     let new_size = WsWinsize {
         x: 42,
@@ -117,72 +115,103 @@ async fn test_ws_resize() -> Result<()> {
         rows: 200,
         cols: 20,
     };
-    stream.send(WsClient::Move(Sid(1), Some(new_size))).await;
-    stream.send(WsClient::Move(Sid(2), Some(new_size))).await; // error: does not exist
-    stream.flush().await;
-    assert_eq!(stream.shells.len(), 1);
-    assert_eq!(*stream.shells.get(&Sid(1)).unwrap(), new_size);
-    assert_eq!(stream.errors.len(), 2);
+    s.send(WsClient::Move(Sid(1), Some(new_size))).await;
+    s.send(WsClient::Move(Sid(2), Some(new_size))).await; // error: does not exist
+    s.flush().await;
+    assert_eq!(s.shells.len(), 1);
+    assert_eq!(*s.shells.get(&Sid(1)).unwrap(), new_size);
+    assert_eq!(s.errors.len(), 2);
 
-    stream.send(WsClient::Close(Sid(1))).await;
-    stream.flush().await;
-    assert_eq!(stream.shells.len(), 0);
+    s.send(WsClient::Close(Sid(1))).await;
+    s.flush().await;
+    assert_eq!(s.shells.len(), 0);
 
-    stream.send(WsClient::Move(Sid(1), None)).await; // error: shell was closed
-    stream.flush().await;
-    assert_eq!(stream.errors.len(), 3);
+    s.send(WsClient::Move(Sid(1), None)).await; // error: shell was closed
+    s.flush().await;
+    assert_eq!(s.errors.len(), 3);
 
     Ok(())
 }
 
 #[tokio::test]
 async fn test_users_join() -> Result<()> {
-    let server = TestServer::new().await?;
+    let server = TestServer::new().await;
 
     let mut controller = Controller::new(&server.endpoint(), Runner::Echo).await?;
     let name = controller.name().to_owned();
     tokio::spawn(async move { controller.run().await });
 
     let endpoint = server.ws_endpoint(&name);
-    let mut stream1 = ClientSocket::connect(&endpoint).await?;
-    stream1.flush().await;
-    assert_eq!(stream1.users.len(), 1);
+    let mut s1 = ClientSocket::connect(&endpoint).await?;
+    s1.flush().await;
+    assert_eq!(s1.users.len(), 1);
 
-    let mut stream2 = ClientSocket::connect(&endpoint).await?;
-    stream2.flush().await;
-    assert_eq!(stream2.users.len(), 2);
+    let mut s2 = ClientSocket::connect(&endpoint).await?;
+    s2.flush().await;
+    assert_eq!(s2.users.len(), 2);
 
-    drop(stream2);
-    let mut stream3 = ClientSocket::connect(&endpoint).await?;
-    stream3.flush().await;
-    assert_eq!(stream3.users.len(), 2);
+    drop(s2);
+    let mut s3 = ClientSocket::connect(&endpoint).await?;
+    s3.flush().await;
+    assert_eq!(s3.users.len(), 2);
 
-    stream1.flush().await;
-    assert_eq!(stream1.users.len(), 2);
+    s1.flush().await;
+    assert_eq!(s1.users.len(), 2);
 
     Ok(())
 }
 
 #[tokio::test]
 async fn test_users_metadata() -> Result<()> {
-    let server = TestServer::new().await?;
+    let server = TestServer::new().await;
 
     let mut controller = Controller::new(&server.endpoint(), Runner::Echo).await?;
     let name = controller.name().to_owned();
     tokio::spawn(async move { controller.run().await });
 
     let endpoint = server.ws_endpoint(&name);
-    let mut stream = ClientSocket::connect(&endpoint).await?;
-    stream.flush().await;
-    assert_eq!(stream.users.len(), 1);
-    assert_eq!(stream.users.get(&stream.user_id).unwrap().cursor, None);
+    let mut s = ClientSocket::connect(&endpoint).await?;
+    s.flush().await;
+    assert_eq!(s.users.len(), 1);
+    assert_eq!(s.users.get(&s.user_id).unwrap().cursor, None);
 
-    stream.send(WsClient::SetName("mr. foo".into())).await;
-    stream.send(WsClient::SetCursor(Some((40, 524)))).await;
-    stream.flush().await;
-    let user = stream.users.get(&stream.user_id).unwrap();
+    s.send(WsClient::SetName("mr. foo".into())).await;
+    s.send(WsClient::SetCursor(Some((40, 524)))).await;
+    s.flush().await;
+    let user = s.users.get(&s.user_id).unwrap();
     assert_eq!(user.name, "mr. foo");
     assert_eq!(user.cursor, Some((40, 524)));
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_chat_messages() -> Result<()> {
+    let server = TestServer::new().await;
+
+    let mut controller = Controller::new(&server.endpoint(), Runner::Echo).await?;
+    let name = controller.name().to_owned();
+    tokio::spawn(async move { controller.run().await });
+
+    let endpoint = server.ws_endpoint(&name);
+    let mut s1 = ClientSocket::connect(&endpoint).await?;
+    let mut s2 = ClientSocket::connect(&endpoint).await?;
+
+    s1.send(WsClient::SetName("billy".into())).await;
+    s1.send(WsClient::Chat("hello there!".into())).await;
+    s1.flush().await;
+
+    s2.flush().await;
+    assert_eq!(s2.messages.len(), 1);
+    assert_eq!(
+        s2.messages[0],
+        (s1.user_id, "billy".into(), "hello there!".into())
+    );
+
+    let mut s3 = ClientSocket::connect(&endpoint).await?;
+    s3.flush().await;
+    assert_eq!(s1.messages.len(), 1);
+    assert_eq!(s3.messages.len(), 0);
 
     Ok(())
 }

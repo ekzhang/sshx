@@ -12,8 +12,7 @@ use sshx_core::{
 };
 use tokio::sync::{broadcast, watch, Notify};
 use tokio::time::Instant;
-use tokio_stream::wrappers::errors::BroadcastStreamRecvError;
-use tokio_stream::wrappers::{BroadcastStream, WatchStream};
+use tokio_stream::wrappers::{errors::BroadcastStreamRecvError, BroadcastStream, WatchStream};
 use tokio_stream::Stream;
 use tracing::{debug, warn};
 
@@ -293,6 +292,19 @@ impl Session {
             warn!(%id, "invariant violation: removed user that does not exist");
         }
         self.broadcast.send(WsServer::UserDiff(id, None)).ok();
+    }
+
+    /// Send a chat message into the room.
+    pub fn send_chat(&self, id: Uid, msg: &str) -> Result<()> {
+        // Populate the message with the current name in case it's not known later.
+        let name = {
+            let users = self.users.read();
+            users.get(&id).context("user not found")?.name.clone()
+        };
+        self.broadcast
+            .send(WsServer::Hear(id, name, msg.into()))
+            .ok();
+        Ok(())
     }
 
     /// Register a client message, refreshing the last update timestamp.

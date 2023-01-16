@@ -7,8 +7,8 @@ pub mod common;
 
 #[tokio::test]
 async fn test_rpc() -> Result<()> {
-    let server = TestServer::new().await?;
-    let mut client = server.grpc_client().await?;
+    let server = TestServer::new().await;
+    let mut client = server.grpc_client().await;
 
     let req = OpenRequest {
         origin: "sshx.io".into(),
@@ -21,7 +21,7 @@ async fn test_rpc() -> Result<()> {
 
 #[tokio::test]
 async fn test_web_get() -> Result<()> {
-    let server = TestServer::new().await?;
+    let server = TestServer::new().await;
 
     let resp = reqwest::get(server.endpoint()).await?;
     assert!(!resp.status().is_server_error());

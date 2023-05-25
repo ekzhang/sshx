@@ -1,32 +1,34 @@
 app = "sshx"
-
+primary_region = "ewr"
 kill_signal = "SIGINT"
 kill_timeout = 5
-processes = []
 
 [experimental]
-  allowed_public_ports = []
   auto_rollback = true
 
 [[services]]
+  protocol = "tcp"
   internal_port = 8051
   processes = ["app"]
-  protocol = "tcp"
+
+  [services.concurrency]
+    type = "connections"
+    hard_limit = 65536
+    soft_limit = 1024
 
   [[services.ports]]
-    handlers = ["http"]
     port = 80
+    handlers = ["http"]
     force_https = true
 
   [[services.ports]]
-    handlers = ["tls"]
     port = 443
-
-  [services.ports.tls_options]
-    alpn = ["h2", "http/1.1"]
+    handlers = ["tls"]
+    [services.ports.tls_options]
+      alpn = ["h2", "http/1.1"]
 
   [[services.tcp_checks]]
-    grace_period = "1s"
     interval = "15s"
-    restart_limit = 0
     timeout = "2s"
+    grace_period = "1s"
+    restart_limit = 0

@@ -10,7 +10,7 @@ use sshx_core::proto::sshx_service_client::SshxServiceClient;
 use sshx_core::{Sid, Uid};
 use sshx_server::{
     session::Session,
-    web::{WsClient, WsServer, WsUser, WsWinsize},
+    web::protocol::{WsClient, WsServer, WsUser, WsWinsize},
     Server, ServerState,
 };
 use tokio::net::{TcpListener, TcpStream};

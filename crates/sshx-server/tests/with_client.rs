@@ -4,7 +4,7 @@ use sshx_core::{
     proto::{server_update::ServerMessage, TerminalInput},
     Sid, Uid,
 };
-use sshx_server::web::{WsClient, WsWinsize};
+use sshx_server::web::protocol::{WsClient, WsWinsize};
 use tokio::time::{self, Duration};
 
 use crate::common::*;

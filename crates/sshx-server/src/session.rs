@@ -17,7 +17,7 @@ use tokio_stream::Stream;
 use tracing::{debug, warn};
 
 use crate::utils::Shutdown;
-use crate::web::{WsServer, WsUser, WsWinsize};
+use crate::web::protocol::{WsServer, WsUser, WsWinsize};
 
 /// In-memory state for a single sshx session.
 #[derive(Debug)]

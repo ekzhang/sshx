@@ -1,4 +1,4 @@
-use ansi_term::Color::{Cyan, Fixed, Green, Yellow};
+use ansi_term::Color::{Cyan, Fixed, Green};
 use anyhow::Result;
 use clap::Parser;
 use sshx::{controller::Controller, runner::Runner, terminal::get_default_shell};
@@ -29,15 +29,12 @@ fn print_greeting(shell: &str, controller: &Controller) {
 
   {arr}  Link:  {link_v}
   {arr}  Shell: {shell_v}
-
-  {online_msg}
 "#,
         sshx = Green.bold().paint("sshx"),
         version = Green.paint(&version_str),
         arr = Green.paint("➜"),
         link_v = Cyan.underline().paint(controller.url()),
         shell_v = Fixed(8).paint(shell),
-        online_msg = Yellow.paint("Your terminal session is online!"),
     );
 }
 

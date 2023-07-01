@@ -1,0 +1,26 @@
+#!/bin/bash
+
+# This is a short script to install the latest version of the sshx binary.
+#
+# It's meant to be as simple as possible, so if you're not happy hardcoding a
+# `curl | sh` pipe in your application, you can just download the binary
+# directly with the appropriate URL for your architecture.
+
+set +e
+
+case "$(uname -s)" in
+  Linux*) suffix="-unknown-linux-musl";;
+  Darwin*) suffix="-apple-darwin";;
+  *) echo "Unsupported OS $(uname -s)"; exit 1;;
+esac
+
+case "$(uname -m)" in
+  aarch64 | aarch64_be | arm64 | armv8b | armv8l) arch="aarch64";;
+  x86_64 | x64 | amd64) arch="x86_64";;
+  *) echo "Unsupported arch $(uname -m)"; exit 1;;
+esac
+
+url="https://s3.amazonaws.com/sshx/sshx-${arch}${suffix}"
+curl -sSf "$url" -o /tmp/sshx
+chmod +x /tmp/sshx
+sudo mv -v /tmp/sshx /usr/local/bin

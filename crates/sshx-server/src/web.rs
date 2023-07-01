@@ -1,7 +1,6 @@
 //! HTTP and WebSocket handlers for the sshx web interface.
 
 use std::collections::HashSet;
-use std::io;
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
@@ -10,7 +9,6 @@ use axum::extract::{Path, State};
 use axum::response::IntoResponse;
 use axum::routing::{get, get_service};
 use axum::Router;
-use hyper::StatusCode;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use sshx_core::proto::{server_update::ServerMessage, TerminalInput, TerminalSize};
@@ -18,7 +16,7 @@ use sshx_core::{Sid, Uid};
 use tokio::sync::mpsc;
 use tokio_stream::StreamExt;
 use tower_http::services::{ServeDir, ServeFile};
-use tracing::{error, info_span, warn, Instrument};
+use tracing::{info_span, warn, Instrument};
 
 use crate::session::Session;
 use crate::ServerState;
@@ -37,14 +35,7 @@ pub fn app() -> Router<Arc<ServerState>> {
 
     Router::new()
         .nest("/api", backend())
-        .fallback_service(get_service(static_files).handle_error(error_handler))
-}
-
-/// Error handler for tower-http services.
-async fn error_handler(error: io::Error) -> impl IntoResponse {
-    let message = format!("unhandled internal error: {error}");
-    error!("{message}");
-    (StatusCode::INTERNAL_SERVER_ERROR, message)
+        .fallback_service(get_service(static_files))
 }
 
 /// Runs the backend web API server.

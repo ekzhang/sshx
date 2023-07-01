@@ -33,6 +33,9 @@ frontend in parallel on your machine.
 
 ## Deployment
 
-This application is containerized and deployed on [Fly.io](https://fly.io/). To
-set up a new server, just run `flyctl deploy` as a user with the appropriate
-permissions.
+The application server is containerized, and its latest version is automatically
+deployed on [Fly.io](https://fly.io/).
+
+```shell
+fly deploy
+```

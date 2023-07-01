@@ -71,47 +71,45 @@ sudo mv -v /tmp/sshx /usr/local/bin/sshx`,
       </div>
     </div>
 
-    <section class="my-12 space-y-6 text-xl md:max-w-[460px] text-gray-300">
+    <section class="my-12 space-y-6 text-lg md:max-w-[460px] text-gray-400">
       <p>
-        <code>sshx</code> lets you share your terminal by link with anyone on the
-        web.
+        <code>sshx</code> gives you a link to share your terminal with anyone on
+        the Internet.
       </p>
       <p>
-        It supports <b>live presence</b> and <b>chat</b> so you can see who’s
-        online and seamlessly work with them. Plus, it’s <b>fast</b>: just run a
-        single Rust-based CLI tool to start your session.
+        It has <b>live cursors</b> and <b>chat</b> so you can see who's online
+        and work with them. Also, <b>it's fast</b>, with a CLI tool and server
+        both written in Rust.
       </p>
       <p>
         Use <code>sshx</code> for pair programming, demos, remote access, or even
-        just as a fashionable web interface for your terminal.
+        as a fashionable web interface for your computer.
       </p>
     </section>
 
     <div class="pb-12 md:pb-36">
       <button
-        class="bg-pink-600 hover:bg-pink-500 active:ring-4 active:ring-pink-500/50 text-lg font-semibold px-8 py-2 rounded-full"
+        class="bg-pink-700 hover:bg-pink-600 active:ring-4 active:ring-pink-500/50 text-lg font-semibold px-8 py-2 rounded-full"
         on:click={() => installationEl.scrollIntoView({ behavior: "smooth" })}
       >
         Get Started
       </button>
     </div>
 
-    <hr />
-
-    <h2 bind:this={installationEl}>
+    <h2 bind:this={installationEl} class="mt-40 mb-16">
       Get started in <span class="title-gradient">two quick steps</span>
     </h2>
 
     <div
-      class="grid md:grid-cols-2 gap-12 md:text-center mb-12 text-lg text-gray-300"
+      class="grid md:grid-cols-2 gap-16 md:text-center mb-12 text-lg text-gray-300"
     >
-      <div class="space-y-5">
+      <div class="space-y-6">
         <h3 class="step-heading">
           <span class="pill mr-3">1</span> Install the CLI
         </h3>
-        <p>
-          Download the tiny <code>sshx</code> binary to connect to our servers. It's
-          just 6 MB, and you can install it in a couple different ways.
+        <p class="text-gray-400">
+          Download the <code>sshx</code> binary to get started. It's tiny, only a
+          few megabytes, and you have multiple installation options.
         </p>
         <div class="flex flex-col items-start text-base">
           <div class="flex rounded-t text-sm bg-gray-900">
@@ -128,37 +126,41 @@ sudo mv -v /tmp/sshx /usr/local/bin/sshx`,
           <pre class="rounded-b rounded-r w-full">{selectedInstall.steps}</pre>
         </div>
 
-        <p>
-          You can also see <a
-            class="underline"
-            href="https://github.com/ekzhang/sshx"
-            >other methods of installation</a
+        <p class="text-gray-400">
+          You can also build it <a
+            target="_blank"
+            rel="noreferrer"
+            class="underline underline-offset-2 text-gray-300"
+            href="https://github.com/ekzhang/sshx">from the repository</a
           >.
         </p>
       </div>
-      <div class="space-y-5">
+      <div class="space-y-6">
         <h3 class="step-heading">
-          <span class="pill mr-3">2</span> Start a session
+          <span class="pill mr-3">2</span> Share your terminal
         </h3>
 
-        <p>Just run a single command in your shell.</p>
+        <p class="text-gray-400">
+          Run a single command in your favorite shell.
+        </p>
 
         <pre class="rounded">sshx</pre>
 
-        <p>
-          It's that easy! This kicks off a live session with your unique link at <code
+        <p class="text-gray-400">
+          This kicks off a live session and assigns a unique link at <code
             >https://sshx.io/s/$ID</code
-          >, and you can invite anyone to collaborate together in your terminal
-          on the web.
+          >. Invite anyone to join.
         </p>
       </div>
     </div>
 
-    <hr />
+    <hr class="mt-40 mb-12" />
 
     <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6">
       {#each socials as social}
         <a
+          target="_blank"
+          rel="noreferrer"
           href={social.href}
           class="border border-gray-700 hover:bg-gray-900 transition-colors p-4 text-center text-lg font-medium rounded-lg"
         >
@@ -168,23 +170,27 @@ sudo mv -v /tmp/sshx /usr/local/bin/sshx`,
     </div>
 
     <p class="mb-12 text-center text-gray-400">
-      open source, &copy; Eric Zhang 2022
+      open source, &copy; Eric Zhang 2023
     </p>
   </main>
 </div>
 
 <style lang="postcss">
   h1 {
-    @apply font-extrabold text-4xl sm:text-5xl max-w-[26ch] py-2;
+    @apply font-bold text-4xl sm:text-5xl max-w-[26ch] py-2;
     line-height: 1.15;
   }
 
   h2 {
-    @apply font-extrabold text-3xl sm:text-4xl mb-12 md:text-center scroll-mt-8;
+    @apply font-bold text-3xl sm:text-4xl md:text-center scroll-mt-16;
+  }
+
+  b {
+    @apply text-gray-300 font-semibold;
   }
 
   code {
-    @apply text-[0.9em] text-white font-medium bg-gray-700 px-1 py-0.5 rounded;
+    @apply text-[0.9em] text-gray-200 font-medium bg-gray-700 px-1 py-0.5 rounded;
   }
 
   pre {
@@ -192,7 +198,7 @@ sudo mv -v /tmp/sshx /usr/local/bin/sshx`,
   }
 
   hr {
-    @apply mx-auto md:w-1/2 border-gray-800 my-12;
+    @apply mx-auto md:w-1/2 border-gray-800;
   }
 
   .title-gradient {
@@ -200,10 +206,11 @@ sudo mv -v /tmp/sshx /usr/local/bin/sshx`,
   }
 
   .step-heading {
-    @apply text-2xl text-gray-200 font-bold flex items-center md:justify-center;
+    @apply text-2xl text-gray-200 font-semibold flex items-center md:justify-center;
   }
 
   .pill {
-    @apply flex justify-center items-center w-[1.5em] h-[1.5em] bg-gray-700 rounded-full;
+    @apply flex justify-center items-center w-7 h-7 rounded-full;
+    @apply text-base font-normal border border-current;
   }
 </style>

@@ -7,14 +7,8 @@
 
   const installs = [
     {
-      title: "macOS",
-      steps: `brew tap ekzhang/sshx
-brew install sshx`,
-    },
-    {
-      title: "Linux",
-      steps: `curl -sSf $DOWNLOAD_URL -o /tmp/sshx
-sudo mv -v /tmp/sshx /usr/local/bin/sshx`,
+      title: "macOS / Linux",
+      steps: `curl -sSf https://sshx.io/get | sh`,
     },
     {
       title: "Rust (from source)",
@@ -101,7 +95,7 @@ sudo mv -v /tmp/sshx /usr/local/bin/sshx`,
     </h2>
 
     <div
-      class="grid md:grid-cols-2 gap-16 md:text-center mb-12 text-lg text-gray-300"
+      class="grid lg:grid-cols-2 gap-16 lg:text-center mb-12 text-lg text-gray-300"
     >
       <div class="space-y-6">
         <h3 class="step-heading">

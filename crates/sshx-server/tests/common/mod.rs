@@ -156,7 +156,7 @@ impl ClientSocket {
                     WsServer::Shells(shells) => self.shells = BTreeMap::from_iter(shells),
                     WsServer::Chunks(id, chunks) => {
                         let value = self.data.entry(id).or_default();
-                        for (_, buf) in chunks {
+                        for buf in chunks {
                             value.push_str(&buf);
                         }
                     }

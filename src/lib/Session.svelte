@@ -99,7 +99,7 @@
           const [id, chunks] = message.chunks;
           tick().then(() => {
             seqnums[id] += chunks.length;
-            for (const [, data] of chunks) {
+            for (const data of chunks) {
               writers[id](data);
             }
           });

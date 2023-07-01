@@ -31,9 +31,6 @@ pub struct Session {
     /// Atomic counter to get new, unique IDs.
     counter: IdCounter,
 
-    /// Read-only timestamp when the session was started.
-    created: Instant,
-
     /// Timestamp of the last client message from an active connection.
     updated: Mutex<Instant>,
 
@@ -63,8 +60,8 @@ struct State {
     /// Sequence number, indicating how many bytes have been received.
     seqnum: u64,
 
-    /// Terminal data chunks, with associated timestamps in milliseconds.
-    data: Vec<(u64, String)>,
+    /// Terminal data chunks.
+    data: Vec<Arc<str>>,
 
     /// Set when this shell is terminated.
     closed: bool,
@@ -82,7 +79,6 @@ impl Session {
             shells: RwLock::new(HashMap::new()),
             users: RwLock::new(HashMap::new()),
             counter: IdCounter::default(),
-            created: now,
             updated: Mutex::new(now),
             source: watch::channel(Vec::new()).0,
             broadcast: broadcast::channel(32).0,
@@ -126,7 +122,7 @@ impl Session {
         &self,
         id: Sid,
         chunknum: u64,
-    ) -> impl Stream<Item = Vec<(u64, String)>> + '_ {
+    ) -> impl Stream<Item = Vec<Arc<str>>> + '_ {
         let mut chunknum = chunknum as usize;
         async_stream::stream! {
             while !self.shutdown.is_terminated() {
@@ -225,10 +221,7 @@ impl Session {
                 .get(start as usize..)
                 .context("failed to decode utf-8 suffix in data")?;
             debug!(%id, ?segment, "adding data to shell");
-            shell.data.push((
-                self.created.elapsed().as_millis() as u64,
-                String::from(segment),
-            ));
+            shell.data.push(segment.into());
             shell.seqnum += segment.len() as u64;
             shell.notify.notify_waiters();
         }

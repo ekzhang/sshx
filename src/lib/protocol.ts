@@ -22,7 +22,7 @@ export type WsServer = {
   users?: [Uid, WsUser][];
   userDiff?: [Uid, WsUser | null];
   shells?: [Sid, WsWinsize][];
-  chunks?: [Sid, [number, string][]];
+  chunks?: [Sid, string[]];
   hear?: [Uid, string, string];
   terminated?: [];
   error?: string;

@@ -115,7 +115,7 @@ pub enum WsServer {
     /// Notification when the set of open shells has changed.
     Shells(Vec<(Sid, WsWinsize)>),
     /// Subscription results, in the form of terminal data chunks.
-    Chunks(Sid, Vec<(u64, String)>),
+    Chunks(Sid, Vec<Arc<str>>),
     /// Get a chat message tuple `(uid, name, text)` from the room.
     Hear(Uid, String, String),
     /// The current session has been terminated.
@@ -206,7 +206,7 @@ async fn handle_socket(mut socket: WebSocket, session: Arc<Session>) -> Result<(
     send(&mut socket, WsServer::Users(session.list_users())).await?;
 
     let mut subscribed = HashSet::new(); // prevent duplicate subscriptions
-    let (chunks_tx, mut chunks_rx) = mpsc::channel::<(Sid, Vec<(u64, String)>)>(1);
+    let (chunks_tx, mut chunks_rx) = mpsc::channel::<(Sid, Vec<Arc<str>>)>(1);
 
     let mut shells_stream = session.subscribe_shells();
     loop {

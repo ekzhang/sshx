@@ -1,5 +1,5 @@
 <script lang="ts">
-  import "@fontsource/inter/variable-full.css";
+  import "@fontsource-variable/inter";
 
   import "xterm/css/xterm.css";
   import "../app.css";

@@ -21,7 +21,7 @@ use tower_http::services::{ServeDir, ServeFile};
 use tracing::{error, info_span, warn, Instrument};
 
 use crate::session::Session;
-use crate::state::ServerState;
+use crate::ServerState;
 
 /// Returns the web application server, built with Axum.
 pub fn app() -> Router<Arc<ServerState>> {

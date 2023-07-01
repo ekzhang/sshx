@@ -18,7 +18,7 @@ use tonic::{Request, Response, Status, Streaming};
 use tracing::{error, info, warn};
 
 use crate::session::Session;
-use crate::state::ServerState;
+use crate::ServerState;
 
 /// Interval for synchronizing sequence numbers with the client.
 pub const SYNC_INTERVAL: Duration = Duration::from_secs(5);
@@ -43,7 +43,10 @@ impl SshxService for GrpcServer {
     async fn open(&self, request: Request<OpenRequest>) -> RR<OpenResponse> {
         use dashmap::mapref::entry::Entry::*;
 
-        let origin = request.into_inner().origin;
+        let origin = match &self.0.override_origin {
+            Some(origin) => origin.clone(),
+            None => request.into_inner().origin,
+        };
         if origin.is_empty() {
             return Err(Status::invalid_argument("origin is empty"));
         }

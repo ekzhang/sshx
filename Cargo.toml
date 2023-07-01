@@ -3,7 +3,7 @@ members = ["crates/*"]
 
 [workspace.dependencies]
 anyhow = "1.0.62"
-clap = { version = "4.0.29", features = ["derive"] }
+clap = { version = "4.0.29", features = ["derive", "env"] }
 prost = "0.11.3"
 serde = { version = "1.0.143", features = ["derive", "rc"] }
 tokio = { version = "1.23.0", features = ["full"] }

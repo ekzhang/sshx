@@ -1,7 +1,13 @@
+# prettier-ignore
 procs:
   server:
-    shell: cargo run --bin sshx-server
+    shell: >-
+      cargo run --bin sshx-server --
+      --override-origin http://localhost:5173
+      --secret dev-secret
   client:
-    shell: cargo run --bin sshx -- --server http://localhost:8051
+    shell: >-
+      cargo run --bin sshx --
+      --server http://localhost:8051
   web:
     shell: npm run dev

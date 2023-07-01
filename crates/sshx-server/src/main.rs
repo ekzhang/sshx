@@ -2,7 +2,7 @@ use std::net::SocketAddr;
 
 use anyhow::Result;
 use clap::Parser;
-use sshx_server::Server;
+use sshx_server::{Server, ServerOptions};
 use tokio::signal::unix::{signal, SignalKind};
 use tracing::info;
 
@@ -17,6 +17,14 @@ struct Args {
     /// Whether to expose the server on all network interfaces.
     #[clap(long)]
     host: bool,
+
+    /// Secret used for signing session tokens.
+    #[clap(long, env = "SSHX_SECRET")]
+    secret: Option<String>,
+
+    /// Override the origin URL returned by the Open() RPC.
+    #[clap(long)]
+    override_origin: Option<String>,
 }
 
 #[tokio::main]
@@ -30,7 +38,11 @@ async fn main() -> Result<()> {
     let mut sigterm = signal(SignalKind::terminate())?;
     let mut sigint = signal(SignalKind::interrupt())?;
 
-    let server = Server::new();
+    let mut options = ServerOptions::default();
+    options.secret = args.secret;
+    options.override_origin = args.override_origin;
+
+    let server = Server::new(options);
 
     let serve_task = async {
         info!("server listening at {addr}");

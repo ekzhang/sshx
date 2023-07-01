@@ -10,9 +10,8 @@ use sshx_core::proto::sshx_service_client::SshxServiceClient;
 use sshx_core::{Sid, Uid};
 use sshx_server::{
     session::Session,
-    state::ServerState,
     web::{WsClient, WsServer, WsUser, WsWinsize},
-    Server,
+    Server, ServerState,
 };
 use tokio::net::{TcpListener, TcpStream};
 use tokio::time;
@@ -35,7 +34,7 @@ impl TestServer {
         let local_addr = listener.local_addr().unwrap();
 
         let incoming = AddrIncoming::from_listener(listener).unwrap();
-        let server = Arc::new(Server::new());
+        let server = Arc::new(Server::new(Default::default()));
         {
             let server = Arc::clone(&server);
             tokio::spawn(async move {

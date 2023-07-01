@@ -19,8 +19,8 @@ This will compile the `sshx` binary and place it in your `~/.cargo/bin` folder.
 
 ### Workflow
 
-Install [Rust 1.66+](https://www.rust-lang.org/),
-[Node v16](https://nodejs.org/), [NPM v8](https://www.npmjs.com/), and
+Install [Rust 1.70+](https://www.rust-lang.org/),
+[Node v18](https://nodejs.org/), [NPM v9](https://www.npmjs.com/), and
 [mprocs](https://github.com/pvolok/mprocs). Then, run
 
 ```shell

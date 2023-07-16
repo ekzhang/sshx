@@ -175,7 +175,7 @@ impl Session {
     /// Terminates an existing shell.
     pub fn close_shell(&self, id: Sid) -> Result<()> {
         match self.shells.write().get_mut(&id) {
-            Some(mut shell) if !shell.closed => {
+            Some(shell) if !shell.closed => {
                 shell.closed = true;
                 shell.notify.notify_waiters();
             }

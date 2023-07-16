@@ -64,7 +64,26 @@
   let term: Terminal | null = null;
 
   let loaded = false;
+  let focused = false;
   let currentTitle = "Remote Terminal";
+
+  function handleWheelSkipXTerm(event: WheelEvent) {
+    event.preventDefault(); // Stop native macOS Chrome zooming on pinch.
+    event.stopPropagation();
+    termEl?.dispatchEvent(new WheelEvent(event.type, event));
+  }
+
+  function setFocused(isFocused: boolean, cursorLayer: HTMLDivElement) {
+    if (isFocused && !focused) {
+      focused = isFocused;
+      cursorLayer.removeEventListener("wheel", handleWheelSkipXTerm);
+      dispatch("focus");
+    } else if (!isFocused && focused) {
+      focused = isFocused;
+      cursorLayer.addEventListener("wheel", handleWheelSkipXTerm);
+      dispatch("blur");
+    }
+  }
 
   const preloadBuffer: string[] = [];
 
@@ -131,23 +150,22 @@
       currentTitle = title;
     });
 
-    let currentlyFocused = false;
+    // Hack: We artificially disable scrolling when the terminal is not focused.
+    const cursorLayer = termEl.querySelector(
+      ".xterm-cursor-layer",
+    )! as HTMLDivElement;
+    cursorLayer.addEventListener("wheel", handleWheelSkipXTerm);
+
     const focusObserver = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
         if (
           mutation.type === "attributes" &&
           mutation.attributeName === "class"
         ) {
-          // The "focus class is set directly by xterm.js, but there isn't any way to listen for it.
+          // The "focus" class is set directly by xterm.js, but there isn't any way to listen for it.
           const target = mutation.target as HTMLElement;
           const isFocused = target.classList.contains("focus");
-          if (isFocused && !currentlyFocused) {
-            currentlyFocused = isFocused;
-            dispatch("focus");
-          } else if (!isFocused && currentlyFocused) {
-            currentlyFocused = isFocused;
-            dispatch("blur");
-          }
+          setFocused(isFocused, cursorLayer);
         }
       }
     });
@@ -171,7 +189,8 @@
 </script>
 
 <div
-  class="term-container opacity-95"
+  class="term-container"
+  class:focused
   style:background={theme.background}
   on:mousedown={() => dispatch("bringToFront")}
   on:pointerdown={(event) => event.stopPropagation()}
@@ -202,12 +221,27 @@
     class="inline-block px-4 py-2 transition-opacity duration-500"
     bind:this={termEl}
     style:opacity={loaded ? 1.0 : 0.0}
-    on:wheel={(event) => event.stopPropagation()}
+    on:wheel={(event) => {
+      if (focused) {
+        // Don't pan the page when scrolling while the terminal is selected.
+        // Conversely, we manually disable terminal scrolling unless it is currently selected.
+        event.stopPropagation();
+      }
+    }}
   />
 </div>
 
 <style lang="postcss">
   .term-container {
-    @apply inline-block rounded-lg border border-gray-600 transition-transform duration-200;
+    @apply inline-block rounded-lg border border-zinc-700 opacity-90;
+    transition: transform 200ms, opacity 200ms;
+  }
+
+  .term-container:not(.focused) :global(.xterm) {
+    @apply cursor-default;
+  }
+
+  .term-container.focused {
+    @apply opacity-100;
   }
 </style>

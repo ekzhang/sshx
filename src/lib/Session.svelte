@@ -245,7 +245,12 @@
   }, 20);
 </script>
 
-<main class="p-8" class:cursor-nwse-resize={resizing !== -1}>
+<!-- Wheel handler stops native macOS Chrome zooming on pinch. -->
+<main
+  class="p-8"
+  class:cursor-nwse-resize={resizing !== -1}
+  on:wheel={(event) => event.preventDefault()}
+>
   <div
     class="absolute top-8 left-1/2 -translate-x-1/2 pointer-events-none z-10"
   >

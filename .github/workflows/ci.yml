@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - uses: actions-rs/toolchain@v1
         with:
@@ -29,15 +29,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
-      - uses: arduino/setup-protoc@v1
+      - uses: arduino/setup-protoc@v2
 
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
 
-      - uses: Swatinem/rust-cache@v1
+      - uses: Swatinem/rust-cache@v2
 
       - run: cargo test
 
@@ -48,9 +48,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
-      - uses: actions/setup-node@v2
+      - uses: actions/setup-node@v3
         with:
           node-version: "18"
 
@@ -72,7 +72,7 @@ jobs:
       cancel-in-progress: true
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - uses: superfly/flyctl-actions@master
         env:

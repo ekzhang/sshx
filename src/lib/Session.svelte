@@ -306,7 +306,7 @@
         style:top={OFFSET_TOP_CSS}
         style:transform-origin={OFFSET_TRANSFORM_ORIGIN_CSS}
         transition:fade|local
-        use:slide={{ x: ws.x, y: ws.y, center, zoom }}
+        use:slide={{ x: ws.x, y: ws.y, center, zoom, immediate: id === moving }}
       >
         <XTerm
           rows={ws.rows}

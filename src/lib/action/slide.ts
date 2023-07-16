@@ -1,4 +1,5 @@
-import { spring } from "svelte/motion";
+import { tweened } from "svelte/motion";
+import { cubicOut } from "svelte/easing";
 import type { Action } from "svelte/action";
 import { PerfectCursor } from "perfect-cursors";
 
@@ -7,15 +8,16 @@ export type SlideParams = {
   y: number;
   center: number[];
   zoom: number;
+  immediate?: boolean;
 };
 
-/** An action for spring-y transitions with global transformations. */
+/** An action for tweened transitions with global transformations. */
 export const slide: Action<HTMLElement, SlideParams> = (node, params) => {
   let center = params?.center ?? [0, 0];
   let zoom = params?.zoom ?? 1;
 
   const pos = { x: params?.x ?? 0, y: params?.y ?? 0 };
-  const spos = spring(pos, { stiffness: 0.6, damping: 1.6 });
+  const spos = tweened(pos, { duration: 150, easing: cubicOut });
 
   const disposeSub = spos.subscribe((pos) => {
     node.style.transform = `scale(${(zoom * 100).toFixed(3)}%)
@@ -27,7 +29,7 @@ export const slide: Action<HTMLElement, SlideParams> = (node, params) => {
       center = params?.center ?? [0, 0];
       zoom = params?.zoom ?? 1;
       const pos = { x: params?.x ?? 0, y: params?.y ?? 0 };
-      spos.set(pos);
+      spos.set(pos, { duration: params.immediate ? 0 : 150 });
     },
 
     destroy() {

@@ -67,13 +67,13 @@
 
     <section class="my-12 space-y-6 text-lg md:max-w-[460px] text-gray-400">
       <p>
-        <code>sshx</code> gives you a link to share your terminal with anyone on
-        the Internet.
+        <code>sshx</code> gives you a link to share terminals with anyone, on a multiplayer
+        infinite canvas.
       </p>
       <p>
-        It has <b>live cursors</b> and <b>chat</b> so you can see who's online
-        and work with them. Also, <b>it's fast</b>, with a CLI tool and server
-        both written in Rust.
+        It has <b>live cursors</b> and <b>chat</b> so you can work with whoever
+        is online. Also, <b>it's fast</b>, with a simple CLI tool and server
+        written in Rust.
       </p>
       <p>
         Use <code>sshx</code> for pair programming, demos, remote access, or even

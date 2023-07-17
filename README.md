@@ -1,10 +1,22 @@
 # sshx
 
-**The delightful web-based, collaborative terminal you never knew you needed.**
+**A delightful web-based, collaborative terminal.**
+
+Features:
+
+- Run a single command to share your terminal with anyone.
+- Resize, move windows, and freely zoom and pan on an infinite canvas.
+- See other people's cursors moving in real time.
+- Globally distributed system, where each user connects to the nearest server.
+- Automatic reconnection and real-time latency estimates.
+- Predictive echo for faster local editing (à la
+  [Mosh](https://github.com/mobile-shell/mosh)).
 
 Visit [sshx.io](https://sshx.io) to learn more, including installation steps.
 
 ## Development
+
+Here's how to work on the project, if you want to contribute.
 
 ### Building from source
 

@@ -22,7 +22,7 @@
     "fontfaceobserver": "^2.3.0",
     "lodash-es": "^4.17.21",
     "perfect-cursors": "^1.0.5",
-    "sshx-xterm": "^5.1.3",
+    "sshx-xterm": "5.2.1",
     "svelte": "^3.59.2",
     "svelte-feather-icons": "^4.0.1",
     "xterm-addon-web-links": "^0.8.0",

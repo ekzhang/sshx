@@ -51,6 +51,8 @@
   const dispatch = createEventDispatcher<{
     data: Uint8Array;
     close: void;
+    shrink: void;
+    expand: void;
     bringToFront: void;
     startMove: MouseEvent;
     focus: void;
@@ -142,6 +144,7 @@
 
     term.loadAddon(new WebLinksAddon());
     term.loadAddon(new WebglAddon());
+    // term.loadAddon(new LocalEchoController());
 
     term.open(termEl);
 
@@ -206,12 +209,12 @@
           containing element's on:pointerdown `stopPropagation()` call.
         -->
         <CircleButton kind="red" on:mousedown={() => dispatch("close")} />
-        <CircleButton kind="yellow" />
-        <CircleButton kind="green" />
+        <CircleButton kind="yellow" on:mousedown={() => dispatch("shrink")} />
+        <CircleButton kind="green" on:mousedown={() => dispatch("expand")} />
       </CircleButtons>
     </div>
     <div
-      class="p-2 text-sm text-gray-300 font-bold overflow-hidden text-ellipsis min-w-0"
+      class="p-2 text-sm text-gray-300 text-center font-bold overflow-hidden whitespace-nowrap text-ellipsis w-0 flex-grow-[4]"
     >
       {currentTitle}
     </div>

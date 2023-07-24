@@ -28,6 +28,10 @@
   const OFFSET_TOP_CSS = `calc(50vh - ${CONSTANT_OFFSET_TOP}px)`;
   const OFFSET_TRANSFORM_ORIGIN_CSS = `calc(-1 * ${OFFSET_LEFT_CSS}) calc(-1 * ${OFFSET_TOP_CSS})`;
 
+  // Terminal width and height limits.
+  const TERM_MIN_ROWS = 8;
+  const TERM_MIN_COLS = 32;
+
   function getConstantOffset() {
     return [
       0.5 * window.innerWidth - CONSTANT_OFFSET_LEFT,
@@ -194,11 +198,11 @@
       if (resizing !== -1) {
         const cols = Math.max(
           Math.floor((event.pageX - resizingOrigin[0]) / resizingCell[0]),
-          60, // Minimum number of columns.
+          TERM_MIN_COLS, // Minimum number of columns.
         );
         const rows = Math.max(
           Math.floor((event.pageY - resizingOrigin[1]) / resizingCell[1]),
-          8, // Minimum number of rows.
+          TERM_MIN_ROWS, // Minimum number of rows.
         );
         if (rows !== resizingSize.rows || cols !== resizingSize.cols) {
           resizingSize = { ...resizingSize, rows, cols };
@@ -315,6 +319,18 @@
           bind:termEl={termElements[id]}
           on:data={({ detail: data }) => srocket?.send({ data: [id, data] })}
           on:close={() => srocket?.send({ close: id })}
+          on:shrink={() => {
+            const rows = Math.max(ws.rows - 4, TERM_MIN_ROWS);
+            const cols = Math.max(ws.cols - 10, TERM_MIN_COLS);
+            if (rows !== ws.rows || cols !== ws.cols) {
+              srocket?.send({ move: [id, { ...ws, rows, cols }] });
+            }
+          }}
+          on:expand={() => {
+            const rows = ws.rows + 4;
+            const cols = ws.cols + 10;
+            srocket?.send({ move: [id, { ...ws, rows, cols }] });
+          }}
           on:bringToFront={() => srocket?.send({ move: [id, null] })}
           on:startMove={({ detail: event }) => {
             const [x, y] = normalizePosition(event);

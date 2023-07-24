@@ -49,8 +49,9 @@ function debounce<T extends (...args: any[]) => void>(fn: T, ms = 0) {
   };
 }
 
-const MIN_ZOOM = 0.25;
-const MAX_ZOOM = 1;
+const MIN_ZOOM = 0.35;
+const MAX_ZOOM = 2;
+export const INITIAL_ZOOM = 0.9;
 
 export class TouchZoom {
   #node: HTMLElement;
@@ -75,7 +76,7 @@ export class TouchZoom {
 
   isPinching = false;
   center: number[] = [0, 0];
-  zoom = 1;
+  zoom = INITIAL_ZOOM;
 
   #preventGesture = (event: TouchEvent) => event.preventDefault();
 
@@ -198,7 +199,7 @@ export class TouchZoom {
           : [this.#bounds.width / 2, this.#bounds.height / 2];
       const delta = z * 0.618;
 
-      let newZoom = (1 - delta / 160) * this.zoom;
+      let newZoom = (1 - delta / 320) * this.zoom;
       newZoom = Vec.clamp(newZoom, MIN_ZOOM, MAX_ZOOM);
 
       const offset = Vec.sub(point, [0, 0]);

@@ -12,7 +12,7 @@
   import Avatars from "./ui/Avatars.svelte";
   import LiveCursor from "./ui/LiveCursor.svelte";
   import { slide } from "./action/slide";
-  import { TouchZoom } from "./action/touchZoom";
+  import { TouchZoom, INITIAL_ZOOM } from "./action/touchZoom";
 
   export let id: string;
 
@@ -20,9 +20,9 @@
   // terminal at the time that it is first created.
   //
   // For a default 80x24 terminal, this is half of the width and height on a
-  // normal screen at 100% scale.
-  const CONSTANT_OFFSET_LEFT = 357;
-  const CONSTANT_OFFSET_TOP = 258;
+  // normal screen at default zoom.
+  const CONSTANT_OFFSET_LEFT = 300 * INITIAL_ZOOM;
+  const CONSTANT_OFFSET_TOP = 220 * INITIAL_ZOOM;
 
   const OFFSET_LEFT_CSS = `calc(50vw - ${CONSTANT_OFFSET_LEFT}px)`;
   const OFFSET_TOP_CSS = `calc(50vh - ${CONSTANT_OFFSET_TOP}px)`;
@@ -38,7 +38,7 @@
   let fabricEl: HTMLElement;
   let touchZoom: TouchZoom;
   let center = [0, 0];
-  let zoom = 1;
+  let zoom = INITIAL_ZOOM;
 
   onMount(() => {
     touchZoom = new TouchZoom(fabricEl);
@@ -259,7 +259,7 @@
       {newMessages}
       on:create={() => {
         srocket?.send({ create: [] });
-        touchZoom.moveTo([0, 0], 1);
+        touchZoom.moveTo([0, 0], INITIAL_ZOOM);
       }}
       on:chat={() => {
         showChat = !showChat;

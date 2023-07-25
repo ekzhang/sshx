@@ -19,6 +19,9 @@ use tracing::{debug, warn};
 use crate::utils::Shutdown;
 use crate::web::protocol::{WsServer, WsUser, WsWinsize};
 
+/// Store a rolling buffer with at most this quantity of output, per shell.
+const SHELL_STORED_BYTES: u64 = 4 << 20;
+
 /// In-memory state for a single sshx session.
 #[derive(Debug)]
 pub struct Session {
@@ -62,6 +65,12 @@ struct State {
 
     /// Terminal data chunks.
     data: Vec<Arc<str>>,
+
+    /// Number of pruned data chunks before `data[0]`.
+    chunk_offset: u64,
+
+    /// Number of bytes in pruned data chunks.
+    byte_offset: u64,
 
     /// Set when this shell is terminated.
     closed: bool,
@@ -121,9 +130,8 @@ impl Session {
     pub fn subscribe_chunks(
         &self,
         id: Sid,
-        chunknum: u64,
+        mut chunknum: u64,
     ) -> impl Stream<Item = Vec<Arc<str>>> + '_ {
-        let mut chunknum = chunknum as usize;
         async_stream::stream! {
             while !self.shutdown.is_terminated() {
                 // We absolutely cannot hold `shells` across an await point,
@@ -137,9 +145,11 @@ impl Session {
                     let notify = Arc::clone(&shell.notify);
                     let notified = async move { notify.notified().await };
                     let mut chunks = Vec::new();
-                    if chunknum < shell.data.len() {
-                        chunks.extend_from_slice(&shell.data[chunknum..]);
-                        chunknum = shell.data.len();
+                    let current_chunks = shell.chunk_offset + shell.data.len() as u64;
+                    if chunknum < current_chunks {
+                        let start = chunknum.saturating_sub(shell.chunk_offset) as usize;
+                        chunks = shell.data[start..].to_vec();
+                        chunknum = current_chunks;
                     }
                     (chunks, notified)
                 };
@@ -223,6 +233,21 @@ impl Session {
             debug!(%id, ?segment, "adding data to shell");
             shell.data.push(segment.into());
             shell.seqnum += segment.len() as u64;
+
+            // Prune old chunks if we've exceeded the maximum stored bytes.
+            let mut stored_bytes = shell.seqnum - shell.byte_offset;
+            if stored_bytes > SHELL_STORED_BYTES {
+                let mut offset = 0;
+                while offset < shell.data.len() && stored_bytes > SHELL_STORED_BYTES {
+                    let bytes = shell.data[offset].len() as u64;
+                    stored_bytes -= bytes;
+                    shell.chunk_offset += 1;
+                    shell.byte_offset += bytes;
+                    offset += 1;
+                }
+                shell.data.drain(..offset);
+            }
+
             shell.notify.notify_waiters();
         }
 

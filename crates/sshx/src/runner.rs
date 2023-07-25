@@ -11,6 +11,9 @@ use tokio::{
 
 use crate::terminal::Terminal;
 
+const CONTENT_ROLLING_BYTES: usize = 8 << 20; // Store at least this much content.
+const CONTENT_PRUNE_BYTES: usize = 12 << 20; // Prune when we exceed this length.
+
 /// Variants of terminal behavior that are used by the controller.
 #[derive(Debug, Clone)]
 pub enum Runner {
@@ -57,6 +60,7 @@ async fn shell_task(
     term.set_winsize(24, 80)?;
 
     let mut content = String::new(); // content from the terminal
+    let mut content_offset = 0; // bytes before the first character of `content`
     let mut decoder = UTF_8.new_decoder(); // UTF-8 streaming decoder
     let mut seq = 0; // our log of the server's sequence number
     let mut seq_outdated = 0; // number of times seq has been outdated
@@ -103,16 +107,23 @@ async fn shell_task(
         }
 
         // Send data if the server has fallen behind.
-        if content.len() > seq {
-            seq = prev_char_boundary(&content, seq);
+        if content_offset + content.len() > seq {
+            let start = prev_char_boundary(&content, seq - content_offset);
             let data = TerminalData {
                 id: id.0,
-                data: content[seq..].into(),
-                seq: seq as u64,
+                data: content[start..].into(),
+                seq: (content_offset + start) as u64,
             };
             output_tx.send(ClientMessage::Data(data)).await?;
-            seq = content.len();
+            seq = content_offset + content.len();
             seq_outdated = 0;
+        }
+
+        if content.len() > CONTENT_PRUNE_BYTES && seq - CONTENT_ROLLING_BYTES > content_offset {
+            let pruned = (seq - CONTENT_ROLLING_BYTES) - content_offset;
+            let pruned = prev_char_boundary(&content, pruned);
+            content_offset += pruned;
+            content.drain(..pruned);
         }
     }
     Ok(())

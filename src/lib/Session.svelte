@@ -49,6 +49,17 @@
     touchZoom.onMove(() => {
       center = touchZoom.center;
       zoom = touchZoom.zoom;
+
+      // Blur if the user is currently focused on a terminal.
+      //
+      // This makes it so that panning does not stop when the cursor happens to
+      // intersect with the textarea, which absorbs wheel and touch events.
+      if (document.activeElement) {
+        const classList = [...document.activeElement.classList];
+        if (classList.includes("xterm-helper-textarea")) {
+          (document.activeElement as HTMLElement).blur();
+        }
+      }
     });
   });
 

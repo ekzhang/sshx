@@ -144,7 +144,6 @@
 
     term.loadAddon(new WebLinksAddon());
     term.loadAddon(new WebglAddon());
-    // term.loadAddon(new LocalEchoController());
 
     term.open(termEl);
 

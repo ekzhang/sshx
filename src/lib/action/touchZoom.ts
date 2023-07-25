@@ -118,6 +118,7 @@ export class TouchZoom {
         },
         drag: {
           filterTaps: true,
+          pointer: { keys: false },
         },
       },
     );

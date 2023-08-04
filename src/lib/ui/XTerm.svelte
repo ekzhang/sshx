@@ -207,9 +207,18 @@
           TODO: This should be on:click, but that is not working due to the
           containing element's on:pointerdown `stopPropagation()` call.
         -->
-        <CircleButton kind="red" on:mousedown={() => dispatch("close")} />
-        <CircleButton kind="yellow" on:mousedown={() => dispatch("shrink")} />
-        <CircleButton kind="green" on:mousedown={() => dispatch("expand")} />
+        <CircleButton
+          kind="red"
+          on:mousedown={(event) => event.button === 0 && dispatch("close")}
+        />
+        <CircleButton
+          kind="yellow"
+          on:mousedown={(event) => event.button === 0 && dispatch("shrink")}
+        />
+        <CircleButton
+          kind="green"
+          on:mousedown={(event) => event.button === 0 && dispatch("expand")}
+        />
       </CircleButtons>
     </div>
     <div

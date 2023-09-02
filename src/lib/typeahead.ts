@@ -1632,7 +1632,7 @@ export class TypeAheadAddon extends Disposable implements ITerminalAddon {
   activate(terminal: Terminal): void {
     const style = (this._typeaheadStyle = this._register(
       new TypeAheadStyle(
-        "italic", // ITerminalConfiguration.localEchoStyle
+        "dim", // ITerminalConfiguration.localEchoStyle
         terminal,
       ),
     ));
@@ -1949,4 +1949,13 @@ export class TypeAheadAddon extends Disposable implements ITerminalAddon {
 
   //   this._deferClearingPredictions();
   // }
+
+  onBeforeProcessData(data: string): string {
+    if (!this._timeline) return data;
+    // console.log("incoming data:", JSON.stringify(data));
+    data = this._timeline.beforeServerInput(data);
+    // console.log("emitted data:", JSON.stringify(data));
+    this._deferClearingPredictions();
+    return data;
+  }
 }

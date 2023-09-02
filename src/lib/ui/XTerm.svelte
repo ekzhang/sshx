@@ -42,6 +42,7 @@
   import themes from "./themes";
   import CircleButton from "./CircleButton.svelte";
   import CircleButtons from "./CircleButtons.svelte";
+  import { TypeAheadAddon } from "$lib/typeahead";
 
   const theme = themes.defaultDark;
 
@@ -58,6 +59,8 @@
     focus: void;
     blur: void;
   }>();
+
+  const typeahead = new TypeAheadAddon();
 
   export let rows: number, cols: number;
   export let write: (data: string) => void; // bound function prop
@@ -94,6 +97,7 @@
       // Before the terminal is loaded, push data into a buffer.
       preloadBuffer.push(data);
     } else {
+      if (data) data = typeahead.onBeforeProcessData(data);
       term.write(data);
     }
   };
@@ -177,6 +181,9 @@
     for (const data of preloadBuffer) {
       term.write(data);
     }
+
+    typeahead.reset();
+    term.loadAddon(typeahead);
 
     const utf8 = new TextEncoder();
     term.onData((data: string) => {

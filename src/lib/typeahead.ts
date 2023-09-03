@@ -1597,7 +1597,7 @@ export const enum CharPredictState {
 
 export class TypeAheadAddon extends Disposable implements ITerminalAddon {
   private _typeaheadStyle?: TypeAheadStyle;
-  private _typeaheadThreshold = 0; // ITerminalConfiguration.localEchoLatencyThreshold
+  private _typeaheadThreshold = 50; // ITerminalConfiguration.localEchoLatencyThreshold
   private _excludeProgramRe = compileExcludeRegexp([
     "vim",
     "vi",

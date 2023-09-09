@@ -24,8 +24,9 @@ message TerminalData {
 
 // Details of bytes input to the terminal (not necessarily valid UTF-8).
 message TerminalInput {
-  uint32 id = 1;  // ID of the shell.
-  bytes data = 2; // Binary sequence of terminal data.
+  uint32 id = 1;     // ID of the shell.
+  bytes data = 2;    // Encrypted binary sequence of terminal data.
+  uint64 offset = 3; // Offset of the first byte for encryption.
 }
 
 // Pair of a terminal ID and its associated size.

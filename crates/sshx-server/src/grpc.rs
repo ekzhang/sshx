@@ -16,8 +16,7 @@ use tokio_stream::{wrappers::ReceiverStream, StreamExt};
 use tonic::{Request, Response, Status, Streaming};
 use tracing::{error, info, warn};
 
-use crate::session::Session;
-use crate::web::protocol::WsMetadata;
+use crate::session::{Metadata, Session};
 use crate::ServerState;
 
 /// Interval for synchronizing sequence numbers with the client.
@@ -56,7 +55,7 @@ impl SshxService for GrpcServer {
         match self.0.store.entry(name.clone()) {
             Occupied(_) => return Err(Status::already_exists("generated duplicate ID")),
             Vacant(v) => {
-                let metadata = WsMetadata {
+                let metadata = Metadata {
                     encrypted_zeros: request.encrypted_zeros.into(),
                 };
                 v.insert(Session::new(metadata).into());

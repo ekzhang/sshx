@@ -18,7 +18,6 @@ hyper = { version = "0.14.18", features = ["full"] }
 parking_lot = "0.12.0"
 rand.workspace = true
 serde.workspace = true
-serde_bytes = "0.11.6"
 sha2 = "0.10.2"
 sshx-core = { path = "../sshx-core" }
 tokio.workspace = true

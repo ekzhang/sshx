@@ -67,8 +67,16 @@ async fn handle_socket(mut socket: WebSocket, session: Arc<Session>) -> Result<(
     }
 
     let user_id = session.counter().next_uid();
-    let metadata = session.metadata().clone();
-    send(&mut socket, WsServer::Hello(user_id, metadata)).await?;
+    send(&mut socket, WsServer::Hello(user_id)).await?;
+
+    match recv(&mut socket).await? {
+        Some(WsClient::Authenticate(bytes)) if bytes == session.metadata().encrypted_zeros => {}
+        _ => {
+            send(&mut socket, WsServer::InvalidAuth()).await?;
+            socket.close().await?;
+            return Ok(());
+        }
+    }
 
     let _user_guard = session.user_scope(user_id)?;
 
@@ -109,6 +117,7 @@ async fn handle_socket(mut socket: WebSocket, session: Arc<Session>) -> Result<(
         };
 
         match msg {
+            WsClient::Authenticate(_) => {}
             WsClient::SetName(name) => {
                 session.update_user(user_id, |user| user.name = name)?;
             }
@@ -139,9 +148,13 @@ async fn handle_socket(mut socket: WebSocket, session: Arc<Session>) -> Result<(
                     session.update_tx().send(msg).await?;
                 }
             }
-            WsClient::Data(id, data) => {
-                let data = TerminalInput { id: id.0, data };
-                update_tx.send(ServerMessage::Input(data)).await?;
+            WsClient::Data(id, data, offset) => {
+                let input = TerminalInput {
+                    id: id.0,
+                    data: data.into(),
+                    offset,
+                };
+                update_tx.send(ServerMessage::Input(input)).await?;
             }
             WsClient::Subscribe(id, chunknum) => {
                 if subscribed.contains(&id) {

@@ -102,7 +102,8 @@ impl ClientSocket {
     pub async fn connect(uri: &str, key: &str) -> Result<Self> {
         let (stream, resp) = tokio_tungstenite::connect_async(uri).await?;
         ensure!(resp.status() == StatusCode::SWITCHING_PROTOCOLS);
-        Ok(Self {
+
+        let mut this = Self {
             inner: stream,
             encrypt: Encrypt::new(key),
             user_id: Uid(0),
@@ -112,13 +113,26 @@ impl ClientSocket {
             messages: Vec::new(),
             errors: Vec::new(),
             terminated: false,
-        })
+        };
+        this.authenticate().await;
+        Ok(this)
+    }
+
+    async fn authenticate(&mut self) {
+        let encrypted_zeros = self.encrypt.zeros().into();
+        self.send(WsClient::Authenticate(encrypted_zeros)).await;
     }
 
     pub async fn send(&mut self, msg: WsClient) {
         let mut buf = Vec::new();
         ciborium::ser::into_writer(&msg, &mut buf).unwrap();
         self.inner.send(Message::Binary(buf)).await.unwrap();
+    }
+
+    pub async fn send_input(&mut self, id: Sid, data: &[u8]) {
+        let offset = 42; // arbitrary, don't reuse the offset in real code though
+        let data = self.encrypt.segment(0x200000000, offset, data);
+        self.send(WsClient::Data(id, data.into(), offset)).await;
     }
 
     async fn recv(&mut self) -> Option<WsServer> {
@@ -147,7 +161,8 @@ impl ClientSocket {
         let flush_task = async {
             while let Some(msg) = self.recv().await {
                 match msg {
-                    WsServer::Hello(user_id, _) => self.user_id = user_id,
+                    WsServer::Hello(user_id) => self.user_id = user_id,
+                    WsServer::InvalidAuth() => panic!("invalid authentication"),
                     WsServer::Users(users) => self.users = BTreeMap::from_iter(users),
                     WsServer::UserDiff(id, maybe_user) => {
                         self.users.remove(&id);

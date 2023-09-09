@@ -23,7 +23,8 @@ export type WsUser = {
 
 /** Server message type, see the Rust version. */
 export type WsServer = {
-  hello?: [Uid, WsMetadata];
+  hello?: Uid;
+  invalidAuth?: [];
   users?: [Uid, WsUser][];
   userDiff?: [Uid, WsUser | null];
   shells?: [Sid, WsWinsize][];
@@ -35,13 +36,14 @@ export type WsServer = {
 
 /** Client message type, see the Rust version. */
 export type WsClient = {
+  authenticate?: Uint8Array;
   setName?: string;
   setCursor?: [number, number] | null;
   setFocus?: number | null;
   create?: [];
   close?: Sid;
   move?: [Sid, WsWinsize | null];
-  data?: [Sid, Uint8Array];
+  data?: [Sid, Uint8Array, bigint];
   subscribe?: [Sid, number];
   chat?: string;
 };

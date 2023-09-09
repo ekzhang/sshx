@@ -18,16 +18,23 @@ use tokio_stream::Stream;
 use tracing::{debug, warn};
 
 use crate::utils::Shutdown;
-use crate::web::protocol::{WsMetadata, WsServer, WsUser, WsWinsize};
+use crate::web::protocol::{WsServer, WsUser, WsWinsize};
 
 /// Store a rolling buffer with at most this quantity of output, per shell.
 const SHELL_STORED_BYTES: u64 = 4 << 20;
 
+/// Metadata sent to clients on connection.
+#[derive(Debug, Clone)]
+pub struct Metadata {
+    /// Used to validate that clients have the correct encryption key.
+    pub encrypted_zeros: Bytes,
+}
+
 /// In-memory state for a single sshx session.
 #[derive(Debug)]
 pub struct Session {
-    /// Metadata sent to clients on connection.
-    metadata: WsMetadata,
+    /// Static metadata for this session.
+    metadata: Metadata,
 
     /// In-memory state for the session.
     shells: RwLock<HashMap<Sid, State>>,
@@ -85,7 +92,7 @@ struct State {
 
 impl Session {
     /// Construct a new session.
-    pub fn new(metadata: WsMetadata) -> Self {
+    pub fn new(metadata: Metadata) -> Self {
         let now = Instant::now();
         let (update_tx, update_rx) = async_channel::bounded(256);
         Session {
@@ -103,7 +110,7 @@ impl Session {
     }
 
     /// Returns the metadata for this session.
-    pub fn metadata(&self) -> &WsMetadata {
+    pub fn metadata(&self) -> &Metadata {
         &self.metadata
     }
 

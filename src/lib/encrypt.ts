@@ -46,17 +46,17 @@ export class Encrypt {
 
   async segment(
     streamNum: bigint,
-    offset: number,
+    offset: bigint,
     data: Uint8Array,
   ): Promise<Uint8Array> {
     if (streamNum === 0n) throw new Error("stream number must be nonzero"); // security check)
 
-    const blockNum = offset >> 4;
+    const blockNum = offset >> 4n;
     const iv = new Uint8Array(16);
     new DataView(iv.buffer).setBigUint64(0, streamNum);
-    new DataView(iv.buffer).setBigUint64(8, BigInt(blockNum));
+    new DataView(iv.buffer).setBigUint64(8, blockNum);
 
-    const padBytes = offset % 16;
+    const padBytes = Number(offset % 16n);
     const paddedData = new Uint8Array(padBytes + data.length);
     paddedData.set(data, padBytes);
 

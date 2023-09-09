@@ -5,14 +5,6 @@ use rand::Rng;
 use serde::{Deserialize, Serialize};
 use sshx_core::{Sid, Uid};
 
-/// Metadata sent to clients on connection.
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-pub struct WsMetadata {
-    /// Used by clients to validate their encryption key.
-    pub encrypted_zeros: Bytes,
-}
-
 /// Real-time message conveying the position and size of a terminal.
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -68,7 +60,9 @@ pub struct WsUser {
 #[serde(rename_all = "camelCase")]
 pub enum WsServer {
     /// Initial server message, with the user's ID and session metadata.
-    Hello(Uid, WsMetadata),
+    Hello(Uid),
+    /// The user's authentication was invalid.
+    InvalidAuth(),
     /// A snapshot of all current users in the session.
     Users(Vec<(Uid, WsUser)>),
     /// Info about a single user in the session: joined, left, or changed.
@@ -89,6 +83,8 @@ pub enum WsServer {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub enum WsClient {
+    /// Authenticate the user's encryption key by zeros block.
+    Authenticate(Bytes),
     /// Set the name of the current user.
     SetName(String),
     /// Send real-time information about the user's cursor.
@@ -102,7 +98,7 @@ pub enum WsClient {
     /// Move a shell window to a new position and focus it.
     Move(Sid, Option<WsWinsize>),
     /// Add user data to a given shell.
-    Data(Sid, #[serde(with = "serde_bytes")] Vec<u8>),
+    Data(Sid, Bytes, u64),
     /// Subscribe to a shell, starting at a given chunk index.
     Subscribe(Sid, u64),
     /// Send a a chat message to the room.

@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use sshx::{controller::Controller, runner::Runner};
+use sshx::{controller::Controller, encrypt::Encrypt, runner::Runner};
 use sshx_core::{
     proto::{server_update::ServerMessage, TerminalInput},
     Sid, Uid,
@@ -32,9 +32,13 @@ async fn test_command() -> Result<()> {
     let updates = session.update_tx();
     updates.send(ServerMessage::CreateShell(1)).await?;
 
+    let key = controller.encryption_key();
+    let encrypt = Encrypt::new(key);
+    let offset = 4242;
     let data = TerminalInput {
         id: 1,
-        data: "ls\r\n".into(),
+        data: encrypt.segment(0x200000000, offset, b"ls\r\n"),
+        offset,
     };
     updates.send(ServerMessage::Input(data)).await?;
 
@@ -80,11 +84,11 @@ async fn test_ws_basic() -> Result<()> {
     s.send(WsClient::Subscribe(Sid(1), 0)).await;
     assert_eq!(s.read(Sid(1)), "");
 
-    s.send(WsClient::Data(Sid(1), b"hello!".to_vec())).await;
+    s.send_input(Sid(1), b"hello!").await;
     s.flush().await;
     assert_eq!(s.read(Sid(1)), "hello!");
 
-    s.send(WsClient::Data(Sid(1), b" 123".to_vec())).await;
+    s.send_input(Sid(1), b" 123").await;
     s.flush().await;
     assert_eq!(s.read(Sid(1)), "hello! 123");
 

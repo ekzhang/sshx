@@ -134,10 +134,10 @@ impl Controller {
 
             match message {
                 ServerMessage::Input(input) => {
-                    // We ignore `data.seq` because it should be unused here.
+                    let data = self.encrypt.segment(0x200000000, input.offset, &input.data);
                     if let Some(sender) = self.shells_tx.get(&Sid(input.id)) {
                         // This line applies backpressure if the shell task is overloaded.
-                        sender.send(ShellData::Data(input.data)).await.ok();
+                        sender.send(ShellData::Data(data)).await.ok();
                     } else {
                         warn!(%input.id, "received data for non-existing shell");
                     }

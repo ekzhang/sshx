@@ -74,6 +74,7 @@
     ];
   }
 
+  let encrypt: Encrypt;
   let srocket: Srocket<WsServer, WsClient> | null = null;
 
   let connected = false;
@@ -107,32 +108,33 @@
   onMount(async () => {
     // The page hash sets the end-to-end encryption key.
     const key = window.location.hash?.slice(1) ?? "";
-    const encrypt = await Encrypt.new(key);
-    const clientEncryptedZeros = await encrypt.zeros();
+    encrypt = await Encrypt.new(key);
+    const encryptedZeros = await encrypt.zeros();
 
     srocket = new Srocket<WsServer, WsClient>(`/api/s/${id}`, {
       onMessage(message) {
         if (message.hello) {
-          userId = message.hello[0];
-          const { encryptedZeros } = message.hello[1];
-          if (!isEqual(encryptedZeros, clientEncryptedZeros)) {
-            exitReason =
-              "The URL is not correct, invalid end-to-end encryption key.";
-            srocket?.dispose();
-          } else {
-            makeToast({
-              kind: "success",
-              message: `Connected to the server.`,
-            });
-          }
+          userId = message.hello;
+          srocket?.send({ authenticate: encryptedZeros });
+          makeToast({
+            kind: "success",
+            message: `Connected to the server.`,
+          });
+        } else if (message.invalidAuth) {
+          exitReason =
+            "The URL is not correct, invalid end-to-end encryption key.";
+          srocket?.dispose();
         } else if (message.chunks) {
           let [id, seqnum, chunks] = message.chunks;
           locks[id](async () => {
             await tick();
             chunknums[id] += chunks.length;
             for (const data of chunks) {
-              const streamNum = 0x100000000n | BigInt(id);
-              const buf = await encrypt.segment(streamNum, seqnum, data);
+              const buf = await encrypt.segment(
+                0x100000000n | BigInt(id),
+                BigInt(seqnum),
+                data,
+              );
               seqnum += data.length;
               writers[id](new TextDecoder().decode(buf));
             }
@@ -190,6 +192,21 @@
   });
 
   onDestroy(() => srocket?.dispose());
+
+  let counter = 0n;
+
+  async function handleInput(id: number, data: Uint8Array) {
+    if (counter === 0n) {
+      // On the first call, initialize the counter to a random 64-bit integer.
+      const array = new Uint8Array(8);
+      crypto.getRandomValues(array);
+      counter = new DataView(array.buffer).getBigUint64(0);
+    }
+    const offset = counter;
+    counter += BigInt(data.length); // Must increment before the `await`.
+    const encrypted = await encrypt.segment(0x200000000n, offset, data);
+    srocket?.send({ data: [id, encrypted, offset] });
+  }
 
   // Stupid hack to preserve input focus when terminals are reordered.
   // See: https://github.com/sveltejs/svelte/issues/3973
@@ -348,7 +365,7 @@
           cols={ws.cols}
           bind:write={writers[id]}
           bind:termEl={termElements[id]}
-          on:data={({ detail: data }) => srocket?.send({ data: [id, data] })}
+          on:data={({ detail: data }) => handleInput(id, data)}
           on:close={() => srocket?.send({ close: id })}
           on:shrink={() => {
             const rows = Math.max(ws.rows - 4, TERM_MIN_ROWS);

@@ -115,7 +115,6 @@
       onMessage(message) {
         if (message.hello) {
           userId = message.hello;
-          srocket?.send({ authenticate: encryptedZeros });
           makeToast({
             kind: "success",
             message: `Connected to the server.`,
@@ -174,6 +173,7 @@
       },
 
       onConnect() {
+        srocket?.send({ authenticate: encryptedZeros });
         connected = true;
       },
 

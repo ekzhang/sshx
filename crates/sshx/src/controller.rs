@@ -12,7 +12,7 @@ use tokio::sync::mpsc;
 use tokio::time::{self, Duration, Instant, MissedTickBehavior};
 use tokio_stream::{wrappers::ReceiverStream, StreamExt};
 use tonic::transport::Channel;
-use tracing::{error, info, warn};
+use tracing::{debug, error, warn};
 
 use crate::encrypt::Encrypt;
 use crate::runner::{Runner, ShellData};
@@ -42,7 +42,7 @@ pub struct Controller {
 impl Controller {
     /// Construct a new controller, connecting to the remote server.
     pub async fn new(origin: &str, runner: Runner) -> Result<Self> {
-        info!(%origin, "connecting to server");
+        debug!(%origin, "connecting to server");
         let mut client = SshxServiceClient::connect(String::from(origin)).await?;
         let encryption_key = rand_alphanumeric(14); // 83.3 bits of entropy
         let encrypt = Encrypt::new(&encryption_key);
@@ -188,7 +188,7 @@ impl Controller {
         let encrypt = self.encrypt.clone();
         let output_tx = self.output_tx.clone();
         tokio::spawn(async move {
-            info!(%id, "spawning new shell");
+            debug!(%id, "spawning new shell");
             if let Err(err) = output_tx.send(ClientMessage::CreatedShell(id.0)).await {
                 error!(%id, ?err, "failed to send shell creation message");
                 return;
@@ -203,7 +203,7 @@ impl Controller {
 
     /// Terminate this session gracefully.
     pub async fn close(&self) -> Result<bool> {
-        info!("closing session");
+        debug!("closing session");
         let req = CloseRequest {
             name: self.name.clone(),
             token: self.token.clone(),

@@ -30,7 +30,6 @@ pub fn get_default_shell() -> String {
 #[pin_project(PinnedDrop)]
 pub struct Terminal {
     child: Pid,
-    slave: OwnedFd,
     #[pin]
     master_read: File,
     #[pin]
@@ -48,11 +47,11 @@ impl Terminal {
         let master_read = unsafe { File::from_raw_fd(result.master) };
 
         // Safety: The slave file descriptor was created by openpty() and has its
-        // ownership transferred here. It is closed when the object is dropped.
+        // ownership transferred here. It is closed when dropped.
         let slave = unsafe { OwnedFd::from_raw_fd(result.slave) };
 
         // The slave file descriptor was created by openpty() and has its ownership
-        // transferred here. From the master side, it is closed on drop.
+        // transferred here.
         let child = Self::fork_child(shell, slave.as_raw_fd())?;
 
         // We need to clone the file object to prevent livelocks in Tokio, when multiple
@@ -65,7 +64,6 @@ impl Terminal {
 
         Ok(Self {
             child,
-            slave,
             master_read,
             master_write,
         })
@@ -107,8 +105,8 @@ impl Terminal {
     pub fn get_winsize(&self) -> Result<(u16, u16)> {
         nix::ioctl_read_bad!(ioctl_get_winsize, TIOCGWINSZ, Winsize);
         let mut winsize = make_winsize(0, 0);
-        // Safety: The slave file descriptor was created by openpty().
-        unsafe { ioctl_get_winsize(self.slave.as_raw_fd(), &mut winsize) }?;
+        // Safety: The master file descriptor was created by openpty().
+        unsafe { ioctl_get_winsize(self.master_read.as_raw_fd(), &mut winsize) }?;
         Ok((winsize.ws_row, winsize.ws_col))
     }
 
@@ -116,8 +114,8 @@ impl Terminal {
     pub fn set_winsize(&self, rows: u16, cols: u16) -> Result<()> {
         nix::ioctl_write_ptr_bad!(ioctl_set_winsize, TIOCSWINSZ, Winsize);
         let winsize = make_winsize(rows, cols);
-        // Safety: The slave file descriptor was created by openpty().
-        unsafe { ioctl_set_winsize(self.slave.as_raw_fd(), &winsize) }?;
+        // Safety: The master file descriptor was created by openpty().
+        unsafe { ioctl_set_winsize(self.master_read.as_raw_fd(), &winsize) }?;
         Ok(())
     }
 }

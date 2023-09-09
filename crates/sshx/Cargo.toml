@@ -4,10 +4,13 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+aes = "0.8.3"
 ansi_term = "0.12.1"
 anyhow.workspace = true
+argon2 = { version = "0.5.2", default-features = false, features = ["alloc"] }
 clap.workspace = true
 close_fds = "0.3.2"
+ctr = "0.9.2"
 encoding_rs = "0.8.31"
 nix = "0.26.1"
 pin-project = "1.0.10"

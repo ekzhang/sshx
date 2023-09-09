@@ -7,13 +7,14 @@ use sshx_core::proto::{
     client_update::ClientMessage, server_update::ServerMessage,
     sshx_service_client::SshxServiceClient, ClientUpdate, CloseRequest, OpenRequest,
 };
-use sshx_core::Sid;
+use sshx_core::{rand_alphanumeric, Sid};
 use tokio::sync::mpsc;
 use tokio::time::{self, Duration, Instant, MissedTickBehavior};
 use tokio_stream::{wrappers::ReceiverStream, StreamExt};
 use tonic::transport::Channel;
 use tracing::{error, info, warn};
 
+use crate::encrypt::Encrypt;
 use crate::runner::{Runner, ShellData};
 
 /// Interval for sending empty heartbeat messages to the server.
@@ -23,6 +24,8 @@ const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(2);
 pub struct Controller {
     client: SshxServiceClient<Channel>,
     runner: Runner,
+    encrypt: Encrypt,
+    encryption_key: String,
 
     name: String,
     token: String,
@@ -41,14 +44,22 @@ impl Controller {
     pub async fn new(origin: &str, runner: Runner) -> Result<Self> {
         info!(%origin, "connecting to server");
         let mut client = SshxServiceClient::connect(String::from(origin)).await?;
+        let encryption_key = rand_alphanumeric(14); // 83.3 bits of entropy
+        let encrypt = Encrypt::new(&encryption_key);
+
         let req = OpenRequest {
             origin: origin.into(),
+            encrypted_zeros: encrypt.zeros(),
         };
-        let resp = client.open(req).await?.into_inner();
+        let mut resp = client.open(req).await?.into_inner();
+        resp.url = resp.url + "#" + &encryption_key;
+
         let (output_tx, output_rx) = mpsc::channel(64);
         Ok(Self {
             client,
             runner,
+            encrypt,
+            encryption_key,
             name: resp.name,
             token: resp.token,
             url: resp.url,
@@ -66,6 +77,11 @@ impl Controller {
     /// Returns the URL of the session.
     pub fn url(&self) -> &str {
         &self.url
+    }
+
+    /// Returns the encryption key for this session, hidden from the server.
+    pub fn encryption_key(&self) -> &str {
+        &self.encryption_key
     }
 
     /// Run the controller forever, listening for requests from the server.
@@ -169,6 +185,7 @@ impl Controller {
         debug_assert!(opt.is_none(), "shell ID cannot be in existing tasks");
 
         let runner = self.runner.clone();
+        let encrypt = self.encrypt.clone();
         let output_tx = self.output_tx.clone();
         tokio::spawn(async move {
             info!(%id, "spawning new shell");
@@ -176,7 +193,7 @@ impl Controller {
                 error!(%id, ?err, "failed to send shell creation message");
                 return;
             }
-            if let Err(err) = runner.run(id, shell_rx, output_tx.clone()).await {
+            if let Err(err) = runner.run(id, encrypt, shell_rx, output_tx.clone()).await {
                 let err = ClientMessage::Error(err.to_string());
                 output_tx.send(err).await.ok();
             }

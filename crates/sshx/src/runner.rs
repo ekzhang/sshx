@@ -9,6 +9,7 @@ use tokio::{
     sync::mpsc,
 };
 
+use crate::encrypt::Encrypt;
 use crate::terminal::Terminal;
 
 const CONTENT_ROLLING_BYTES: usize = 8 << 20; // Store at least this much content.
@@ -39,12 +40,13 @@ impl Runner {
     pub async fn run(
         &self,
         id: Sid,
+        encrypt: Encrypt,
         shell_rx: mpsc::Receiver<ShellData>,
         output_tx: mpsc::Sender<ClientMessage>,
     ) -> Result<()> {
         match self {
-            Self::Shell(shell) => shell_task(id, shell, shell_rx, output_tx).await,
-            Self::Echo => echo_task(id, shell_rx, output_tx).await,
+            Self::Shell(shell) => shell_task(id, encrypt, shell, shell_rx, output_tx).await,
+            Self::Echo => echo_task(id, encrypt, shell_rx, output_tx).await,
         }
     }
 }
@@ -52,6 +54,7 @@ impl Runner {
 /// Asynchronous task handling a single shell within the session.
 async fn shell_task(
     id: Sid,
+    encrypt: Encrypt,
     shell: &str,
     mut shell_rx: mpsc::Receiver<ShellData>,
     output_tx: mpsc::Sender<ClientMessage>,
@@ -109,9 +112,14 @@ async fn shell_task(
         // Send data if the server has fallen behind.
         if content_offset + content.len() > seq {
             let start = prev_char_boundary(&content, seq - content_offset);
+            let data = encrypt.segment(
+                0x100000000 | id.0 as u64, // stream number
+                (content_offset + start) as u64,
+                content[start..].as_bytes(),
+            );
             let data = TerminalData {
                 id: id.0,
-                data: content[start..].into(),
+                data,
                 seq: (content_offset + start) as u64,
             };
             output_tx.send(ClientMessage::Data(data)).await?;
@@ -139,6 +147,7 @@ fn prev_char_boundary(s: &str, i: usize) -> usize {
 
 async fn echo_task(
     id: Sid,
+    encrypt: Encrypt,
     mut shell_rx: mpsc::Receiver<ShellData>,
     output_tx: mpsc::Sender<ClientMessage>,
 ) -> Result<()> {
@@ -149,7 +158,7 @@ async fn echo_task(
                 let msg = String::from_utf8_lossy(&data);
                 let term_data = TerminalData {
                     id: id.0,
-                    data: msg.to_string(),
+                    data: encrypt.segment(0x100000000 | id.0 as u64, seq, msg.as_bytes()),
                     seq,
                 };
                 output_tx.send(ClientMessage::Data(term_data)).await?;

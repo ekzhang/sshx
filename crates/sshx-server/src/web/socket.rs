@@ -7,6 +7,7 @@ use axum::extract::{
     Path, State,
 };
 use axum::response::IntoResponse;
+use bytes::Bytes;
 use sshx_core::proto::{server_update::ServerMessage, TerminalInput, TerminalSize};
 use sshx_core::Sid;
 use tokio::sync::mpsc;
@@ -66,7 +67,8 @@ async fn handle_socket(mut socket: WebSocket, session: Arc<Session>) -> Result<(
     }
 
     let user_id = session.counter().next_uid();
-    send(&mut socket, WsServer::Hello(user_id)).await?;
+    let metadata = session.metadata().clone();
+    send(&mut socket, WsServer::Hello(user_id, metadata)).await?;
 
     let _user_guard = session.user_scope(user_id)?;
 
@@ -75,7 +77,7 @@ async fn handle_socket(mut socket: WebSocket, session: Arc<Session>) -> Result<(
     send(&mut socket, WsServer::Users(session.list_users())).await?;
 
     let mut subscribed = HashSet::new(); // prevent duplicate subscriptions
-    let (chunks_tx, mut chunks_rx) = mpsc::channel::<(Sid, Vec<Arc<str>>)>(1);
+    let (chunks_tx, mut chunks_rx) = mpsc::channel::<(Sid, u64, Vec<Bytes>)>(1);
 
     let mut shells_stream = session.subscribe_shells();
     loop {
@@ -94,8 +96,8 @@ async fn handle_socket(mut socket: WebSocket, session: Arc<Session>) -> Result<(
                 send(&mut socket, WsServer::Shells(shells)).await?;
                 continue;
             }
-            Some((id, chunks)) = chunks_rx.recv() => {
-                send(&mut socket, WsServer::Chunks(id, chunks)).await?;
+            Some((id, seqnum, chunks)) = chunks_rx.recv() => {
+                send(&mut socket, WsServer::Chunks(id, seqnum, chunks)).await?;
                 continue;
             }
             result = recv(&mut socket) => {
@@ -151,8 +153,8 @@ async fn handle_socket(mut socket: WebSocket, session: Arc<Session>) -> Result<(
                 tokio::spawn(async move {
                     let stream = session.subscribe_chunks(id, chunknum);
                     tokio::pin!(stream);
-                    while let Some(chunks) = stream.next().await {
-                        if chunks_tx.send((id, chunks)).await.is_err() {
+                    while let Some((seqnum, chunks)) = stream.next().await {
+                        if chunks_tx.send((id, seqnum, chunks)).await.is_err() {
                             break;
                         }
                     }

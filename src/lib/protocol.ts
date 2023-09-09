@@ -1,6 +1,11 @@
 type Sid = number; // u32
 type Uid = number; // u32
 
+/** Metadata sent to clients on connection. */
+export type WsMetadata = {
+  encryptedZeros: Uint8Array;
+};
+
 /** Position and size of a window, see the Rust version. */
 export type WsWinsize = {
   x: number;
@@ -18,11 +23,11 @@ export type WsUser = {
 
 /** Server message type, see the Rust version. */
 export type WsServer = {
-  hello?: Uid;
+  hello?: [Uid, WsMetadata];
   users?: [Uid, WsUser][];
   userDiff?: [Uid, WsUser | null];
   shells?: [Sid, WsWinsize][];
-  chunks?: [Sid, string[]];
+  chunks?: [Sid, number, Uint8Array[]];
   hear?: [Uid, string, string];
   terminated?: [];
   error?: string;

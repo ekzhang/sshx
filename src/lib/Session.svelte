@@ -1,8 +1,10 @@
 <script lang="ts">
   import { onDestroy, onMount, tick, beforeUpdate, afterUpdate } from "svelte";
   import { fade } from "svelte/transition";
-  import { debounce, throttle } from "lodash-es";
+  import { debounce, isEqual, throttle } from "lodash-es";
 
+  import { Encrypt } from "./encrypt";
+  import { createLock } from "./lock";
   import { Srocket } from "./srocket";
   import type { WsClient, WsServer, WsUser, WsWinsize } from "./protocol";
   import { makeToast } from "./toast";
@@ -82,7 +84,8 @@
   /** Bound "write" method for each terminal. */
   const writers: Record<number, (data: string) => void> = {};
   const termElements: Record<number, HTMLDivElement> = {};
-  const seqnums: Record<number, number> = {};
+  const chunknums: Record<number, number> = {};
+  const locks: Record<number, any> = {};
   let userId = 0;
   let users: [number, WsUser][] = [];
   let shells: [number, WsWinsize][] = [];
@@ -101,21 +104,37 @@
   let chatMessages: ChatMessage[] = [];
   let newMessages = false;
 
-  onMount(() => {
+  onMount(async () => {
+    // The page hash sets the end-to-end encryption key.
+    const key = window.location.hash?.slice(1) ?? "";
+    const encrypt = await Encrypt.new(key);
+    const clientEncryptedZeros = await encrypt.zeros();
+
     srocket = new Srocket<WsServer, WsClient>(`/api/s/${id}`, {
       onMessage(message) {
         if (message.hello) {
-          userId = message.hello;
-          makeToast({
-            kind: "success",
-            message: `Connected to the server.`,
-          });
+          userId = message.hello[0];
+          const { encryptedZeros } = message.hello[1];
+          if (!isEqual(encryptedZeros, clientEncryptedZeros)) {
+            exitReason =
+              "The URL is not correct, invalid end-to-end encryption key.";
+            srocket?.dispose();
+          } else {
+            makeToast({
+              kind: "success",
+              message: `Connected to the server.`,
+            });
+          }
         } else if (message.chunks) {
-          const [id, chunks] = message.chunks;
-          tick().then(() => {
-            seqnums[id] += chunks.length;
+          let [id, seqnum, chunks] = message.chunks;
+          locks[id](async () => {
+            await tick();
+            chunknums[id] += chunks.length;
             for (const data of chunks) {
-              writers[id](data);
+              const streamNum = 0x100000000n | BigInt(id);
+              const buf = await encrypt.segment(streamNum, seqnum, data);
+              seqnum += data.length;
+              writers[id](new TextDecoder().decode(buf));
             }
           });
         } else if (message.users) {
@@ -133,9 +152,10 @@
           }
           for (const [id] of message.shells) {
             if (!subscriptions.has(id)) {
-              seqnums[id] ??= 0;
+              chunknums[id] ??= 0;
+              locks[id] ??= createLock();
               subscriptions.add(id);
-              srocket?.send({ subscribe: [id, seqnums[id]] });
+              srocket?.send({ subscribe: [id, chunknums[id]] });
             }
           }
         } else if (message.hear) {

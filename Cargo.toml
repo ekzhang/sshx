@@ -6,6 +6,7 @@ resolver = "2"
 anyhow = "1.0.62"
 clap = { version = "4.0.29", features = ["derive", "env"] }
 prost = "0.11.3"
+rand = "0.8.5"
 serde = { version = "1.0.143", features = ["derive", "rc"] }
 tokio = { version = "1.23.0", features = ["full"] }
 tokio-stream = { version = "0.1.9", features = ["sync"] }

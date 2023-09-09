@@ -6,6 +6,7 @@ use std::time::Duration;
 use anyhow::{ensure, Result};
 use futures_util::{SinkExt, StreamExt};
 use hyper::{server::conn::AddrIncoming, StatusCode};
+use sshx::encrypt::Encrypt;
 use sshx_core::proto::sshx_service_client::SshxServiceClient;
 use sshx_core::{Sid, Uid};
 use sshx_server::{
@@ -85,6 +86,7 @@ impl Drop for TestServer {
 /// A WebSocket client that interacts with the server, used for testing.
 pub struct ClientSocket {
     inner: WebSocketStream<MaybeTlsStream<TcpStream>>,
+    encrypt: Encrypt,
 
     pub user_id: Uid,
     pub users: BTreeMap<Uid, WsUser>,
@@ -97,11 +99,12 @@ pub struct ClientSocket {
 
 impl ClientSocket {
     /// Connect to a WebSocket endpoint.
-    pub async fn connect(uri: &str) -> Result<Self> {
+    pub async fn connect(uri: &str, key: &str) -> Result<Self> {
         let (stream, resp) = tokio_tungstenite::connect_async(uri).await?;
         ensure!(resp.status() == StatusCode::SWITCHING_PROTOCOLS);
         Ok(Self {
             inner: stream,
+            encrypt: Encrypt::new(key),
             user_id: Uid(0),
             users: BTreeMap::new(),
             shells: BTreeMap::new(),
@@ -144,7 +147,7 @@ impl ClientSocket {
         let flush_task = async {
             while let Some(msg) = self.recv().await {
                 match msg {
-                    WsServer::Hello(user_id) => self.user_id = user_id,
+                    WsServer::Hello(user_id, _) => self.user_id = user_id,
                     WsServer::Users(users) => self.users = BTreeMap::from_iter(users),
                     WsServer::UserDiff(id, maybe_user) => {
                         self.users.remove(&id);
@@ -153,10 +156,16 @@ impl ClientSocket {
                         }
                     }
                     WsServer::Shells(shells) => self.shells = BTreeMap::from_iter(shells),
-                    WsServer::Chunks(id, chunks) => {
+                    WsServer::Chunks(id, seqnum, chunks) => {
                         let value = self.data.entry(id).or_default();
+                        assert_eq!(seqnum, value.len() as u64);
                         for buf in chunks {
-                            value.push_str(&buf);
+                            let plaintext = self.encrypt.segment(
+                                0x100000000 | id.0 as u64,
+                                value.len() as u64,
+                                &buf,
+                            );
+                            value.push_str(std::str::from_utf8(&plaintext).unwrap());
                         }
                     }
                     WsServer::Hear(id, name, msg) => {

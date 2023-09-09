@@ -17,9 +17,9 @@ cargo build --release --target aarch64-unknown-linux-musl
 
 SDKROOT=$(xcrun -sdk macosx13.3 --show-sdk-path) \
 MACOSX_DEPLOYMENT_TARGET=$(xcrun -sdk macosx13.3 --show-sdk-platform-version) \
-cargo build --release --target=x86_64-apple-darwin
+cargo build --release --target x86_64-apple-darwin
 
-cargo build --release --target=aarch64-apple-darwin
+cargo build --release --target aarch64-apple-darwin
 
 targets=(
   x86_64-unknown-linux-musl

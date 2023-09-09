@@ -9,14 +9,14 @@ async-channel = "1.6.1"
 async-stream = "0.3.3"
 axum = { version = "0.6.0", features = ["ws"] }
 base64 = "0.21.0"
+bytes = { version = "1.5.0", features = ["serde"] }
 ciborium = "0.2.0"
 clap.workspace = true
 dashmap = "5.2.0"
 hmac = "0.12.1"
 hyper = { version = "0.14.18", features = ["full"] }
-nanoid = "0.4.0"
 parking_lot = "0.12.0"
-rand = "0.8.5"
+rand.workspace = true
 serde.workspace = true
 serde_bytes = "0.11.6"
 sha2 = "0.10.2"

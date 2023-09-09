@@ -1,4 +1,5 @@
 use anyhow::Result;
+use sshx::encrypt::Encrypt;
 use sshx_core::proto::*;
 
 use crate::common::*;
@@ -12,6 +13,7 @@ async fn test_rpc() -> Result<()> {
 
     let req = OpenRequest {
         origin: "sshx.io".into(),
+        encrypted_zeros: Encrypt::new("").zeros(),
     };
     let resp = client.open(req).await?;
     assert!(!resp.into_inner().name.is_empty());

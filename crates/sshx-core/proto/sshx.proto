@@ -17,9 +17,9 @@ service SshxService {
 
 // Details of bytes exchanged with the terminal.
 message TerminalData {
-  uint32 id = 1;   // ID of the shell.
-  string data = 2; // UTF-8 terminal data.
-  uint64 seq = 3;  // Sequence number of the first byte.
+  uint32 id = 1;  // ID of the shell.
+  bytes data = 2; // Encrypted, UTF-8 terminal data.
+  uint64 seq = 3; // Sequence number of the first byte.
 }
 
 // Details of bytes input to the terminal (not necessarily valid UTF-8).
@@ -37,7 +37,8 @@ message TerminalSize {
 
 // Request to open an sshx session.
 message OpenRequest {
-  string origin = 1; // Web origin of the server.
+  string origin = 1;         // Web origin of the server.
+  bytes encrypted_zeros = 2; // Encrypted zero block, for client verification.
 }
 
 // Details of a newly-created sshx session.

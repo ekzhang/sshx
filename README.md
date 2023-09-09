@@ -8,6 +8,7 @@ Features:
 - Resize, move windows, and freely zoom and pan on an infinite canvas.
 - See other people's cursors moving in real time.
 - Globally distributed system, where each user connects to the nearest server.
+- End-to-end encryption with Argon2 and AES.
 - Automatic reconnection and real-time latency estimates.
 - Predictive echo for faster local editing (à la
   [Mosh](https://github.com/mobile-shell/mosh)).

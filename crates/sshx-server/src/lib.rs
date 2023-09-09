@@ -18,9 +18,9 @@ use anyhow::Result;
 use dashmap::DashMap;
 use hmac::{Hmac, Mac as _};
 use hyper::server::conn::AddrIncoming;
-use nanoid::nanoid;
 use session::Session;
 use sha2::Sha256;
+use sshx_core::rand_alphanumeric;
 use utils::Shutdown;
 
 pub mod grpc;
@@ -55,7 +55,7 @@ pub struct ServerState {
 impl ServerState {
     /// Create an empty server state using the given secret.
     pub fn new(options: ServerOptions) -> Self {
-        let secret = options.secret.unwrap_or_else(|| nanoid!());
+        let secret = options.secret.unwrap_or_else(|| rand_alphanumeric(22));
         Self {
             mac: Hmac::new_from_slice(secret.as_bytes()).unwrap(),
             override_origin: options.override_origin,

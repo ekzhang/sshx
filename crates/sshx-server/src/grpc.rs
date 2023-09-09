@@ -5,12 +5,11 @@ use std::time::Duration;
 
 use base64::prelude::{Engine as _, BASE64_STANDARD};
 use hmac::Mac;
-use nanoid::nanoid;
 use sshx_core::proto::{
     client_update::ClientMessage, server_update::ServerMessage, sshx_service_server::SshxService,
     ClientUpdate, CloseRequest, CloseResponse, OpenRequest, OpenResponse, ServerUpdate,
 };
-use sshx_core::Sid;
+use sshx_core::{rand_alphanumeric, Sid};
 use tokio::sync::mpsc;
 use tokio::time::{self, MissedTickBehavior};
 use tokio_stream::{wrappers::ReceiverStream, StreamExt};
@@ -18,6 +17,7 @@ use tonic::{Request, Response, Status, Streaming};
 use tracing::{error, info, warn};
 
 use crate::session::Session;
+use crate::web::protocol::WsMetadata;
 use crate::ServerState;
 
 /// Interval for synchronizing sequence numbers with the client.
@@ -43,24 +43,24 @@ impl SshxService for GrpcServer {
     async fn open(&self, request: Request<OpenRequest>) -> RR<OpenResponse> {
         use dashmap::mapref::entry::Entry::*;
 
+        let request = request.into_inner();
         let origin = match &self.0.override_origin {
             Some(origin) => origin.clone(),
-            None => request.into_inner().origin,
+            None => request.origin,
         };
         if origin.is_empty() {
             return Err(Status::invalid_argument("origin is empty"));
         }
-        const CHARS: [char; 62] = [
-            '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F', 'G',
-            'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X',
-            'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o',
-            'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
-        ];
-        let name = nanoid!(10, &CHARS);
+        let name = rand_alphanumeric(10);
         info!(%name, "creating new session");
         match self.0.store.entry(name.clone()) {
             Occupied(_) => return Err(Status::already_exists("generated duplicate ID")),
-            Vacant(v) => v.insert(Session::new().into()),
+            Vacant(v) => {
+                let metadata = WsMetadata {
+                    encrypted_zeros: request.encrypted_zeros.into(),
+                };
+                v.insert(Session::new(metadata).into());
+            }
         };
         let token = self.0.mac.clone().chain_update(&name).finalize();
         let url = format!("{origin}/s/{name}");
@@ -183,7 +183,7 @@ async fn handle_update(tx: &ServerTx, session: &Session, update: ClientUpdate) -
             return send_err(tx, "unexpected hello".into()).await;
         }
         Some(ClientMessage::Data(data)) => {
-            if let Err(err) = session.add_data(Sid(data.id), &data.data, data.seq) {
+            if let Err(err) = session.add_data(Sid(data.id), data.data.into(), data.seq) {
                 return send_err(tx, format!("add data: {:?}", err)).await;
             }
         }

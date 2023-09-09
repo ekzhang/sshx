@@ -51,9 +51,9 @@ async fn test_ws_missing() -> Result<()> {
     let server = TestServer::new().await;
 
     let bad_endpoint = format!("ws://{}/not/an/endpoint", server.local_addr());
-    assert!(ClientSocket::connect(&bad_endpoint).await.is_err());
+    assert!(ClientSocket::connect(&bad_endpoint, "").await.is_err());
 
-    let mut s = ClientSocket::connect(&server.ws_endpoint("foobar")).await?;
+    let mut s = ClientSocket::connect(&server.ws_endpoint("foobar"), "").await?;
     s.expect_close(4404).await;
 
     Ok(())
@@ -65,9 +65,10 @@ async fn test_ws_basic() -> Result<()> {
 
     let mut controller = Controller::new(&server.endpoint(), Runner::Echo).await?;
     let name = controller.name().to_owned();
+    let key = controller.encryption_key().to_owned();
     tokio::spawn(async move { controller.run().await });
 
-    let mut s = ClientSocket::connect(&server.ws_endpoint(&name)).await?;
+    let mut s = ClientSocket::connect(&server.ws_endpoint(&name), &key).await?;
     s.flush().await;
     assert_eq!(s.user_id, Uid(1));
 
@@ -96,9 +97,10 @@ async fn test_ws_resize() -> Result<()> {
 
     let mut controller = Controller::new(&server.endpoint(), Runner::Echo).await?;
     let name = controller.name().to_owned();
+    let key = controller.encryption_key().to_owned();
     tokio::spawn(async move { controller.run().await });
 
-    let mut s = ClientSocket::connect(&server.ws_endpoint(&name)).await?;
+    let mut s = ClientSocket::connect(&server.ws_endpoint(&name), &key).await?;
 
     s.send(WsClient::Move(Sid(1), None)).await; // error: does not exist yet!
     s.flush().await;
@@ -139,19 +141,20 @@ async fn test_users_join() -> Result<()> {
 
     let mut controller = Controller::new(&server.endpoint(), Runner::Echo).await?;
     let name = controller.name().to_owned();
+    let key = controller.encryption_key().to_owned();
     tokio::spawn(async move { controller.run().await });
 
     let endpoint = server.ws_endpoint(&name);
-    let mut s1 = ClientSocket::connect(&endpoint).await?;
+    let mut s1 = ClientSocket::connect(&endpoint, &key).await?;
     s1.flush().await;
     assert_eq!(s1.users.len(), 1);
 
-    let mut s2 = ClientSocket::connect(&endpoint).await?;
+    let mut s2 = ClientSocket::connect(&endpoint, &key).await?;
     s2.flush().await;
     assert_eq!(s2.users.len(), 2);
 
     drop(s2);
-    let mut s3 = ClientSocket::connect(&endpoint).await?;
+    let mut s3 = ClientSocket::connect(&endpoint, &key).await?;
     s3.flush().await;
     assert_eq!(s3.users.len(), 2);
 
@@ -167,10 +170,11 @@ async fn test_users_metadata() -> Result<()> {
 
     let mut controller = Controller::new(&server.endpoint(), Runner::Echo).await?;
     let name = controller.name().to_owned();
+    let key = controller.encryption_key().to_owned();
     tokio::spawn(async move { controller.run().await });
 
     let endpoint = server.ws_endpoint(&name);
-    let mut s = ClientSocket::connect(&endpoint).await?;
+    let mut s = ClientSocket::connect(&endpoint, &key).await?;
     s.flush().await;
     assert_eq!(s.users.len(), 1);
     assert_eq!(s.users.get(&s.user_id).unwrap().cursor, None);
@@ -191,11 +195,12 @@ async fn test_chat_messages() -> Result<()> {
 
     let mut controller = Controller::new(&server.endpoint(), Runner::Echo).await?;
     let name = controller.name().to_owned();
+    let key = controller.encryption_key().to_owned();
     tokio::spawn(async move { controller.run().await });
 
     let endpoint = server.ws_endpoint(&name);
-    let mut s1 = ClientSocket::connect(&endpoint).await?;
-    let mut s2 = ClientSocket::connect(&endpoint).await?;
+    let mut s1 = ClientSocket::connect(&endpoint, &key).await?;
+    let mut s2 = ClientSocket::connect(&endpoint, &key).await?;
 
     s1.send(WsClient::SetName("billy".into())).await;
     s1.send(WsClient::Chat("hello there!".into())).await;
@@ -208,7 +213,7 @@ async fn test_chat_messages() -> Result<()> {
         (s1.user_id, "billy".into(), "hello there!".into())
     );
 
-    let mut s3 = ClientSocket::connect(&endpoint).await?;
+    let mut s3 = ClientSocket::connect(&endpoint, &key).await?;
     s3.flush().await;
     assert_eq!(s1.messages.len(), 1);
     assert_eq!(s3.messages.len(), 0);

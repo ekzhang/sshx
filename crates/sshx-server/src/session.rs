@@ -5,6 +5,7 @@ use std::ops::DerefMut;
 use std::sync::Arc;
 
 use anyhow::{bail, Context, Result};
+use bytes::Bytes;
 use parking_lot::{Mutex, RwLock, RwLockWriteGuard};
 use sshx_core::{
     proto::{server_update::ServerMessage, SequenceNumbers},
@@ -17,7 +18,7 @@ use tokio_stream::Stream;
 use tracing::{debug, warn};
 
 use crate::utils::Shutdown;
-use crate::web::protocol::{WsServer, WsUser, WsWinsize};
+use crate::web::protocol::{WsMetadata, WsServer, WsUser, WsWinsize};
 
 /// Store a rolling buffer with at most this quantity of output, per shell.
 const SHELL_STORED_BYTES: u64 = 4 << 20;
@@ -25,6 +26,9 @@ const SHELL_STORED_BYTES: u64 = 4 << 20;
 /// In-memory state for a single sshx session.
 #[derive(Debug)]
 pub struct Session {
+    /// Metadata sent to clients on connection.
+    metadata: WsMetadata,
+
     /// In-memory state for the session.
     shells: RwLock<HashMap<Sid, State>>,
 
@@ -64,7 +68,7 @@ struct State {
     seqnum: u64,
 
     /// Terminal data chunks.
-    data: Vec<Arc<str>>,
+    data: Vec<Bytes>,
 
     /// Number of pruned data chunks before `data[0]`.
     chunk_offset: u64,
@@ -81,10 +85,11 @@ struct State {
 
 impl Session {
     /// Construct a new session.
-    pub fn new() -> Self {
+    pub fn new(metadata: WsMetadata) -> Self {
         let now = Instant::now();
         let (update_tx, update_rx) = async_channel::bounded(256);
         Session {
+            metadata,
             shells: RwLock::new(HashMap::new()),
             users: RwLock::new(HashMap::new()),
             counter: IdCounter::default(),
@@ -95,6 +100,11 @@ impl Session {
             update_rx,
             shutdown: Shutdown::new(),
         }
+    }
+
+    /// Returns the metadata for this session.
+    pub fn metadata(&self) -> &WsMetadata {
+        &self.metadata
     }
 
     /// Gives access to the ID counter for obtaining new IDs.
@@ -131,12 +141,12 @@ impl Session {
         &self,
         id: Sid,
         mut chunknum: u64,
-    ) -> impl Stream<Item = Vec<Arc<str>>> + '_ {
+    ) -> impl Stream<Item = (u64, Vec<Bytes>)> + '_ {
         async_stream::stream! {
             while !self.shutdown.is_terminated() {
                 // We absolutely cannot hold `shells` across an await point,
                 // since that would cause deadlocks.
-                let (chunks, notified) = {
+                let (seqnum, chunks, notified) = {
                     let shells = self.shells.read();
                     let shell = match shells.get(&id) {
                         Some(shell) if !shell.closed => shell,
@@ -144,18 +154,20 @@ impl Session {
                     };
                     let notify = Arc::clone(&shell.notify);
                     let notified = async move { notify.notified().await };
+                    let mut seqnum = shell.byte_offset;
                     let mut chunks = Vec::new();
                     let current_chunks = shell.chunk_offset + shell.data.len() as u64;
                     if chunknum < current_chunks {
                         let start = chunknum.saturating_sub(shell.chunk_offset) as usize;
+                        seqnum += shell.data[..start].iter().map(|x| x.len() as u64).sum::<u64>();
                         chunks = shell.data[start..].to_vec();
                         chunknum = current_chunks;
                     }
-                    (chunks, notified)
+                    (seqnum, chunks, notified)
                 };
 
                 if !chunks.is_empty() {
-                    yield chunks;
+                    yield (seqnum, chunks);
                 }
                 tokio::select! {
                     _ = notified => (),
@@ -222,17 +234,15 @@ impl Session {
     }
 
     /// Receive new data into the session.
-    pub fn add_data(&self, id: Sid, data: &str, seq: u64) -> Result<()> {
+    pub fn add_data(&self, id: Sid, data: Bytes, seq: u64) -> Result<()> {
         let mut shell = self.get_shell_mut(id)?;
 
         if seq <= shell.seqnum && seq + data.len() as u64 > shell.seqnum {
             let start = shell.seqnum - seq;
-            let segment = data
-                .get(start as usize..)
-                .context("failed to decode utf-8 suffix in data")?;
-            debug!(%id, ?segment, "adding data to shell");
-            shell.data.push(segment.into());
+            let segment = data.slice(start as usize..);
+            debug!(%id, bytes = segment.len(), "adding data to shell");
             shell.seqnum += segment.len() as u64;
+            shell.data.push(segment);
 
             // Prune old chunks if we've exceeded the maximum stored bytes.
             let mut stored_bytes = shell.seqnum - shell.byte_offset;
@@ -348,11 +358,5 @@ impl Session {
     /// Resolves when the session has received a shutdown signal.
     pub async fn terminated(&self) {
         self.shutdown.wait().await
-    }
-}
-
-impl Default for Session {
-    fn default() -> Self {
-        Self::new()
     }
 }

@@ -11,3 +11,4 @@ procs:
       --server http://localhost:8051
   web:
     shell: npm run dev
+    stop: SIGKILL  # TODO: Why is this necessary?

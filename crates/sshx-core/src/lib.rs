@@ -18,6 +18,16 @@ pub mod proto {
     pub const FILE_DESCRIPTOR_SET: &[u8] = tonic::include_file_descriptor_set!("sshx");
 }
 
+/// Generate a cryptographically-secure, random alphanumeric value.
+pub fn rand_alphanumeric(len: usize) -> String {
+    use rand::{distributions::Alphanumeric, thread_rng, Rng};
+    thread_rng()
+        .sample_iter(Alphanumeric)
+        .take(len)
+        .map(char::from)
+        .collect()
+}
+
 /// Unique identifier for a shell within the session.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(transparent)]

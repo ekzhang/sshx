@@ -1,10 +1,17 @@
 //! Serializable types sent and received by the web server.
 
-use std::sync::Arc;
-
+use bytes::Bytes;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use sshx_core::{Sid, Uid};
+
+/// Metadata sent to clients on connection.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct WsMetadata {
+    /// Used by clients to validate their encryption key.
+    pub encrypted_zeros: Bytes,
+}
 
 /// Real-time message conveying the position and size of a terminal.
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
@@ -60,8 +67,8 @@ pub struct WsUser {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub enum WsServer {
-    /// Initial server message, informing the user of their ID.
-    Hello(Uid),
+    /// Initial server message, with the user's ID and session metadata.
+    Hello(Uid, WsMetadata),
     /// A snapshot of all current users in the session.
     Users(Vec<(Uid, WsUser)>),
     /// Info about a single user in the session: joined, left, or changed.
@@ -69,7 +76,7 @@ pub enum WsServer {
     /// Notification when the set of open shells has changed.
     Shells(Vec<(Sid, WsWinsize)>),
     /// Subscription results, in the form of terminal data chunks.
-    Chunks(Sid, Vec<Arc<str>>),
+    Chunks(Sid, u64, Vec<Bytes>),
     /// Get a chat message tuple `(uid, name, text)` from the room.
     Hear(Uid, String, String),
     /// The current session has been terminated.

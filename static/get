@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # This is a short script to install the latest version of the sshx binary.
 #
@@ -23,18 +23,18 @@ esac
 url="https://s3.amazonaws.com/sshx/sshx-${arch}${suffix}"
 temp=$(mktemp)
 
-if [[ -z "$NO_COLOR" ]]; then
-  ansi_reset="\x1b[0m"
-  ansi_info="\x1b[35;1m"
-  ansi_error="\x1b[31m"
-  ansi_underline="\x1b[4m"
+if [ -z "$NO_COLOR" ]; then
+  ansi_reset="\033[0m"
+  ansi_info="\033[35;1m"
+  ansi_error="\033[31m"
+  ansi_underline="\033[4m"
 fi
 
 printf "${ansi_reset}${ansi_info}↯ Downloading sshx from ${ansi_underline}%s${ansi_reset}\n" "$url"
 http_code=$(curl "$url" -o "$temp" -w "%{http_code}")
-if [[ ${http_code} -lt 200 || ${http_code} -gt 299 ]]; then
+if [ "$http_code" -lt 200 ] || [ "$http_code" -gt 299 ]; then
   printf "${ansi_error}Error: Request had status code ${http_code}.\n"
-  >&2 cat "$temp"
+  cat "$temp" 1>&2
   printf "${ansi_reset}\n"
   exit 1
 fi

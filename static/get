@@ -21,6 +21,26 @@ case "$(uname -m)" in
 esac
 
 url="https://s3.amazonaws.com/sshx/sshx-${arch}${suffix}"
-curl -sSf "$url" -o /tmp/sshx
-chmod +x /tmp/sshx
-sudo mv -v /tmp/sshx /usr/local/bin
+temp=$(mktemp)
+
+if [[ -z "$NO_COLOR" ]]; then
+  ansi_reset="\x1b[0m"
+  ansi_info="\x1b[35;1m"
+  ansi_error="\x1b[31m"
+  ansi_underline="\x1b[4m"
+fi
+
+printf "${ansi_reset}${ansi_info}↯ Downloading sshx from ${ansi_underline}%s${ansi_reset}\n" "$url"
+http_code=$(curl "$url" -o "$temp" -w "%{http_code}")
+if [[ ${http_code} -lt 200 || ${http_code} -gt 299 ]]; then
+  printf "${ansi_error}Error: Request had status code ${http_code}.\n"
+  >&2 cat "$temp"
+  printf "${ansi_reset}\n"
+  exit 1
+fi
+
+printf "\n${ansi_reset}${ansi_info}↯ Installing sshx to ${ansi_underline}%s${ansi_reset}\n" "/usr/local/bin"
+chmod +x "$temp"
+sudo mv -v "$temp" /usr/local/bin/sshx
+
+printf "\n${ansi_reset}${ansi_info}↯ Done! You can now run sshx.${ansi_reset}\n"

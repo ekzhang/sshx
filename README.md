@@ -1,19 +1,30 @@
 # sshx
 
-**A delightful web-based, collaborative terminal.**
+A secure web-based, collaborative terminal.
 
-Features:
+**Features:**
 
 - Run a single command to share your terminal with anyone.
 - Resize, move windows, and freely zoom and pan on an infinite canvas.
 - See other people's cursors moving in real time.
-- Globally distributed system, where each user connects to the nearest server.
+- Connect to the nearest server in a globally distributed mesh.
 - End-to-end encryption with Argon2 and AES.
 - Automatic reconnection and real-time latency estimates.
 - Predictive echo for faster local editing (à la
   [Mosh](https://github.com/mobile-shell/mosh)).
 
-Visit [sshx.io](https://sshx.io) to learn more, including installation steps.
+Visit [sshx.io](https://sshx.io) to learn more.
+
+## Installation
+
+Just run this command to get the `sshx` binary for your platform.
+
+```shell
+curl -sSf https://sshx.io/get | sh
+```
+
+Supports Linux and MacOS, on both x86_64 and arm64 architectures. The
+precompiled Linux binaries are statically linked.
 
 ## Development
 
@@ -24,7 +35,7 @@ Here's how to work on the project, if you want to contribute.
 To build the latest version of the client from source, clone this repository and
 run, with [Rust](https://rust-lang.com/) installed:
 
-```
+```shell
 cargo install --path crates/sshx
 ```
 
@@ -46,8 +57,7 @@ frontend in parallel on your machine.
 
 ## Deployment
 
-The application server is containerized, and its latest version is automatically
-deployed on [Fly.io](https://fly.io/).
+The application servers are deployed on [Fly.io](https://fly.io/).
 
 ```shell
 fly deploy

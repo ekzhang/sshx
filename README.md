@@ -10,8 +10,7 @@ A secure web-based, collaborative terminal.
 - Connect to the nearest server in a globally distributed mesh.
 - End-to-end encryption with Argon2 and AES.
 - Automatic reconnection and real-time latency estimates.
-- Predictive echo for faster local editing (à la
-  [Mosh](https://github.com/mobile-shell/mosh)).
+- Predictive echo for faster local editing (à la Mosh).
 
 Visit [sshx.io](https://sshx.io) to learn more.
 
@@ -44,8 +43,9 @@ jobs:
       # ... other steps ...
 
       - run: curl -sSf https://sshx.io/get | sh && sshx
-      # ^ This will open a remote terminal session and print the URL. It should
-      #   take under a second.
+      #      ^
+      #      └ This will open a remote terminal session and print the URL. It
+      #        should take under a second.
 ```
 
 We don't have a prepackaged action because it's just a single command. It works

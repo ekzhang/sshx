@@ -2,6 +2,14 @@
   import logotypeDark from "$lib/assets/logotype-dark.svg";
   import landingGraphic from "$lib/assets/landing-graphic.svg";
   import landingBackground from "$lib/assets/landing-background.svg";
+  import {
+    CastIcon,
+    HardDriveIcon,
+    ImageIcon,
+    LockIcon,
+    RefreshCwIcon,
+    Share2Icon,
+  } from "svelte-feather-icons";
 
   let installationEl: HTMLDivElement;
 
@@ -50,7 +58,7 @@
     </header>
     <h1>
       A secure web-based,
-      <span class="title-gradient">collaborative</span> terminal.
+      <span class="title-gradient">collaborative</span> terminal
     </h1>
 
     <div class="relative">
@@ -93,6 +101,61 @@
       >
         Get Started
       </button>
+    </div>
+
+    <div
+      class="mt-8 md:mt-32 grid md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6"
+    >
+      <div class="feature-block">
+        <div class="feature-icon">
+          <CastIcon size="14" />
+        </div>
+        <h3>Collaborative</h3>
+        <p>Invite someone by sharing a secure, unique link in your browser.</p>
+      </div>
+      <div class="feature-block">
+        <div class="feature-icon">
+          <HardDriveIcon size="14" />
+        </div>
+        <h3>Cross-platform</h3>
+        <p>sshx is an executable that installs in under a second.</p>
+      </div>
+      <div class="feature-block">
+        <div class="feature-icon">
+          <ImageIcon size="14" />
+        </div>
+        <h3>Infinite canvas</h3>
+        <p>
+          Create any number of terminals, then arrange and resize them in real
+          time.
+        </p>
+      </div>
+      <div class="feature-block">
+        <div class="feature-icon">
+          <RefreshCwIcon size="14" />
+        </div>
+        <h3>Live presence</h3>
+        <p>
+          You can see other people's names and cursors while they're connected.
+        </p>
+      </div>
+      <div class="feature-block">
+        <div class="feature-icon">
+          <LockIcon size="14" />
+        </div>
+        <h3>End-to-end encrypted</h3>
+        <p>
+          All terminal data is encrypted from client to client; the server never
+          sees it.
+        </p>
+      </div>
+      <div class="feature-block">
+        <div class="feature-icon">
+          <Share2Icon size="14" />
+        </div>
+        <h3>Ultra-fast mesh routing</h3>
+        <p>Each client talks to the nearest server peer in a global network.</p>
+      </div>
     </div>
 
     <h2 bind:this={installationEl} class="mt-40 mb-16">
@@ -199,6 +262,45 @@
 
   .title-gradient {
     @apply text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-400 to-blue-500;
+  }
+
+  .feature-block {
+    @apply relative border rounded-lg border-transparent p-6 sm:p-8;
+    background: #111111 padding-box;
+  }
+
+  .feature-block::before {
+    content: "";
+    @apply absolute inset-0;
+    z-index: -1;
+    margin: -1px;
+    border-radius: inherit;
+    background: linear-gradient(
+      160deg,
+      rgba(255, 255, 255, 0.36) 5%,
+      rgba(255, 255, 255, 0.08) 25%,
+      rgba(255, 255, 255, 0.24) 50%,
+      rgba(255, 255, 255, 0.08) 75%,
+      rgba(255, 255, 255, 0.28) 95%
+    );
+    opacity: 0.5;
+    transition: opacity 200ms;
+  }
+
+  .feature-block:hover::before {
+    opacity: 1;
+  }
+
+  .feature-block h3 {
+    @apply font-semibold mb-2;
+  }
+
+  .feature-block p {
+    @apply text-gray-400;
+  }
+
+  .feature-icon {
+    @apply inline-block p-3 rounded-full mb-3 shadow-md border border-gray-600;
   }
 
   .step-heading {

@@ -9,6 +9,7 @@ use sshx_core::proto::{
 };
 use sshx_core::{rand_alphanumeric, Sid};
 use tokio::sync::mpsc;
+use tokio::task;
 use tokio::time::{self, Duration, Instant, MissedTickBehavior};
 use tokio_stream::{wrappers::ReceiverStream, StreamExt};
 use tonic::transport::Channel;
@@ -43,9 +44,13 @@ impl Controller {
     /// Construct a new controller, connecting to the remote server.
     pub async fn new(origin: &str, runner: Runner) -> Result<Self> {
         debug!(%origin, "connecting to server");
-        let mut client = SshxServiceClient::connect(String::from(origin)).await?;
         let encryption_key = rand_alphanumeric(14); // 83.3 bits of entropy
-        let encrypt = Encrypt::new(&encryption_key);
+
+        let encryption_key2 = encryption_key.clone();
+        let kdf_task = task::spawn_blocking(move || Encrypt::new(&encryption_key2));
+
+        let mut client = SshxServiceClient::connect(String::from(origin)).await?;
+        let encrypt = kdf_task.await?;
 
         let req = OpenRequest {
             origin: origin.into(),

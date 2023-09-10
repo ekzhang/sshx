@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onDestroy, onMount, tick, beforeUpdate, afterUpdate } from "svelte";
   import { fade } from "svelte/transition";
-  import { debounce, isEqual, throttle } from "lodash-es";
+  import { debounce, throttle } from "lodash-es";
 
   import { Encrypt } from "./encrypt";
   import { createLock } from "./lock";

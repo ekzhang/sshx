@@ -26,6 +26,31 @@ curl -sSf https://sshx.io/get | sh
 Supports Linux and MacOS, on both x86_64 and arm64 architectures. The
 precompiled Linux binaries are statically linked.
 
+### CI/CD
+
+You can also use sshx in continuous integration workflows to help debug tricky
+issues, like in GitHub Actions.
+
+```yaml
+name: CI
+on: push
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      # ... other steps ...
+
+      - run: curl -sSf https://sshx.io/get | sh && sshx
+      # ^ This will open a remote terminal session and print the URL. It should
+      #   take under a second.
+```
+
+We don't have a prepackaged action because it's just a single command. It works
+anywhere: GitLab CI, CircleCI, CI on your Raspberry Pi, etc.
+
 ## Development
 
 Here's how to work on the project, if you want to contribute.

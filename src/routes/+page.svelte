@@ -39,13 +39,18 @@
 </script>
 
 <div class="overflow-x-hidden absolute inset-0">
+  <div class="w-full bg-pink-700 text-white text-xl px-4 py-8 text-center">
+    <strong>Warning:</strong> sshx is not ready or publicly released yet. Use at
+    your own risk.
+  </div>
+
   <main class="max-w-screen-xl mx-auto px-4 md:px-8 lg:px-16">
     <header class="my-12">
       <img class="h-16 -mx-1" src={logotypeDark} alt="sshx logo" />
     </header>
     <h1>
-      Web-based, <span class="title-gradient">real-time collaboration</span> for
-      your remote terminal
+      A secure web-based,
+      <span class="title-gradient">collaborative</span> terminal.
     </h1>
 
     <div class="relative">
@@ -67,17 +72,17 @@
 
     <section class="my-12 space-y-6 text-lg md:max-w-[460px] text-gray-400">
       <p>
-        <code>sshx</code> gives you a link to share terminals with anyone, on a multiplayer
-        infinite canvas.
+        <code>sshx</code> gives you a link to share your terminal with anyone,
+        on a <b>multiplayer infinite canvas</b>.
       </p>
       <p>
-        It has <b>live cursors</b> and <b>chat</b> so you can work with whoever
-        is online. Also, <b>it's fast</b>, with a simple CLI tool and server
-        written in Rust.
+        It has <b>real-time collaboration</b>, with remote cursors and chat.
+        Also, it's <b>fast</b> and <b>end-to-end encrypted</b>, with client and
+        server binaries written in Rust.
       </p>
       <p>
-        Use <code>sshx</code> for pair programming, demos, remote access, or even
-        as a fashionable web interface for your computer.
+        Install <code>sshx</code> with just one command. Use it for teaching, debugging,
+        or cloud access.
       </p>
     </section>
 
@@ -102,8 +107,8 @@
           <span class="pill mr-3">1</span> Install the CLI
         </h3>
         <p class="text-gray-400">
-          Download the <code>sshx</code> binary to get started. It's tiny, only a
-          few megabytes, and you have multiple installation options.
+          Get the <code>sshx</code> binary by running the following in your terminal.
+          It's tiny and downloads in seconds (3 MB).
         </p>
         <div class="flex flex-col items-start text-base">
           <div class="flex rounded-t text-sm bg-gray-900">
@@ -125,8 +130,8 @@
             target="_blank"
             rel="noreferrer"
             class="underline underline-offset-2 text-gray-300"
-            href="https://github.com/ekzhang/sshx">from the repository</a
-          >.
+            href="https://github.com/ekzhang/sshx">from source</a
+          >, if you'd like.
         </p>
       </div>
       <div class="space-y-6">
@@ -134,16 +139,13 @@
           <span class="pill mr-3">2</span> Share your terminal
         </h3>
 
-        <p class="text-gray-400">
-          Run a single command in your favorite shell.
-        </p>
+        <p class="text-gray-400">Run this command in your favorite terminal.</p>
 
         <pre class="rounded">sshx</pre>
 
         <p class="text-gray-400">
-          This kicks off a live session and assigns a unique link at <code
-            >https://sshx.io/s/$ID</code
-          >. Invite anyone to join.
+          This kicks off a live, encrypted session with a unique link. Open the
+          link in a web browser to join.
         </p>
       </div>
     </div>

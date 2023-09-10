@@ -7,7 +7,7 @@ use sshx::{controller::Controller, runner::Runner, terminal::get_default_shell};
 use tokio::signal;
 use tracing::error;
 
-/// Web-based, real-time collaboration for your remote terminal.
+/// A secure web-based, collaborative terminal.
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
 struct Args {

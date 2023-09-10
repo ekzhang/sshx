@@ -20,7 +20,7 @@ case "$(uname -m)" in
   *) echo "Unsupported arch $(uname -m)"; exit 1;;
 esac
 
-url="https://s3.amazonaws.com/sshx/sshx-${arch}${suffix}"
+url="https://s3.amazonaws.com/sshx/sshx-${arch}${suffix}.tar.gz"
 temp=$(mktemp)
 
 if [ -z "$NO_COLOR" ]; then
@@ -39,8 +39,7 @@ if [ "$http_code" -lt 200 ] || [ "$http_code" -gt 299 ]; then
   exit 1
 fi
 
-printf "\n${ansi_reset}${ansi_info}↯ Installing sshx to ${ansi_underline}%s${ansi_reset}\n" "/usr/local/bin"
-chmod +x "$temp"
-sudo mv -v "$temp" /usr/local/bin/sshx
+printf "\n${ansi_reset}${ansi_info}↯ Adding sshx binary to ${ansi_underline}%s${ansi_reset}\n" "/usr/local/bin"
+sudo tar xf "$temp" -C /usr/local/bin
 
 printf "\n${ansi_reset}${ansi_info}↯ Done! You can now run sshx.${ansi_reset}\n"

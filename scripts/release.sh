@@ -21,6 +21,7 @@ cargo build --release --target x86_64-apple-darwin
 
 cargo build --release --target aarch64-apple-darwin
 
+temp=$(mktemp)
 targets=(
   x86_64-unknown-linux-musl
   aarch64-unknown-linux-musl
@@ -29,6 +30,11 @@ targets=(
 )
 for target in "${targets[@]}"
 do
-  aws s3 cp target/$target/release/sshx s3://sshx/sshx-$target
-  aws s3 cp target/$target/release/sshx-server s3://sshx/sshx-server-$target
+  echo "compress: target/$target/release/sshx"
+  tar czf $temp -C target/$target/release sshx
+  aws s3 cp $temp s3://sshx/sshx-$target.tar.gz
+
+  echo "compress: target/$target/release/sshx-server"
+  tar czf $temp -C target/$target/release sshx-server
+  aws s3 cp $temp s3://sshx/sshx-server-$target.tar.gz
 done

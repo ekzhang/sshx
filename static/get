@@ -40,6 +40,10 @@ if [ "$http_code" -lt 200 ] || [ "$http_code" -gt 299 ]; then
 fi
 
 printf "\n${ansi_reset}${ansi_info}↯ Adding sshx binary to ${ansi_underline}%s${ansi_reset}\n" "/usr/local/bin"
-sudo tar xf "$temp" -C /usr/local/bin
+if [ "$(id -u)" -ne 0 ]; then
+  sudo tar xf "$temp" -C /usr/local/bin
+else
+  tar xf "$temp" -C /usr/local/bin
+fi
 
 printf "\n${ansi_reset}${ansi_info}↯ Done! You can now run sshx.${ansi_reset}\n"

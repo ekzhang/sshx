@@ -1,10 +1,10 @@
-use std::net::SocketAddr;
+use std::{net::SocketAddr, process::ExitCode};
 
 use anyhow::Result;
 use clap::Parser;
 use sshx_server::{Server, ServerOptions};
 use tokio::signal::unix::{signal, SignalKind};
-use tracing::info;
+use tracing::{error, info};
 
 /// The sshx server CLI interface.
 #[derive(Parser, Debug)]
@@ -28,10 +28,7 @@ struct Args {
 }
 
 #[tokio::main]
-async fn main() -> Result<()> {
-    tracing_subscriber::fmt::init();
-
-    let args = Args::parse();
+async fn start(args: Args) -> Result<()> {
     let host = if args.host { "::" } else { "::1" };
     let addr = SocketAddr::new(host.parse()?, args.port);
 
@@ -62,4 +59,21 @@ async fn main() -> Result<()> {
 
     tokio::try_join!(serve_task, signals_task)?;
     Ok(())
+}
+
+fn main() -> ExitCode {
+    let args = Args::parse();
+
+    tracing_subscriber::fmt()
+        .with_env_filter(std::env::var("RUST_LOG").unwrap_or("info".into()))
+        .with_writer(std::io::stderr)
+        .init();
+
+    match start(args) {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(err) => {
+            error!("{err:?}");
+            ExitCode::FAILURE
+        }
+    }
 }

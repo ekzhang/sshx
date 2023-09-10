@@ -5,7 +5,7 @@
 use std::convert::Infallible;
 use std::env;
 use std::ffi::{CStr, CString};
-use std::os::fd::{AsRawFd, FromRawFd, OwnedFd, RawFd};
+use std::os::fd::{AsRawFd, RawFd};
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
@@ -42,22 +42,14 @@ impl Terminal {
     pub async fn new(shell: &str) -> Result<Terminal> {
         let result = pty::openpty(None, None)?;
 
-        // Safety: The master file descriptor was created by openpty() and has its
-        // ownership transferred here. It is closed when the object is dropped.
-        let master_read = unsafe { File::from_raw_fd(result.master) };
-
-        // Safety: The slave file descriptor was created by openpty() and has its
-        // ownership transferred here. It is closed when dropped.
-        let slave = unsafe { OwnedFd::from_raw_fd(result.slave) };
-
-        // The slave file descriptor was created by openpty() and has its ownership
-        // transferred here.
-        let child = Self::fork_child(shell, slave.as_raw_fd())?;
+        // The slave file descriptor was created by openpty() and is forked here.
+        let child = Self::fork_child(shell, result.slave.as_raw_fd())?;
 
         // We need to clone the file object to prevent livelocks in Tokio, when multiple
         // reads and writes happen concurrently on the same file descriptor. This is a
         // current limitation of how the `tokio::fs::File` struct is implemented, due to
         // its blocking I/O on a separate thread.
+        let master_read = File::from(std::fs::File::from(result.master));
         let master_write = master_read.try_clone().await?;
 
         trace!(%child, "creating new terminal");

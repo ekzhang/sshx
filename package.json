@@ -25,6 +25,7 @@
     "sshx-xterm": "5.2.1",
     "svelte": "^3.59.2",
     "svelte-feather-icons": "^4.0.1",
+    "xterm-addon-image": "^0.5.0",
     "xterm-addon-web-links": "^0.8.0",
     "xterm-addon-webgl": "^0.15.0"
   },

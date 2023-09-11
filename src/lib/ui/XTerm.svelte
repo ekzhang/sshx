@@ -105,9 +105,13 @@
   $: term?.resize(cols, rows);
 
   onMount(async () => {
-    const { Terminal } = await import("sshx-xterm");
-    const { WebLinksAddon } = await import("xterm-addon-web-links");
-    const { WebglAddon } = await import("xterm-addon-webgl");
+    const [{ Terminal }, { WebLinksAddon }, { WebglAddon }, { ImageAddon }] =
+      await Promise.all([
+        import("sshx-xterm"),
+        import("xterm-addon-web-links"),
+        import("xterm-addon-webgl"),
+        import("xterm-addon-image"),
+      ]);
 
     await waitForFonts();
 
@@ -148,6 +152,7 @@
 
     term.loadAddon(new WebLinksAddon());
     term.loadAddon(new WebglAddon());
+    term.loadAddon(new ImageAddon({ enableSizeReports: false }));
 
     term.open(termEl);
 

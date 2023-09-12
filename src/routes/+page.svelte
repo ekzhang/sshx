@@ -163,7 +163,7 @@
     </h2>
 
     <div
-      class="grid lg:grid-cols-2 gap-16 lg:text-center mb-12 text-lg text-gray-300"
+      class="mx-auto max-w-screen-lg grid lg:grid-cols-2 gap-16 lg:text-center mb-12 text-lg text-gray-300"
     >
       <div class="space-y-6">
         <h3 class="step-heading">
@@ -207,8 +207,8 @@
         <pre class="rounded">sshx</pre>
 
         <p class="text-gray-400">
-          This kicks off a live, encrypted session with a unique link. Open the
-          link in a web browser to join.
+          This kicks off a live, encrypted session. Open the link in your web
+          browser to join.
         </p>
       </div>
     </div>

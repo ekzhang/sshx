@@ -74,7 +74,13 @@
 
   function handleWheelSkipXTerm(event: WheelEvent) {
     event.preventDefault(); // Stop native macOS Chrome zooming on pinch.
+
+    // We stop the event from propagating to the main `.xterm` terminal element,
+    // so the xterm.js's event handlers do not fire and scroll the buffer.
     event.stopPropagation();
+
+    // However, we still want it to propagate upward to our pan/zoom handlers,
+    // so we re-dispatch the event higher up, skipping xterm.
     termEl?.dispatchEvent(new WheelEvent(event.type, event));
   }
 
@@ -162,10 +168,9 @@
     });
 
     // Hack: We artificially disable scrolling when the terminal is not focused.
-    const cursorLayer = termEl.querySelector(
-      ".xterm-cursor-layer",
-    )! as HTMLDivElement;
-    cursorLayer.addEventListener("wheel", handleWheelSkipXTerm);
+    // ("termEl" > div.terminal.xterm > div.xterm-screen)
+    const screenEl = termEl.querySelector(".xterm-screen")! as HTMLDivElement;
+    screenEl.addEventListener("wheel", handleWheelSkipXTerm);
 
     const focusObserver = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
@@ -176,7 +181,7 @@
           // The "focus" class is set directly by xterm.js, but there isn't any way to listen for it.
           const target = mutation.target as HTMLElement;
           const isFocused = target.classList.contains("focus");
-          setFocused(isFocused, cursorLayer);
+          setFocused(isFocused, screenEl);
         }
       }
     });

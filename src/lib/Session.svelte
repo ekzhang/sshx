@@ -404,9 +404,7 @@
         <div
           class="absolute w-5 h-5 -bottom-1 -right-1 cursor-nwse-resize"
           on:mousedown={(event) => {
-            const canvasEl = termElements[id].querySelector(
-              "canvas.xterm-cursor-layer",
-            );
+            const canvasEl = termElements[id].querySelector(".xterm-screen");
             if (canvasEl) {
               resizing = id;
               const r = canvasEl.getBoundingClientRect();

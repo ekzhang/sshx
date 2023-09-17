@@ -22,6 +22,7 @@ module.exports = {
     "no-constant-condition": "off",
     "no-control-regex": "off",
     "no-empty": "off",
+    "no-undef": "off",
   },
   parserOptions: {
     sourceType: "module",

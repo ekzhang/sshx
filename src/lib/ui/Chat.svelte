@@ -53,7 +53,8 @@
 
 <div
   class="panel flex flex-col h-full max-h-[480px]"
-  transition:fade|local={{ duration: 150 }}
+  in:fade|local={{ duration: 100 }}
+  out:fade|local={{ duration: 75 }}
 >
   <div class="flex items-center p-3">
     <CircleButtons>
@@ -84,7 +85,7 @@
 
   <form class="relative p-3" on:submit|preventDefault={handleSubmit}>
     <input
-      class="w-full rounded-2xl bg-zinc-800 pl-3.5 pr-9 py-1.5 outline-none text-gray-300"
+      class="w-full rounded-2xl bg-zinc-800 pl-3.5 pr-9 py-1.5 outline-none text-gray-300 focus:ring-2 focus:ring-indigo-500/50"
       placeholder="Aa"
       bind:value={text}
     />

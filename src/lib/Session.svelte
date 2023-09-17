@@ -9,6 +9,7 @@
   import type { WsClient, WsServer, WsUser, WsWinsize } from "./protocol";
   import { makeToast } from "./toast";
   import Chat, { type ChatMessage } from "./ui/Chat.svelte";
+  import Settings from "./ui/Settings.svelte";
   import Toolbar from "./ui/Toolbar.svelte";
   import XTerm from "./ui/XTerm.svelte";
   import Avatars from "./ui/Avatars.svelte";
@@ -81,6 +82,7 @@
   let exitReason: string | null = null;
 
   let showChat = false; // @hmr:keep
+  let settingsOpen = false; // @hmr:keep
 
   /** Bound "write" method for each terminal. */
   const writers: Record<number, (data: string) => void> = {};
@@ -304,7 +306,7 @@
   on:wheel={(event) => event.preventDefault()}
 >
   <div
-    class="absolute top-8 left-1/2 -translate-x-1/2 pointer-events-none z-10"
+    class="absolute top-8 inset-x-0 flex justify-center pointer-events-none z-10"
   >
     <Toolbar
       {connected}
@@ -316,6 +318,9 @@
       on:chat={() => {
         showChat = !showChat;
         newMessages = false;
+      }}
+      on:settings={() => {
+        settingsOpen = true;
       }}
     />
   </div>
@@ -333,6 +338,19 @@
     </div>
   {/if}
 
+  <Settings open={settingsOpen} on:close={() => (settingsOpen = false)} />
+
+  <!--
+    Dotted circle background appears underneath the rest of the elements, but
+    moves and zooms with the fabric of the canvas.
+  -->
+  <div
+    class="absolute inset-0 -z-10"
+    style:background-image="radial-gradient(#333 {zoom}px, transparent 0)"
+    style:background-size="{24 * zoom}px {24 * zoom}px"
+    style:background-position="{-zoom * center[0]}px {-zoom * center[1]}px"
+  />
+
   <div class="py-2">
     {#if exitReason !== null}
       <div class="text-red-400">{exitReason}</div>
@@ -343,13 +361,7 @@
     {/if}
   </div>
 
-  <div
-    class="absolute inset-0 overflow-hidden touch-none"
-    bind:this={fabricEl}
-    style:background-image="radial-gradient(#333 {zoom}px, transparent 0)"
-    style:background-size="{24 * zoom}px {24 * zoom}px"
-    style:background-position="{-zoom * center[0]}px {-zoom * center[1]}px"
-  >
+  <div class="absolute inset-0 overflow-hidden touch-none" bind:this={fabricEl}>
     {#each shells as [id, winsize] (id)}
       {@const ws = id === moving ? movingSize : winsize}
       <div

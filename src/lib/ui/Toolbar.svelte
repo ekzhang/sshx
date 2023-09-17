@@ -12,12 +12,18 @@
   export let connected: boolean;
   export let newMessages: boolean;
 
-  const dispatch = createEventDispatcher<{ create: void; chat: void }>();
+  const dispatch = createEventDispatcher<{
+    create: void;
+    chat: void;
+    settings: void;
+  }>();
 </script>
 
 <div class="panel inline-block px-3 py-2">
   <div class="flex items-center select-none">
-    <a href="/"><img src={logo} alt="sshx logo" class="h-10" /></a>
+    <a href="/" class="flex-shrink-0"
+      ><img src={logo} alt="sshx logo" class="h-10" /></a
+    >
     <p class="ml-1.5 mr-2 font-medium">sshx</p>
 
     <div class="v-divider" />
@@ -36,7 +42,7 @@
           <div class="activity" />
         {/if}
       </button>
-      <button class="icon-button">
+      <button class="icon-button" on:click={() => dispatch("settings")}>
         <SettingsIcon strokeWidth={1.5} class="p-0.5" />
       </button>
     </div>

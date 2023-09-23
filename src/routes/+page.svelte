@@ -126,7 +126,7 @@
         </div>
         <h3>Infinite canvas</h3>
         <p>
-          Create any number of terminals, then arrange and resize them in real
+          Create a bunch of terminals, then arrange and resize them in real
           time.
         </p>
       </div>
@@ -135,9 +135,7 @@
           <RefreshCwIcon size="14" />
         </div>
         <h3>Live presence</h3>
-        <p>
-          You can see other people's names and cursors while they're connected.
-        </p>
+        <p>See other people's names and cursors while they're connected.</p>
       </div>
       <div class="feature-block">
         <div class="feature-icon">
@@ -153,7 +151,7 @@
         <div class="feature-icon">
           <Share2Icon size="14" />
         </div>
-        <h3>Ultra-fast mesh routing</h3>
+        <h3>Ultra-fast mesh networking</h3>
         <p>Each client talks to the nearest server peer in a global network.</p>
       </div>
     </div>

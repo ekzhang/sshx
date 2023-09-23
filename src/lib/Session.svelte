@@ -16,6 +16,7 @@
   import LiveCursor from "./ui/LiveCursor.svelte";
   import { slide } from "./action/slide";
   import { TouchZoom, INITIAL_ZOOM } from "./action/touchZoom";
+  import { arrangeNewTerminal } from "./arrange";
 
   export let id: string;
 
@@ -86,6 +87,7 @@
 
   /** Bound "write" method for each terminal. */
   const writers: Record<number, (data: string) => void> = {};
+  const termWrappers: Record<number, HTMLDivElement> = {};
   const termElements: Record<number, HTMLDivElement> = {};
   const chunknums: Record<number, number> = {};
   const locks: Record<number, any> = {};
@@ -196,6 +198,25 @@
   onDestroy(() => srocket?.dispose());
 
   let counter = 0n;
+
+  async function handleCreate() {
+    if (shells.length >= 14) {
+      makeToast({
+        kind: "error",
+        message: "You can only create up to 14 terminals.",
+      });
+      return;
+    }
+    const existing = shells.map(([id, winsize]) => ({
+      x: winsize.x,
+      y: winsize.y,
+      width: termWrappers[id].clientWidth,
+      height: termWrappers[id].clientHeight,
+    }));
+    const { x, y } = arrangeNewTerminal(existing);
+    srocket?.send({ create: [x, y] });
+    touchZoom.moveTo([x, y], INITIAL_ZOOM);
+  }
 
   async function handleInput(id: number, data: Uint8Array) {
     if (counter === 0n) {
@@ -311,10 +332,7 @@
     <Toolbar
       {connected}
       {newMessages}
-      on:create={() => {
-        srocket?.send({ create: [] });
-        touchZoom.moveTo([0, 0], INITIAL_ZOOM);
-      }}
+      on:create={handleCreate}
       on:chat={() => {
         showChat = !showChat;
         newMessages = false;
@@ -371,6 +389,7 @@
         style:transform-origin={OFFSET_TRANSFORM_ORIGIN_CSS}
         transition:fade|local
         use:slide={{ x: ws.x, y: ws.y, center, zoom, immediate: id === moving }}
+        bind:this={termWrappers[id]}
       >
         <XTerm
           rows={ws.rows}

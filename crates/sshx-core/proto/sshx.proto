@@ -54,12 +54,19 @@ message SequenceNumbers {
   map<uint32, uint64> map = 1; // Active shells and their sequence numbers.
 }
 
+// Data for a new shell.
+message NewShell {
+  uint32 id = 1; // ID of the shell.
+  int32 x = 2;   // X position of the shell.
+  int32 y = 3;   // Y position of the shell.
+}
+
 // Bidirectional streaming update from the client.
 message ClientUpdate {
   oneof client_message {
     string hello = 1;         // First stream message: "name,token".
     TerminalData data = 2;    // Stream data from the terminal.
-    uint32 created_shell = 3; // Acknowledge that a new shell was created.
+    NewShell created_shell = 3; // Acknowledge that a new shell was created.
     uint32 closed_shell = 4;  // Acknowledge that a shell was closed.
     string error = 15;
   }
@@ -69,7 +76,7 @@ message ClientUpdate {
 message ServerUpdate {
   oneof server_message {
     TerminalInput input = 1;  // Remote input bytes, received from the user.
-    uint32 create_shell = 2;  // ID of a new shell.
+    NewShell create_shell = 2;  // ID of a new shell.
     uint32 close_shell = 3;   // ID of a shell to close.
     SequenceNumbers sync = 4; // Periodic sequence number sync.
     TerminalSize resize = 5;  // Resize a terminal window.

@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use sshx::{controller::Controller, encrypt::Encrypt, runner::Runner};
 use sshx_core::{
-    proto::{server_update::ServerMessage, TerminalInput},
+    proto::{server_update::ServerMessage, NewShell, TerminalInput},
     Sid, Uid,
 };
 use sshx_server::web::protocol::{WsClient, WsWinsize};
@@ -30,7 +30,8 @@ async fn test_command() -> Result<()> {
         .context("couldn't find session in server state")?;
 
     let updates = session.update_tx();
-    updates.send(ServerMessage::CreateShell(1)).await?;
+    let new_shell = NewShell { id: 1, x: 0, y: 0 };
+    updates.send(ServerMessage::CreateShell(new_shell)).await?;
 
     let key = controller.encryption_key();
     let encrypt = Encrypt::new(key);
@@ -76,7 +77,7 @@ async fn test_ws_basic() -> Result<()> {
     s.flush().await;
     assert_eq!(s.user_id, Uid(1));
 
-    s.send(WsClient::Create()).await;
+    s.send(WsClient::Create(0, 0)).await;
     s.flush().await;
     assert_eq!(s.shells.len(), 1);
     assert!(s.shells.contains_key(&Sid(1)));
@@ -110,7 +111,7 @@ async fn test_ws_resize() -> Result<()> {
     s.flush().await;
     assert_eq!(s.errors.len(), 1);
 
-    s.send(WsClient::Create()).await;
+    s.send(WsClient::Create(0, 0)).await;
     s.flush().await;
     assert_eq!(s.shells.len(), 1);
     assert_eq!(*s.shells.get(&Sid(1)).unwrap(), WsWinsize::default());

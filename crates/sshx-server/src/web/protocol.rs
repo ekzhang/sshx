@@ -1,7 +1,6 @@
 //! Serializable types sent and received by the web server.
 
 use bytes::Bytes;
-use rand::Rng;
 use serde::{Deserialize, Serialize};
 use sshx_core::{Sid, Uid};
 
@@ -26,19 +25,6 @@ impl Default for WsWinsize {
             y: 0,
             rows: 24,
             cols: 80,
-        }
-    }
-}
-
-impl WsWinsize {
-    /// Create a new window with default size and random position in a range.
-    pub fn new_random() -> Self {
-        let x = rand::thread_rng().gen_range(-50..=50);
-        let y = rand::thread_rng().gen_range(-30..=30);
-        Self {
-            x,
-            y,
-            ..Default::default()
         }
     }
 }
@@ -92,7 +78,7 @@ pub enum WsClient {
     /// Set the currently focused shell.
     SetFocus(Option<Sid>),
     /// Create a new shell.
-    Create(),
+    Create(i32, i32),
     /// Close a specific shell.
     Close(Sid),
     /// Move a shell window to a new position and focus it.

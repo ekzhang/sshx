@@ -20,11 +20,11 @@
     <DialogOverlay class="fixed -z-10 inset-0 bg-black/20 backdrop-blur-sm" />
 
     <TransitionChild
-      enter="duration-100 ease-out"
+      enter="duration-300 ease-out"
       enterFrom="scale-95 opacity-0"
       enterTo="scale-100 opacity-100"
       leave="duration-75 ease-out"
-      leaveFrom="scale-100 opacity-100"
+      leaveFrom="scale-200 opacity-100"
       leaveTo="scale-95 opacity-0"
       class="w-full sm:w-[calc(100%-32px)] max-w-screen-md"
     >
@@ -45,7 +45,7 @@
             Terminal Settings
           </DialogTitle>
           <DialogDescription class="text-zinc-400">
-            Customize your collaborative terminal experience.
+            Customize your collaborative terminal.
           </DialogDescription>
         </div>
 
@@ -54,7 +54,7 @@
             <div class="flex-1">
               <p class="font-medium mb-2">Name</p>
               <p class="text-sm text-zinc-400">
-                How you appear to other users that are online.
+                How you appear to other users online.
               </p>
             </div>
             <div class="text-red-500">TODO</div>
@@ -63,7 +63,7 @@
             <div class="flex-1">
               <p class="font-medium mb-2">Color palette</p>
               <p class="text-sm text-zinc-400">
-                Select a unified ANSI color scheme to use for terminal windows.
+                Color scheme for text in terminals.
               </p>
             </div>
             <div class="text-red-500">TODO</div>
@@ -72,7 +72,7 @@
             <div class="flex-1">
               <p class="font-medium mb-2">Cursor style</p>
               <p class="text-sm text-zinc-400">
-                How live cursors should be displayed in the window.
+                How live cursors should be displayed.
               </p>
             </div>
             <div class="text-red-500">TODO</div>

@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use anyhow::{Context, Result};
 use sshx_core::proto::{
     client_update::ClientMessage, server_update::ServerMessage,
-    sshx_service_client::SshxServiceClient, ClientUpdate, CloseRequest, OpenRequest,
+    sshx_service_client::SshxServiceClient, ClientUpdate, CloseRequest, NewShell, OpenRequest,
 };
 use sshx_core::{rand_alphanumeric, Sid};
 use tokio::sync::mpsc;
@@ -147,9 +147,11 @@ impl Controller {
                         warn!(%input.id, "received data for non-existing shell");
                     }
                 }
-                ServerMessage::CreateShell(id) => {
-                    if !self.shells_tx.contains_key(&Sid(id)) {
-                        self.spawn_shell_task(Sid(id));
+                ServerMessage::CreateShell(new_shell) => {
+                    let id = Sid(new_shell.id);
+                    let center = (new_shell.x, new_shell.y);
+                    if !self.shells_tx.contains_key(&id) {
+                        self.spawn_shell_task(id, center);
                     } else {
                         warn!(%id, "server asked to create duplicate shell");
                     }
@@ -184,7 +186,7 @@ impl Controller {
     }
 
     /// Entry point to start a new terminal task on the client.
-    fn spawn_shell_task(&mut self, id: Sid) {
+    fn spawn_shell_task(&mut self, id: Sid, center: (i32, i32)) {
         let (shell_tx, shell_rx) = mpsc::channel(16);
         let opt = self.shells_tx.insert(id, shell_tx);
         debug_assert!(opt.is_none(), "shell ID cannot be in existing tasks");
@@ -194,7 +196,12 @@ impl Controller {
         let output_tx = self.output_tx.clone();
         tokio::spawn(async move {
             debug!(%id, "spawning new shell");
-            if let Err(err) = output_tx.send(ClientMessage::CreatedShell(id.0)).await {
+            let new_shell = NewShell {
+                id: id.0,
+                x: center.0,
+                y: center.1,
+            };
+            if let Err(err) = output_tx.send(ClientMessage::CreatedShell(new_shell)).await {
                 error!(%id, ?err, "failed to send shell creation message");
                 return;
             }

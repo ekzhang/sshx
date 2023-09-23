@@ -186,8 +186,10 @@ async fn handle_update(tx: &ServerTx, session: &Session, update: ClientUpdate) -
                 return send_err(tx, format!("add data: {:?}", err)).await;
             }
         }
-        Some(ClientMessage::CreatedShell(id)) => {
-            if let Err(err) = session.add_shell(Sid(id)) {
+        Some(ClientMessage::CreatedShell(new_shell)) => {
+            let id = Sid(new_shell.id);
+            let center = (new_shell.x, new_shell.y);
+            if let Err(err) = session.add_shell(id, center) {
                 return send_err(tx, format!("add shell: {:?}", err)).await;
             }
         }

@@ -185,16 +185,17 @@ impl Session {
     }
 
     /// Add a new shell to the session.
-    pub fn add_shell(&self, id: Sid) -> Result<()> {
+    pub fn add_shell(&self, id: Sid, center: (i32, i32)) -> Result<()> {
         use std::collections::hash_map::Entry::*;
         let _guard = match self.shells.write().entry(id) {
             Occupied(_) => bail!("shell already exists with id={id}"),
             Vacant(v) => v.insert(State::default()),
         };
         self.source.send_modify(|source| {
-            let winsize = match source.len() {
-                0 => WsWinsize::default(),
-                _ => WsWinsize::new_random(),
+            let winsize = WsWinsize {
+                x: center.0,
+                y: center.1,
+                ..Default::default()
             };
             source.push((id, winsize));
         });

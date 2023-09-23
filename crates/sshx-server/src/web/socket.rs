@@ -8,7 +8,7 @@ use axum::extract::{
 };
 use axum::response::IntoResponse;
 use bytes::Bytes;
-use sshx_core::proto::{server_update::ServerMessage, TerminalInput, TerminalSize};
+use sshx_core::proto::{server_update::ServerMessage, NewShell, TerminalInput, TerminalSize};
 use sshx_core::Sid;
 use tokio::sync::mpsc;
 use tokio_stream::StreamExt;
@@ -127,9 +127,12 @@ async fn handle_socket(mut socket: WebSocket, session: Arc<Session>) -> Result<(
             WsClient::SetFocus(id) => {
                 session.update_user(user_id, |user| user.focus = id)?;
             }
-            WsClient::Create() => {
+            WsClient::Create(x, y) => {
                 let id = session.counter().next_sid();
-                update_tx.send(ServerMessage::CreateShell(id.0)).await?;
+                let new_shell = NewShell { id: id.0, x, y };
+                update_tx
+                    .send(ServerMessage::CreateShell(new_shell))
+                    .await?;
             }
             WsClient::Close(id) => {
                 update_tx.send(ServerMessage::CloseShell(id.0)).await?;

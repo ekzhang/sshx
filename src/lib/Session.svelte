@@ -9,6 +9,7 @@
   import type { WsClient, WsServer, WsUser, WsWinsize } from "./protocol";
   import { makeToast } from "./toast";
   import Chat, { type ChatMessage } from "./ui/Chat.svelte";
+  import NameList from "./ui/NameList.svelte";
   import Settings from "./ui/Settings.svelte";
   import Toolbar from "./ui/Toolbar.svelte";
   import XTerm from "./ui/XTerm.svelte";
@@ -377,6 +378,10 @@
     {:else}
       <div class="text-yellow-400">Connecting…</div>
     {/if}
+
+    <div class="mt-4">
+      <NameList {users} />
+    </div>
   </div>
 
   <div class="absolute inset-0 overflow-hidden touch-none" bind:this={fabricEl}>

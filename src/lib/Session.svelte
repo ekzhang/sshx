@@ -19,6 +19,7 @@
   import { slide } from "./action/slide";
   import { TouchZoom, INITIAL_ZOOM } from "./action/touchZoom";
   import { arrangeNewTerminal } from "./arrange";
+  import { settings } from "./settings";
 
   export let id: string;
 
@@ -180,6 +181,9 @@
 
       onConnect() {
         srocket?.send({ authenticate: encryptedZeros });
+        if ($settings.name) {
+          srocket?.send({ setName: $settings.name });
+        }
         connected = true;
       },
 
@@ -198,6 +202,10 @@
   });
 
   onDestroy(() => srocket?.dispose());
+
+  $: if ($settings.name) {
+    srocket?.send({ setName: $settings.name });
+  }
 
   let counter = 0n;
 

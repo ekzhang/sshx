@@ -119,7 +119,9 @@ async fn handle_socket(mut socket: WebSocket, session: Arc<Session>) -> Result<(
         match msg {
             WsClient::Authenticate(_) => {}
             WsClient::SetName(name) => {
-                session.update_user(user_id, |user| user.name = name)?;
+                if !name.is_empty() {
+                    session.update_user(user_id, |user| user.name = name)?;
+                }
             }
             WsClient::SetCursor(cursor) => {
                 session.update_user(user_id, |user| user.cursor = cursor)?;

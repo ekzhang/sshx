@@ -9,6 +9,7 @@
   import type { WsClient, WsServer, WsUser, WsWinsize } from "./protocol";
   import { makeToast } from "./toast";
   import Chat, { type ChatMessage } from "./ui/Chat.svelte";
+  import ChooseName from "./ui/ChooseName.svelte";
   import NameList from "./ui/NameList.svelte";
   import Settings from "./ui/Settings.svelte";
   import Toolbar from "./ui/Toolbar.svelte";
@@ -358,6 +359,8 @@
   {/if}
 
   <Settings open={settingsOpen} on:close={() => (settingsOpen = false)} />
+
+  <ChooseName />
 
   <!--
     Dotted circle background appears underneath the rest of the elements, but

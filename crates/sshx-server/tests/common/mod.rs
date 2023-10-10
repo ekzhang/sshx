@@ -35,7 +35,7 @@ impl TestServer {
         let local_addr = listener.local_addr().unwrap();
 
         let incoming = AddrIncoming::from_listener(listener).unwrap();
-        let server = Arc::new(Server::new(Default::default()));
+        let server = Arc::new(Server::new(Default::default()).unwrap());
         {
             let server = Arc::clone(&server);
             tokio::spawn(async move {

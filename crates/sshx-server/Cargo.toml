@@ -16,7 +16,9 @@ dashmap = "5.5.3"
 hmac = "0.12.1"
 hyper = { version = "0.14.27", features = ["full"] }
 parking_lot = "0.12.1"
+prost.workspace = true
 rand.workspace = true
+redis = { version = "0.23.3", features = ["aio", "tokio-comp"] }
 serde.workspace = true
 sha2 = "0.10.7"
 sshx-core = { path = "../sshx-core" }
@@ -28,9 +30,10 @@ tower = { version = "0.4.13", features = ["steer"] }
 tower-http = { version = "0.4.4", features = ["fs", "redirect", "trace"] }
 tracing.workspace = true
 tracing-subscriber.workspace = true
+zstd = "0.12.4"
 
 [dev-dependencies]
 futures-util = { version = "0.3.28", features = ["sink"] }
-reqwest = "0.11.20"
+reqwest = { version = "0.11.20", default-features = false, features = ["rustls-tls"] }
 sshx = { path = "../sshx" }
 tokio-tungstenite = "0.20.0"

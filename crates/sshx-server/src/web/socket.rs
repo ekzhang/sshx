@@ -156,7 +156,7 @@ async fn handle_socket(mut socket: WebSocket, session: Arc<Session>) -> Result<(
             WsClient::Data(id, data, offset) => {
                 let input = TerminalInput {
                     id: id.0,
-                    data: data.into(),
+                    data,
                     offset,
                 };
                 update_tx.send(ServerMessage::Input(input)).await?;

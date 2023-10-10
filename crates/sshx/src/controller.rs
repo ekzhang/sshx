@@ -54,7 +54,7 @@ impl Controller {
 
         let req = OpenRequest {
             origin: origin.into(),
-            encrypted_zeros: encrypt.zeros(),
+            encrypted_zeros: encrypt.zeros().into(),
         };
         let mut resp = client.open(req).await?.into_inner();
         resp.url = resp.url + "#" + &encryption_key;

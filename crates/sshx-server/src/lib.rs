@@ -38,6 +38,9 @@ pub struct ServerOptions {
 
     /// Override the origin returned for the Open() RPC.
     pub override_origin: Option<String>,
+
+    /// URL of the Redis server that stores session data.
+    pub redis_url: Option<String>,
 }
 
 /// Shared state object for global server logic.
@@ -50,17 +53,21 @@ pub struct ServerState {
 
     /// A concurrent map of session IDs to session objects.
     pub store: DashMap<String, Arc<Session>>,
+
+    /// A client to the Redis server.
+    pub redis: Option<redis::Client>,
 }
 
 impl ServerState {
     /// Create an empty server state using the given secret.
-    pub fn new(options: ServerOptions) -> Self {
+    pub fn new(options: ServerOptions) -> Result<Self> {
         let secret = options.secret.unwrap_or_else(|| rand_alphanumeric(22));
-        Self {
+        Ok(Self {
             mac: Hmac::new_from_slice(secret.as_bytes()).unwrap(),
             override_origin: options.override_origin,
             store: DashMap::new(),
-        }
+            redis: options.redis_url.map(redis::Client::open).transpose()?,
+        })
     }
 }
 
@@ -72,11 +79,11 @@ pub struct Server {
 
 impl Server {
     /// Create a new application server, but do not listen for connections yet.
-    pub fn new(options: ServerOptions) -> Self {
-        Self {
-            state: Arc::new(ServerState::new(options)),
+    pub fn new(options: ServerOptions) -> Result<Self> {
+        Ok(Self {
+            state: Arc::new(ServerState::new(options)?),
             shutdown: Shutdown::new(),
-        }
+        })
     }
 
     /// Returns the server's state object.

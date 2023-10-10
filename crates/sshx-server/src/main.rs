@@ -25,6 +25,10 @@ struct Args {
     /// Override the origin URL returned by the Open() RPC.
     #[clap(long)]
     override_origin: Option<String>,
+
+    /// URL of the Redis server that stores session data.
+    #[clap(long, env = "SSHX_REDIS_URL")]
+    pub redis_url: Option<String>,
 }
 
 #[tokio::main]
@@ -38,8 +42,9 @@ async fn start(args: Args) -> Result<()> {
     let mut options = ServerOptions::default();
     options.secret = args.secret;
     options.override_origin = args.override_origin;
+    options.redis_url = args.redis_url;
 
-    let server = Server::new(options);
+    let server = Server::new(options)?;
 
     let serve_task = async {
         info!("server listening at {addr}");

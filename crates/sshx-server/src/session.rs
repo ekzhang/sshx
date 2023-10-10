@@ -20,10 +20,12 @@ use tracing::{debug, warn};
 use crate::utils::Shutdown;
 use crate::web::protocol::{WsServer, WsUser, WsWinsize};
 
-/// Store a rolling buffer with at most this quantity of output, per shell.
-const SHELL_STORED_BYTES: u64 = 4 << 20;
+mod snapshot;
 
-/// Metadata sent to clients on connection.
+/// Store a rolling buffer with at most this quantity of output, per shell.
+const SHELL_STORED_BYTES: u64 = 1 << 21; // 2 MiB
+
+/// Static metadata for this session.
 #[derive(Debug, Clone)]
 pub struct Metadata {
     /// Used to validate that clients have the correct encryption key.

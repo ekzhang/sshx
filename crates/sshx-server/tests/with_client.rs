@@ -38,7 +38,7 @@ async fn test_command() -> Result<()> {
     let offset = 4242;
     let data = TerminalInput {
         id: 1,
-        data: encrypt.segment(0x200000000, offset, b"ls\r\n"),
+        data: encrypt.segment(0x200000000, offset, b"ls\r\n").into(),
         offset,
     };
     updates.send(ServerMessage::Input(data)).await?;

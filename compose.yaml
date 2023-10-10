@@ -1,0 +1,12 @@
+# Services used by sshx for development. These listen on ports 126XX, to reduce the chance that they
+# conflict with other processes.
+#
+# You can start them with `docker compose up -d`.
+
+services:
+  redis:
+    image: bitnami/redis:7.2
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+    ports:
+      - 127.0.0.1:12601:6379

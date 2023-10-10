@@ -56,7 +56,7 @@ impl SshxService for GrpcServer {
             Occupied(_) => return Err(Status::already_exists("generated duplicate ID")),
             Vacant(v) => {
                 let metadata = Metadata {
-                    encrypted_zeros: request.encrypted_zeros.into(),
+                    encrypted_zeros: request.encrypted_zeros,
                 };
                 v.insert(Session::new(metadata).into());
             }
@@ -182,7 +182,7 @@ async fn handle_update(tx: &ServerTx, session: &Session, update: ClientUpdate) -
             return send_err(tx, "unexpected hello".into()).await;
         }
         Some(ClientMessage::Data(data)) => {
-            if let Err(err) = session.add_data(Sid(data.id), data.data.into(), data.seq) {
+            if let Err(err) = session.add_data(Sid(data.id), data.data, data.seq) {
                 return send_err(tx, format!("add data: {:?}", err)).await;
             }
         }

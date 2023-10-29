@@ -130,13 +130,13 @@ impl StorageMesh {
     /// Mark a session as closed, so it will expire and never be accessed again.
     pub async fn mark_closed(&self, name: &str) -> Result<()> {
         let mut conn = self.redis.get().await?;
-        let owner = redis::pipe()
+        let (owner,): (Option<String>,) = redis::pipe()
             .get_del(format!("session:{{{name}}}:owner"))
             .del(format!("session:{{{name}}}:snapshot"))
             .ignore()
             .set_options(format!("session:{{{name}}}:closed"), true, set_opts())
             .ignore()
-            .query_async::<_, Option<String>>(&mut conn)
+            .query_async(&mut conn)
             .await?;
         if let Some(owner) = owner {
             self.notify_transfer(name, &owner).await?;

@@ -106,8 +106,9 @@ impl SshxService for GrpcServer {
     async fn close(&self, request: Request<CloseRequest>) -> RR<CloseResponse> {
         let request = request.into_inner();
         validate_token(self.0.mac(), &request.name, &request.token)?;
+        info!("closing session {}", request.name);
         if let Err(err) = self.0.close_session(&request.name).await {
-            error!(?err, "failed to close session");
+            error!(?err, "failed to close session {}", request.name);
             return Err(Status::internal(err.to_string()));
         }
         Ok(Response::new(CloseResponse {}))

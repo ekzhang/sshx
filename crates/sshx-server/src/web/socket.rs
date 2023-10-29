@@ -30,14 +30,14 @@ pub async fn get_session_ws(
             match state.frontend_connect(&name).await {
                 Ok(Ok(session)) => {
                     if let Err(err) = handle_socket(&mut socket, session).await {
-                        warn!(%err, "websocket exiting early");
+                        warn!(?err, "websocket exiting early");
                     } else {
                         socket.close().await.ok();
                     }
                 }
                 Ok(Err(Some(host))) => {
                     if let Err(err) = proxy_redirect(&mut socket, &host, &name).await {
-                        error!(%err, "failed to proxy websocket");
+                        error!(?err, "failed to proxy websocket");
                         let frame = CloseFrame {
                             code: 4500,
                             reason: format!("proxy redirect: {err}").into(),
@@ -214,35 +214,51 @@ async fn proxy_redirect(socket: &mut WebSocket, host: &str, name: &str) -> Resul
         tungstenite::protocol::{CloseFrame as TCloseFrame, Message as TMessage},
     };
 
-    let (mut upstream, _) = connect_async(format!("ws://{host}/s/{name}")).await?;
+    let (mut upstream, _) = connect_async(format!("ws://{host}/api/s/{name}")).await?;
     loop {
         // Due to axum having its own WebSocket API types, we need to manually translate
         // between it and tungstenite's message type.
         tokio::select! {
-            Some(client_msg) = socket.recv() => match client_msg? {
-                Message::Text(s) => upstream.send(TMessage::Text(s)).await?,
-                Message::Binary(b) => upstream.send(TMessage::Binary(b)).await?,
-                Message::Close(frame) => {
-                    let frame = frame.map(|frame| TCloseFrame {
-                        code: frame.code.into(),
-                        reason: frame.reason,
-                    });
-                    upstream.send(TMessage::Close(frame)).await?
+            Some(client_msg) = socket.recv() => {
+                let msg = match client_msg {
+                    Ok(Message::Text(s)) => Some(TMessage::Text(s)),
+                    Ok(Message::Binary(b)) => Some(TMessage::Binary(b)),
+                    Ok(Message::Close(frame)) => {
+                        let frame = frame.map(|frame| TCloseFrame {
+                            code: frame.code.into(),
+                            reason: frame.reason,
+                        });
+                        Some(TMessage::Close(frame))
+                    }
+                    Ok(_) => None,
+                    Err(_) => break,
+                };
+                if let Some(msg) = msg {
+                    if upstream.send(msg).await.is_err() {
+                        break;
+                    }
                 }
-                _ => {},
-            },
-            Some(server_msg) = upstream.next() => match server_msg? {
-                TMessage::Text(s) => socket.send(Message::Text(s)).await?,
-                TMessage::Binary(b) => socket.send(Message::Binary(b)).await?,
-                TMessage::Close(frame) => {
-                    let frame = frame.map(|frame| CloseFrame {
-                        code: frame.code.into(),
-                        reason: frame.reason,
-                    });
-                    socket.send(Message::Close(frame)).await?
+            }
+            Some(server_msg) = upstream.next() => {
+                let msg = match server_msg {
+                    Ok(TMessage::Text(s)) => Some(Message::Text(s)),
+                    Ok(TMessage::Binary(b)) => Some(Message::Binary(b)),
+                    Ok(TMessage::Close(frame)) => {
+                        let frame = frame.map(|frame| CloseFrame {
+                            code: frame.code.into(),
+                            reason: frame.reason,
+                        });
+                        Some(Message::Close(frame))
+                    }
+                    Ok(_) => None,
+                    Err(_) => break,
+                };
+                if let Some(msg) = msg {
+                    if socket.send(msg).await.is_err() {
+                        break;
+                    }
                 }
-                _ => {}
-            },
+            }
             else => break,
         }
     }

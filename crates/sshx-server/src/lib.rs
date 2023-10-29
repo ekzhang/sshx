@@ -69,9 +69,13 @@ impl Server {
         let state = self.state.clone();
         let terminated = self.shutdown.wait();
         tokio::spawn(async move {
+            let background_tasks = futures_util::future::join(
+                state.listen_for_transfers(),
+                state.close_old_sessions(),
+            );
             tokio::select! {
                 _ = terminated => {}
-                _ = state.listen_for_transfers() => {}
+                _ = background_tasks => {}
             }
         });
 

@@ -91,6 +91,7 @@ async fn handle_socket(socket: &mut WebSocket, session: Arc<Session>) -> Result<
     }
 
     let user_id = session.counter().next_uid();
+    session.sync_now();
     send(socket, WsServer::Hello(user_id)).await?;
 
     match recv(socket).await? {
@@ -150,6 +151,7 @@ async fn handle_socket(socket: &mut WebSocket, session: Arc<Session>) -> Result<
             }
             WsClient::Create(x, y) => {
                 let id = session.counter().next_sid();
+                session.sync_now();
                 let new_shell = NewShell { id: id.0, x, y };
                 update_tx
                     .send(ServerMessage::CreateShell(new_shell))

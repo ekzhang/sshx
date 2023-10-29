@@ -15,7 +15,7 @@ use crate::session::Session;
 const STORAGE_SYNC_INTERVAL: Duration = Duration::from_secs(10);
 
 /// Length of time a key lasts in Redis before it is expired.
-const STORAGE_EXPIRY: Duration = Duration::from_secs(900);
+const STORAGE_EXPIRY: Duration = Duration::from_secs(300);
 
 fn set_opts() -> redis::SetOptions {
     redis::SetOptions::default()

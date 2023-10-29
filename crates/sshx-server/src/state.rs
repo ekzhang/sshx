@@ -2,19 +2,29 @@
 
 use std::pin::pin;
 use std::sync::Arc;
+use std::time::Duration;
 
 use anyhow::Result;
 use dashmap::DashMap;
 use hmac::{Hmac, Mac as _};
 use sha2::Sha256;
 use sshx_core::rand_alphanumeric;
+use tokio::time;
 use tokio_stream::StreamExt;
+use tracing::error;
 
 use self::mesh::StorageMesh;
 use crate::session::Session;
 use crate::ServerOptions;
 
 pub mod mesh;
+
+/// Timeout for a disconnected session to be evicted and closed.
+///
+/// If a session has no backend clients making connections in this interval,
+/// then its updated timestamp will be out-of-date, so we close it and remove it
+/// from the state to reduce memory usage.
+const DISCONNECTED_SESSION_EXPIRY: Duration = Duration::from_secs(300);
 
 /// Shared state object for global server logic.
 pub struct ServerState {
@@ -93,10 +103,10 @@ impl ServerState {
 
     /// Close a session permanently on this and other servers.
     pub async fn close_session(&self, name: &str) -> Result<()> {
+        self.remove(name);
         if let Some(mesh) = &self.mesh {
             mesh.mark_closed(name).await?;
         }
-        self.remove(name);
         Ok(())
     }
 
@@ -149,6 +159,25 @@ impl ServerState {
             let mut transfers = pin!(mesh.listen_for_transfers());
             while let Some(name) = transfers.next().await {
                 self.remove(&name);
+            }
+        }
+    }
+
+    /// Close all sessions that have been disconnected for too long.
+    pub async fn close_old_sessions(&self) {
+        loop {
+            time::sleep(DISCONNECTED_SESSION_EXPIRY / 5).await;
+            let mut to_close = Vec::new();
+            for entry in &self.store {
+                let session = entry.value();
+                if session.last_accessed().elapsed() > DISCONNECTED_SESSION_EXPIRY {
+                    to_close.push(entry.key().clone());
+                }
+            }
+            for name in to_close {
+                if let Err(err) = self.close_session(&name).await {
+                    error!(?err, "failed to close old session {name}");
+                }
             }
         }
     }

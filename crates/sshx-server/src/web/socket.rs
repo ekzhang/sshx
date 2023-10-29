@@ -214,7 +214,7 @@ async fn proxy_redirect(socket: &mut WebSocket, host: &str) -> Result<()> {
         tungstenite::protocol::{CloseFrame as TCloseFrame, Message as TMessage},
     };
 
-    let (mut upstream, _) = connect_async(host).await?;
+    let (mut upstream, _) = connect_async(format!("ws://{host}")).await?;
     loop {
         // Due to axum having its own WebSocket API types, we need to manually translate
         // between it and tungstenite's message type.

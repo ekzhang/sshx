@@ -13,7 +13,7 @@ use super::{Metadata, Session, State};
 use crate::web::protocol::WsWinsize;
 
 /// Persist at most this many bytes of output in storage, per shell.
-const SHELL_SNAPSHOT_BYTES: u64 = 1 << 17; // 128 KiB
+const SHELL_SNAPSHOT_BYTES: u64 = 1 << 15; // 32 KiB
 
 const MAX_SNAPSHOT_SIZE: usize = 1 << 22; // 4 MiB
 

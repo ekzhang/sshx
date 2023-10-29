@@ -15,17 +15,15 @@
 use std::{net::SocketAddr, sync::Arc};
 
 use anyhow::Result;
-use dashmap::DashMap;
-use hmac::{Hmac, Mac as _};
 use hyper::server::conn::AddrIncoming;
-use session::Session;
-use sha2::Sha256;
-use sshx_core::rand_alphanumeric;
 use utils::Shutdown;
+
+use crate::state::ServerState;
 
 pub mod grpc;
 mod listen;
 pub mod session;
+pub mod state;
 pub mod utils;
 pub mod web;
 
@@ -41,34 +39,9 @@ pub struct ServerOptions {
 
     /// URL of the Redis server that stores session data.
     pub redis_url: Option<String>,
-}
 
-/// Shared state object for global server logic.
-pub struct ServerState {
-    /// Message authentication code for signing tokens.
-    pub mac: Hmac<Sha256>,
-
-    /// Override the origin returned for the Open() RPC.
-    pub override_origin: Option<String>,
-
-    /// A concurrent map of session IDs to session objects.
-    pub store: DashMap<String, Arc<Session>>,
-
-    /// A client to the Redis server.
-    pub redis: Option<redis::Client>,
-}
-
-impl ServerState {
-    /// Create an empty server state using the given secret.
-    pub fn new(options: ServerOptions) -> Result<Self> {
-        let secret = options.secret.unwrap_or_else(|| rand_alphanumeric(22));
-        Ok(Self {
-            mac: Hmac::new_from_slice(secret.as_bytes()).unwrap(),
-            override_origin: options.override_origin,
-            store: DashMap::new(),
-            redis: options.redis_url.map(redis::Client::open).transpose()?,
-        })
-    }
+    /// Hostname of this server, if running multiple servers.
+    pub host: Option<String>,
 }
 
 /// Stateful object that manages the sshx server, with graceful termination.
@@ -91,14 +64,18 @@ impl Server {
         Arc::clone(&self.state)
     }
 
-    /// Returns a future that resolves when the server is terminated.
-    async fn terminated(&self) {
-        self.shutdown.wait().await
-    }
-
     /// Run the application server, listening on a stream of connections.
     pub async fn listen(&self, incoming: AddrIncoming) -> Result<()> {
-        listen::start_server(self.state(), incoming, self.terminated()).await
+        let state = self.state.clone();
+        let terminated = self.shutdown.wait();
+        tokio::spawn(async move {
+            tokio::select! {
+                _ = terminated => {}
+                _ = state.listen_for_transfers() => {}
+            }
+        });
+
+        listen::start_server(self.state(), incoming, self.shutdown.wait()).await
     }
 
     /// Convenience function to call [`Server::listen`] bound to a TCP address.
@@ -111,8 +88,6 @@ impl Server {
         // Stop receiving new network connections.
         self.shutdown.shutdown();
         // Terminate each of the existing sessions.
-        for entry in &self.state.store {
-            entry.value().shutdown();
-        }
+        self.state.shutdown();
     }
 }

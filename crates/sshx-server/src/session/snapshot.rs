@@ -12,10 +12,10 @@ use sshx_core::{
 use super::{Metadata, Session, State};
 use crate::web::protocol::WsWinsize;
 
-/// Persist at most this many bytes of output in Redis, per shell.
+/// Persist at most this many bytes of output in storage, per shell.
 const SHELL_SNAPSHOT_BYTES: u64 = 1 << 17; // 128 KiB
 
-const MAX_SNAPSHOT_SIZE: usize = 1 << 24; // 16 MiB
+const MAX_SNAPSHOT_SIZE: usize = 1 << 22; // 4 MiB
 
 impl Session {
     /// Snapshot the session, returning a compressed representation.

@@ -5,6 +5,7 @@ kill_timeout = 5
 
 [experimental]
   auto_rollback = true
+  cmd = ["sh", "-c", "./sshx-server --listen :: --host \"$FLY_ALLOC_ID.vm.sshx.internal:8051\""]
 
 [[services]]
   protocol = "tcp"

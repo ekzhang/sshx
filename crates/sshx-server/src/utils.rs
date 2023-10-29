@@ -1,6 +1,7 @@
 //! Utility functions shared among server logic.
 
 use std::fmt::Debug;
+use std::future::Future;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
@@ -32,13 +33,16 @@ impl Shutdown {
     }
 
     /// Wait for the shutdown signal, if it has not already been sent.
-    pub async fn wait(&self) {
-        // Initial fast check
-        if !self.is_terminated() {
-            let notify = self.inner.1.notified();
-            // Second check to avoid "missed wakeup" race conditions
-            if !self.is_terminated() {
-                notify.await;
+    pub fn wait(&'_ self) -> impl Future<Output = ()> + Send {
+        let inner = self.inner.clone();
+        async move {
+            // Initial fast check
+            if !inner.0.load(Ordering::Relaxed) {
+                let notify = inner.1.notified();
+                // Second check to avoid "missed wakeup" race conditions
+                if !inner.0.load(Ordering::Relaxed) {
+                    notify.await;
+                }
             }
         }
     }

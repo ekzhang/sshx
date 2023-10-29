@@ -25,7 +25,6 @@ export type WsServer = {
   shells?: [Sid, WsWinsize][];
   chunks?: [Sid, number, Uint8Array[]];
   hear?: [Uid, string, string];
-  terminated?: [];
   error?: string;
 };
 

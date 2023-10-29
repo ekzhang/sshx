@@ -59,8 +59,6 @@ pub enum WsServer {
     Chunks(Sid, u64, Vec<Bytes>),
     /// Get a chat message tuple `(uid, name, text)` from the room.
     Hear(Uid, String, String),
-    /// The current session has been terminated.
-    Terminated(),
     /// Alert the client of an application error.
     Error(String),
 }

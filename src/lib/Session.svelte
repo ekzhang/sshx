@@ -126,6 +126,7 @@
             kind: "success",
             message: `Connected to the server.`,
           });
+          exitReason = null;
         } else if (message.invalidAuth) {
           exitReason =
             "The URL is not correct, invalid end-to-end encryption key.";
@@ -171,9 +172,6 @@
           chatMessages.push({ uid, name, msg, sentAt: new Date() });
           chatMessages = chatMessages;
           if (!showChat) newMessages = true;
-        } else if (message.terminated) {
-          exitReason = "The session has been terminated";
-          srocket?.dispose();
         } else if (message.error) {
           console.warn("Server error: " + message.error);
         }
@@ -196,6 +194,8 @@
       onClose(event) {
         if (event.code === 4404) {
           exitReason = "Failed to connect: " + event.reason;
+        } else if (event.code === 4500) {
+          exitReason = "Internal server error: " + event.reason;
         }
       },
     });

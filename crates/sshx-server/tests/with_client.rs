@@ -26,7 +26,8 @@ async fn test_command() -> Result<()> {
     let mut controller = Controller::new(&server.endpoint(), runner).await?;
 
     let session = server
-        .find_session(controller.name())
+        .state()
+        .lookup(controller.name())
         .context("couldn't find session in server state")?;
 
     let updates = session.update_tx();

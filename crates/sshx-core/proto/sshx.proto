@@ -91,9 +91,7 @@ message CloseRequest {
 }
 
 // Server response to closing a session.
-message CloseResponse {
-  bool exists = 1; // True if the session was found and closed.
-}
+message CloseResponse {}
 
 // Snapshot of a session, used to restore state for persistence across servers.
 message SerializedSession {

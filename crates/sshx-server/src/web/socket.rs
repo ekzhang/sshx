@@ -36,7 +36,7 @@ pub async fn get_session_ws(
                     }
                 }
                 Ok(Err(Some(host))) => {
-                    if let Err(err) = proxy_redirect(&mut socket, &host).await {
+                    if let Err(err) = proxy_redirect(&mut socket, &host, &name).await {
                         error!(%err, "failed to proxy websocket");
                         let frame = CloseFrame {
                             code: 4500,
@@ -208,13 +208,13 @@ async fn handle_socket(socket: &mut WebSocket, session: Arc<Session>) -> Result<
 }
 
 /// Transparently reverse-proxy a WebSocket connection to a different host.
-async fn proxy_redirect(socket: &mut WebSocket, host: &str) -> Result<()> {
+async fn proxy_redirect(socket: &mut WebSocket, host: &str, name: &str) -> Result<()> {
     use tokio_tungstenite::{
         connect_async,
         tungstenite::protocol::{CloseFrame as TCloseFrame, Message as TMessage},
     };
 
-    let (mut upstream, _) = connect_async(format!("ws://{host}")).await?;
+    let (mut upstream, _) = connect_async(format!("ws://{host}/s/{name}")).await?;
     loop {
         // Due to axum having its own WebSocket API types, we need to manually translate
         // between it and tungstenite's message type.

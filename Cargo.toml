@@ -10,7 +10,7 @@ rand = "0.8.5"
 serde = { version = "1.0.188", features = ["derive", "rc"] }
 tokio = { version = "1.32.0", features = ["full"] }
 tokio-stream = { version = "0.1.14", features = ["sync"] }
-tonic = { version = "0.10.0", features = ["tls", "tls-roots"] }
+tonic = { version = "0.10.0", features = ["tls", "tls-webpki-roots"] }
 tracing = "0.1.37"
 tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
 

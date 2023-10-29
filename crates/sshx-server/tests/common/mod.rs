@@ -10,9 +10,9 @@ use sshx::encrypt::Encrypt;
 use sshx_core::proto::sshx_service_client::SshxServiceClient;
 use sshx_core::{Sid, Uid};
 use sshx_server::{
-    session::Session,
+    state::ServerState,
     web::protocol::{WsClient, WsServer, WsUser, WsWinsize},
-    Server, ServerState,
+    Server,
 };
 use tokio::net::{TcpListener, TcpStream};
 use tokio::time;
@@ -35,7 +35,7 @@ impl TestServer {
         let local_addr = listener.local_addr().unwrap();
 
         let incoming = AddrIncoming::from_listener(listener).unwrap();
-        let server = Arc::new(Server::new(Default::default()));
+        let server = Arc::new(Server::new(Default::default()).unwrap());
         {
             let server = Arc::clone(&server);
             tokio::spawn(async move {
@@ -70,11 +70,6 @@ impl TestServer {
     pub fn state(&self) -> Arc<ServerState> {
         self.server.state()
     }
-
-    /// Returns the session associated with the given controller name.
-    pub fn find_session(&self, name: &str) -> Option<Arc<Session>> {
-        self.state().store.get(name).map(|s| s.clone())
-    }
 }
 
 impl Drop for TestServer {
@@ -94,7 +89,6 @@ pub struct ClientSocket {
     pub data: HashMap<Sid, String>,
     pub messages: Vec<(Uid, String, String)>,
     pub errors: Vec<String>,
-    pub terminated: bool,
 }
 
 impl ClientSocket {
@@ -112,7 +106,6 @@ impl ClientSocket {
             data: HashMap::new(),
             messages: Vec::new(),
             errors: Vec::new(),
-            terminated: false,
         };
         this.authenticate().await;
         Ok(this)
@@ -186,7 +179,6 @@ impl ClientSocket {
                     WsServer::Hear(id, name, msg) => {
                         self.messages.push((id, name, msg));
                     }
-                    WsServer::Terminated() => self.terminated = true,
                     WsServer::Error(err) => self.errors.push(err),
                 }
             }

@@ -5,6 +5,7 @@ procs:
       cargo run --bin sshx-server --
       --override-origin http://localhost:5173
       --secret dev-secret
+      --redis-url redis://localhost:12601
   client:
     shell: >-
       cargo run --bin sshx --

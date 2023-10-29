@@ -64,10 +64,10 @@ message NewShell {
 // Bidirectional streaming update from the client.
 message ClientUpdate {
   oneof client_message {
-    string hello = 1;         // First stream message: "name,token".
-    TerminalData data = 2;    // Stream data from the terminal.
+    string hello = 1;           // First stream message: "name,token".
+    TerminalData data = 2;      // Stream data from the terminal.
     NewShell created_shell = 3; // Acknowledge that a new shell was created.
-    uint32 closed_shell = 4;  // Acknowledge that a shell was closed.
+    uint32 closed_shell = 4;    // Acknowledge that a shell was closed.
     string error = 15;
   }
 }
@@ -75,11 +75,11 @@ message ClientUpdate {
 // Bidirectional streaming update from the server.
 message ServerUpdate {
   oneof server_message {
-    TerminalInput input = 1;  // Remote input bytes, received from the user.
-    NewShell create_shell = 2;  // ID of a new shell.
-    uint32 close_shell = 3;   // ID of a shell to close.
-    SequenceNumbers sync = 4; // Periodic sequence number sync.
-    TerminalSize resize = 5;  // Resize a terminal window.
+    TerminalInput input = 1;   // Remote input bytes, received from the user.
+    NewShell create_shell = 2; // ID of a new shell.
+    uint32 close_shell = 3;    // ID of a shell to close.
+    SequenceNumbers sync = 4;  // Periodic sequence number sync.
+    TerminalSize resize = 5;   // Resize a terminal window.
     string error = 15;
   }
 }
@@ -91,6 +91,24 @@ message CloseRequest {
 }
 
 // Server response to closing a session.
-message CloseResponse {
-  bool exists = 1; // True if the session was found and closed.
+message CloseResponse {}
+
+// Snapshot of a session, used to restore state for persistence across servers.
+message SerializedSession {
+  bytes encrypted_zeros = 1;
+  map<uint32, SerializedShell> shells = 2;
+  uint32 next_sid = 3;
+  uint32 next_uid = 4;
+}
+
+message SerializedShell {
+  uint64 seqnum = 1;
+  repeated bytes data = 2;
+  uint64 chunk_offset = 3;
+  uint64 byte_offset = 4;
+  bool closed = 5;
+  int32 winsize_x = 6;
+  int32 winsize_y = 7;
+  uint32 winsize_rows = 8;
+  uint32 winsize_cols = 9;
 }

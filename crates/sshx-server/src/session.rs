@@ -20,10 +20,12 @@ use tracing::{debug, warn};
 use crate::utils::Shutdown;
 use crate::web::protocol::{WsServer, WsUser, WsWinsize};
 
-/// Store a rolling buffer with at most this quantity of output, per shell.
-const SHELL_STORED_BYTES: u64 = 4 << 20;
+mod snapshot;
 
-/// Metadata sent to clients on connection.
+/// Store a rolling buffer with at most this quantity of output, per shell.
+const SHELL_STORED_BYTES: u64 = 1 << 21; // 2 MiB
+
+/// Static metadata for this session.
 #[derive(Debug, Clone)]
 pub struct Metadata {
     /// Used to validate that clients have the correct encryption key.
@@ -45,8 +47,8 @@ pub struct Session {
     /// Atomic counter to get new, unique IDs.
     counter: IdCounter,
 
-    /// Timestamp of the last client message from an active connection.
-    updated: Mutex<Instant>,
+    /// Timestamp of the last backend client message from an active connection.
+    last_accessed: Mutex<Instant>,
 
     /// Watch channel source for the ordered list of open shells and sizes.
     source: watch::Sender<Vec<(Sid, WsWinsize)>>,
@@ -63,6 +65,9 @@ pub struct Session {
 
     /// Receiver end of a channel that buffers messages for the client.
     update_rx: async_channel::Receiver<ServerMessage>,
+
+    /// Triggered from metadata events when an immediate snapshot is needed.
+    sync_notify: Notify,
 
     /// Set when this session has been closed and removed.
     shutdown: Shutdown,
@@ -100,11 +105,12 @@ impl Session {
             shells: RwLock::new(HashMap::new()),
             users: RwLock::new(HashMap::new()),
             counter: IdCounter::default(),
-            updated: Mutex::new(now),
+            last_accessed: Mutex::new(now),
             source: watch::channel(Vec::new()).0,
             broadcast: broadcast::channel(32).0,
             update_tx,
             update_rx,
+            sync_notify: Notify::new(),
             shutdown: Shutdown::new(),
         }
     }
@@ -199,6 +205,7 @@ impl Session {
             };
             source.push((id, winsize));
         });
+        self.sync_now();
         Ok(())
     }
 
@@ -215,6 +222,7 @@ impl Session {
         self.source.send_modify(|source| {
             source.retain(|&(x, _)| x != id);
         });
+        self.sync_now();
         Ok(())
     }
 
@@ -343,9 +351,14 @@ impl Session {
         Ok(())
     }
 
-    /// Register a client message, refreshing the last update timestamp.
+    /// Register a backend client heartbeat, refreshing the timestamp.
     pub fn access(&self) {
-        *self.updated.lock() = Instant::now();
+        *self.last_accessed.lock() = Instant::now();
+    }
+
+    /// Returns the timestamp of the last backend client activity.
+    pub fn last_accessed(&self) -> Instant {
+        *self.last_accessed.lock()
     }
 
     /// Access the sender of the client message channel for this session.
@@ -356,6 +369,25 @@ impl Session {
     /// Access the receiver of the client message channel for this session.
     pub fn update_rx(&self) -> &async_channel::Receiver<ServerMessage> {
         &self.update_rx
+    }
+
+    /// Mark the session as requiring an immediate storage sync.
+    ///
+    /// This is needed for consistency when creating new shells, removing old
+    /// shells, or updating the ID counter. If these operations are lost in a
+    /// server restart, then the snapshot that contains them would be invalid
+    /// compared to the current backend client state.
+    ///
+    /// Note that it is not necessary to do this all the time though, since that
+    /// would put too much pressure on the database. Lost terminal data is
+    /// already re-synchronized periodically.
+    pub fn sync_now(&self) {
+        self.sync_notify.notify_one();
+    }
+
+    /// Resolves when the session has been marked for an immediate sync.
+    pub async fn sync_now_wait(&self) {
+        self.sync_notify.notified().await
     }
 
     /// Send a termination signal to exit this session.

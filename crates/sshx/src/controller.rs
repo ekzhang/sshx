@@ -54,7 +54,7 @@ impl Controller {
 
         let req = OpenRequest {
             origin: origin.into(),
-            encrypted_zeros: encrypt.zeros(),
+            encrypted_zeros: encrypt.zeros().into(),
         };
         let mut resp = client.open(req).await?.into_inner();
         resp.url = resp.url + "#" + &encryption_key;
@@ -98,7 +98,7 @@ impl Controller {
                 if last_retry.elapsed() >= Duration::from_secs(10) {
                     retries = 0;
                 }
-                let secs = 2_u64.pow(retries.min(5));
+                let secs = 2_u64.pow(retries.min(4));
                 error!(%err, "disconnected, retrying in {secs}s...");
                 time::sleep(Duration::from_secs(secs)).await;
                 retries += 1;
@@ -214,14 +214,14 @@ impl Controller {
     }
 
     /// Terminate this session gracefully.
-    pub async fn close(&self) -> Result<bool> {
+    pub async fn close(&self) -> Result<()> {
         debug!("closing session");
         let req = CloseRequest {
             name: self.name.clone(),
             token: self.token.clone(),
         };
-        let resp = self.client.clone().close(req).await?.into_inner();
-        Ok(resp.exists)
+        self.client.clone().close(req).await?;
+        Ok(())
     }
 }
 

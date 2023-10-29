@@ -26,7 +26,8 @@ async fn test_command() -> Result<()> {
     let mut controller = Controller::new(&server.endpoint(), runner).await?;
 
     let session = server
-        .find_session(controller.name())
+        .state()
+        .lookup(controller.name())
         .context("couldn't find session in server state")?;
 
     let updates = session.update_tx();
@@ -38,7 +39,7 @@ async fn test_command() -> Result<()> {
     let offset = 4242;
     let data = TerminalInput {
         id: 1,
-        data: encrypt.segment(0x200000000, offset, b"ls\r\n"),
+        data: encrypt.segment(0x200000000, offset, b"ls\r\n").into(),
         offset,
     };
     updates.send(ServerMessage::Input(data)).await?;

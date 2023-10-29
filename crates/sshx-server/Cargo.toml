@@ -13,24 +13,29 @@ bytes = { version = "1.5.0", features = ["serde"] }
 ciborium = "0.2.1"
 clap.workspace = true
 dashmap = "5.5.3"
+deadpool = "0.10.0"
+deadpool-redis = "0.13.0"
+futures-util = { version = "0.3.28", features = ["sink"] }
 hmac = "0.12.1"
 hyper = { version = "0.14.27", features = ["full"] }
 parking_lot = "0.12.1"
+prost.workspace = true
 rand.workspace = true
+redis = { version = "0.23.3", features = ["tokio-rustls-comp", "tls-rustls-webpki-roots"] }
 serde.workspace = true
 sha2 = "0.10.7"
 sshx-core = { path = "../sshx-core" }
 tokio.workspace = true
 tokio-stream.workspace = true
+tokio-tungstenite = "0.20.0"
 tonic.workspace = true
 tonic-reflection = "0.10.0"
 tower = { version = "0.4.13", features = ["steer"] }
 tower-http = { version = "0.4.4", features = ["fs", "redirect", "trace"] }
 tracing.workspace = true
 tracing-subscriber.workspace = true
+zstd = "0.12.4"
 
 [dev-dependencies]
-futures-util = { version = "0.3.28", features = ["sink"] }
-reqwest = "0.11.20"
+reqwest = { version = "0.11.20", default-features = false, features = ["rustls-tls"] }
 sshx = { path = "../sshx" }
-tokio-tungstenite = "0.20.0"

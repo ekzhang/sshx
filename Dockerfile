@@ -16,4 +16,4 @@ FROM alpine:latest
 WORKDIR /root
 COPY --from=frontend /usr/src/app/build build
 COPY --from=backend /home/rust/src/target/release/sshx-server .
-CMD ["./sshx-server", "--host"]
+CMD ["./sshx-server", "--listen", "::"]

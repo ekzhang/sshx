@@ -40,28 +40,23 @@ impl SshxService for GrpcServer {
     type ChannelStream = ReceiverStream<Result<ServerUpdate, Status>>;
 
     async fn open(&self, request: Request<OpenRequest>) -> RR<OpenResponse> {
-        use dashmap::mapref::entry::Entry::*;
-
         let request = request.into_inner();
-        let origin = match &self.0.override_origin {
-            Some(origin) => origin.clone(),
-            None => request.origin,
-        };
+        let origin = self.0.override_origin().unwrap_or(request.origin);
         if origin.is_empty() {
             return Err(Status::invalid_argument("origin is empty"));
         }
         let name = rand_alphanumeric(10);
         info!(%name, "creating new session");
-        match self.0.store.entry(name.clone()) {
-            Occupied(_) => return Err(Status::already_exists("generated duplicate ID")),
-            Vacant(v) => {
+        match self.0.lookup(&name) {
+            Some(_) => return Err(Status::already_exists("generated duplicate ID")),
+            None => {
                 let metadata = Metadata {
-                    encrypted_zeros: request.encrypted_zeros.into(),
+                    encrypted_zeros: request.encrypted_zeros,
                 };
-                v.insert(Session::new(metadata).into());
+                self.0.insert(&name, Arc::new(Session::new(metadata)));
             }
         };
-        let token = self.0.mac.clone().chain_update(&name).finalize();
+        let token = self.0.mac().chain_update(&name).finalize();
         let url = format!("{origin}/s/{name}");
         Ok(Response::new(OpenResponse {
             name,
@@ -81,14 +76,18 @@ impl SshxService for GrpcServer {
                 let (name, token) = hello
                     .split_once(',')
                     .ok_or_else(|| Status::invalid_argument("missing name and token"))?;
-                validate_token(&self.0.mac, name, token)?;
+                validate_token(self.0.mac(), name, token)?;
                 name.to_string()
             }
             _ => return Err(Status::invalid_argument("invalid first message")),
         };
-        let session = match self.0.store.get(&session_name) {
-            Some(session) => Arc::clone(&session),
-            None => return Err(Status::not_found("session not found")),
+        let session = match self.0.backend_connect(&session_name).await {
+            Ok(Some(session)) => session,
+            Ok(None) => return Err(Status::not_found("session not found")),
+            Err(err) => {
+                error!(?err, "failed to connect to backend session");
+                return Err(Status::internal(err.to_string()));
+            }
         };
 
         // We now spawn an asynchronous task that sends updates to the client. Note that
@@ -106,22 +105,19 @@ impl SshxService for GrpcServer {
 
     async fn close(&self, request: Request<CloseRequest>) -> RR<CloseResponse> {
         let request = request.into_inner();
-        validate_token(&self.0.mac, &request.name, &request.token)?;
-        let exists = match self.0.store.remove(&request.name) {
-            Some((_, session)) => {
-                session.shutdown();
-                true
-            }
-            None => false,
-        };
-        Ok(Response::new(CloseResponse { exists }))
+        validate_token(self.0.mac(), &request.name, &request.token)?;
+        if let Err(err) = self.0.close_session(&request.name).await {
+            error!(?err, "failed to close session");
+            return Err(Status::internal(err.to_string()));
+        }
+        Ok(Response::new(CloseResponse {}))
     }
 }
 
 /// Validate the client token for a session.
-fn validate_token(mac: &(impl Mac + Clone), name: &str, token: &str) -> Result<(), Status> {
+fn validate_token(mac: impl Mac, name: &str, token: &str) -> Result<(), Status> {
     if let Ok(token) = BASE64_STANDARD.decode(token) {
-        if mac.clone().chain_update(name).verify_slice(&token).is_ok() {
+        if mac.chain_update(name).verify_slice(&token).is_ok() {
             return Ok(());
         }
     }
@@ -182,7 +178,7 @@ async fn handle_update(tx: &ServerTx, session: &Session, update: ClientUpdate) -
             return send_err(tx, "unexpected hello".into()).await;
         }
         Some(ClientMessage::Data(data)) => {
-            if let Err(err) = session.add_data(Sid(data.id), data.data.into(), data.seq) {
+            if let Err(err) = session.add_data(Sid(data.id), data.data, data.seq) {
                 return send_err(tx, format!("add data: {:?}", err)).await;
             }
         }

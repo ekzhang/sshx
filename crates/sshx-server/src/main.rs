@@ -1,4 +1,7 @@
-use std::{net::SocketAddr, process::ExitCode};
+use std::{
+    net::{IpAddr, SocketAddr},
+    process::ExitCode,
+};
 
 use anyhow::Result;
 use clap::Parser;
@@ -14,9 +17,9 @@ struct Args {
     #[clap(long, default_value_t = 8051)]
     port: u16,
 
-    /// Whether to expose the server on all network interfaces.
-    #[clap(long)]
-    host: bool,
+    /// Which IP address or network interface to listen on.
+    #[clap(long, value_parser, default_value = "::1")]
+    listen: IpAddr,
 
     /// Secret used for signing session tokens.
     #[clap(long, env = "SSHX_SECRET")]
@@ -25,12 +28,19 @@ struct Args {
     /// Override the origin URL returned by the Open() RPC.
     #[clap(long)]
     override_origin: Option<String>,
+
+    /// URL of the Redis server that stores session data.
+    #[clap(long, env = "SSHX_REDIS_URL")]
+    redis_url: Option<String>,
+
+    /// Hostname of this server, if running multiple servers.
+    #[clap(long)]
+    host: Option<String>,
 }
 
 #[tokio::main]
 async fn start(args: Args) -> Result<()> {
-    let host = if args.host { "::" } else { "::1" };
-    let addr = SocketAddr::new(host.parse()?, args.port);
+    let addr = SocketAddr::new(args.listen, args.port);
 
     let mut sigterm = signal(SignalKind::terminate())?;
     let mut sigint = signal(SignalKind::interrupt())?;
@@ -38,8 +48,10 @@ async fn start(args: Args) -> Result<()> {
     let mut options = ServerOptions::default();
     options.secret = args.secret;
     options.override_origin = args.override_origin;
+    options.redis_url = args.redis_url;
+    options.host = args.host;
 
-    let server = Server::new(options);
+    let server = Server::new(options)?;
 
     let serve_task = async {
         info!("server listening at {addr}");

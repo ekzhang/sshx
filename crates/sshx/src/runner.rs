@@ -12,6 +12,7 @@ use tokio::{
 use crate::encrypt::Encrypt;
 use crate::terminal::Terminal;
 
+const CONTENT_CHUNK_SIZE: usize = 1 << 16; // Send at most this many bytes at a time.
 const CONTENT_ROLLING_BYTES: usize = 8 << 20; // Store at least this much content.
 const CONTENT_PRUNE_BYTES: usize = 12 << 20; // Prune when we exceed this length.
 
@@ -112,18 +113,19 @@ async fn shell_task(
         // Send data if the server has fallen behind.
         if content_offset + content.len() > seq {
             let start = prev_char_boundary(&content, seq - content_offset);
+            let end = prev_char_boundary(&content, (start + CONTENT_CHUNK_SIZE).min(content.len()));
             let data = encrypt.segment(
                 0x100000000 | id.0 as u64, // stream number
                 (content_offset + start) as u64,
-                content[start..].as_bytes(),
+                content[start..end].as_bytes(),
             );
             let data = TerminalData {
                 id: id.0,
-                data,
+                data: data.into(),
                 seq: (content_offset + start) as u64,
             };
             output_tx.send(ClientMessage::Data(data)).await?;
-            seq = content_offset + content.len();
+            seq = content_offset + end;
             seq_outdated = 0;
         }
 
@@ -158,7 +160,9 @@ async fn echo_task(
                 let msg = String::from_utf8_lossy(&data);
                 let term_data = TerminalData {
                     id: id.0,
-                    data: encrypt.segment(0x100000000 | id.0 as u64, seq, msg.as_bytes()),
+                    data: encrypt
+                        .segment(0x100000000 | id.0 as u64, seq, msg.as_bytes())
+                        .into(),
                     seq,
                 };
                 output_tx.send(ClientMessage::Data(term_data)).await?;

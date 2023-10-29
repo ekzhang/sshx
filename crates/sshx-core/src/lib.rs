@@ -76,4 +76,18 @@ impl IdCounter {
     pub fn next_uid(&self) -> Uid {
         Uid(self.next_uid.fetch_add(1, Ordering::Relaxed))
     }
+
+    /// Return the current internal values of the counter.
+    pub fn get_current_values(&self) -> (Sid, Uid) {
+        (
+            Sid(self.next_sid.load(Ordering::Relaxed)),
+            Uid(self.next_uid.load(Ordering::Relaxed)),
+        )
+    }
+
+    /// Set the internal values of the counter.
+    pub fn set_current_values(&self, sid: Sid, uid: Uid) {
+        self.next_sid.store(sid.0, Ordering::Relaxed);
+        self.next_uid.store(uid.0, Ordering::Relaxed);
+    }
 }

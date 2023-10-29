@@ -4,7 +4,7 @@ use std::{pin::pin, sync::Arc, time::Duration};
 
 use anyhow::Result;
 use deadpool::managed::Manager;
-use deadpool_redis::redis::{self, AsyncCommands};
+use redis::AsyncCommands;
 use tokio::time;
 use tokio_stream::{Stream, StreamExt};
 use tracing::error;
@@ -94,8 +94,13 @@ impl StorageMesh {
     /// Periodically set the owner and snapshot of a session.
     pub async fn background_sync(&self, name: &str, session: Arc<Session>) {
         let mut interval = time::interval(STORAGE_SYNC_INTERVAL);
+        interval.set_missed_tick_behavior(time::MissedTickBehavior::Delay);
         loop {
-            interval.tick().await;
+            tokio::select! {
+                _ = interval.tick() => {}
+                _ = session.sync_now_wait() => {}
+                _ = session.terminated() => break,
+            }
             let mut conn = match self.redis.get().await {
                 Ok(conn) => conn,
                 Err(err) => {

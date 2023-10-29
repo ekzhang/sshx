@@ -79,11 +79,7 @@ impl ServerState {
             let session = session.clone();
             let mesh = mesh.clone();
             tokio::spawn(async move {
-                let terminated = session.terminated();
-                tokio::select! {
-                    _ = mesh.background_sync(&name, session.clone()) => {}
-                    _ = terminated => {}
-                }
+                mesh.background_sync(&name, session).await;
             });
         }
         if let Some(prev_session) = self.store.insert(name.to_string(), session) {

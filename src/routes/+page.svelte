@@ -47,11 +47,6 @@
 </script>
 
 <div class="overflow-x-hidden absolute inset-0">
-  <div class="w-full bg-pink-700 text-white text-xl px-4 py-8 text-center">
-    <strong>Warning:</strong> sshx is not ready or publicly released yet. Use at
-    your own risk.
-  </div>
-
   <main class="max-w-screen-xl mx-auto px-4 md:px-8 lg:px-16">
     <header class="my-12">
       <img class="h-16 -mx-1" src={logotypeDark} alt="sshx logo" />
@@ -80,16 +75,16 @@
 
     <section class="my-12 space-y-6 text-lg md:max-w-[460px] text-gray-400">
       <p>
-        <code>sshx</code> gives you a link to share your terminal with anyone,
-        on a <b>multiplayer infinite canvas</b>.
+        <code>sshx</code> lets you share your terminal with anyone by link, on a
+        <b>multiplayer infinite canvas</b>.
       </p>
       <p>
         It has <b>real-time collaboration</b>, with remote cursors and chat.
-        Also, it's <b>fast</b> and <b>end-to-end encrypted</b>, with client and
-        server binaries written in Rust.
+        It's also <b>fast</b> and <b>end-to-end encrypted</b>, with a
+        lightweight server written in Rust.
       </p>
       <p>
-        Install <code>sshx</code> with just one command. Use it for teaching, debugging,
+        Install <code>sshx</code> with a single command. Use it for teaching, debugging,
         or cloud access.
       </p>
     </section>
@@ -111,14 +106,14 @@
           <CastIcon size="14" />
         </div>
         <h3>Collaborative</h3>
-        <p>Invite someone by sharing a secure, unique link in your browser.</p>
+        <p>Invite people by sharing a secure, unique browser link.</p>
       </div>
       <div class="feature-block">
         <div class="feature-icon">
           <HardDriveIcon size="14" />
         </div>
         <h3>Cross-platform</h3>
-        <p>sshx is an executable that installs in under a second.</p>
+        <p>Install the client in under a second, on macOS and Linux.</p>
       </div>
       <div class="feature-block">
         <div class="feature-icon">
@@ -126,8 +121,7 @@
         </div>
         <h3>Infinite canvas</h3>
         <p>
-          Create a bunch of terminals, then arrange and resize them in real
-          time.
+          Create several terminals, then arrange and resize them in real time.
         </p>
       </div>
       <div class="feature-block">
@@ -143,8 +137,7 @@
         </div>
         <h3>End-to-end encrypted</h3>
         <p>
-          All terminal data is encrypted from client to client; the server never
-          sees it.
+          Send terminal data securely; the server never sees what you're typing.
         </p>
       </div>
       <div class="feature-block">
@@ -152,7 +145,10 @@
           <Share2Icon size="14" />
         </div>
         <h3>Ultra-fast mesh networking</h3>
-        <p>Each client talks to the nearest server peer in a global network.</p>
+        <p>
+          Connect from anywhere to the nearest distributed peer in a global
+          network.
+        </p>
       </div>
     </div>
 
@@ -168,8 +164,8 @@
           <span class="pill mr-3">1</span> Install the CLI
         </h3>
         <p class="text-gray-400">
-          Get the <code>sshx</code> binary by running the following in your terminal.
-          It's tiny and downloads in seconds (3 MB).
+          Get the <code>sshx</code> CLI by running this in your terminal. It's tiny
+          and downloads in seconds (3 MB).
         </p>
         <div class="flex flex-col items-start text-base">
           <div class="flex rounded-t text-sm bg-gray-900">

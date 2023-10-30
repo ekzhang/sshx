@@ -16,6 +16,7 @@
     create: void;
     chat: void;
     settings: void;
+    networkInfo: void;
   }>();
 </script>
 
@@ -50,7 +51,7 @@
     <div class="v-divider" />
 
     <div class="flex space-x-1">
-      <button class="icon-button">
+      <button class="icon-button" on:click={() => dispatch("networkInfo")}>
         <WifiIcon strokeWidth={1.5} class="p-0.5" />
       </button>
     </div>

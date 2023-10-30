@@ -11,6 +11,7 @@
   import Chat, { type ChatMessage } from "./ui/Chat.svelte";
   import ChooseName from "./ui/ChooseName.svelte";
   import NameList from "./ui/NameList.svelte";
+  import NetworkInfo from "./ui/NetworkInfo.svelte";
   import Settings from "./ui/Settings.svelte";
   import Toolbar from "./ui/Toolbar.svelte";
   import XTerm from "./ui/XTerm.svelte";
@@ -51,6 +52,10 @@
   let center = [0, 0];
   let zoom = INITIAL_ZOOM;
 
+  let showChat = false; // @hmr:keep
+  let settingsOpen = false; // @hmr:keep
+  let showNetworkInfo = false; // @hmr:keep
+
   onMount(() => {
     touchZoom = new TouchZoom(fabricEl);
     touchZoom.onMove(() => {
@@ -67,6 +72,8 @@
           (document.activeElement as HTMLElement).blur();
         }
       }
+
+      showNetworkInfo = false;
     });
   });
 
@@ -84,9 +91,6 @@
 
   let connected = false;
   let exitReason: string | null = null;
-
-  let showChat = false; // @hmr:keep
-  let settingsOpen = false; // @hmr:keep
 
   /** Bound "write" method for each terminal. */
   const writers: Record<number, (data: string) => void> = {};
@@ -350,7 +354,22 @@
       on:settings={() => {
         settingsOpen = true;
       }}
+      on:networkInfo={() => {
+        showNetworkInfo = !showNetworkInfo;
+      }}
     />
+
+    {#if showNetworkInfo}
+      <div class="absolute top-20 translate-x-[116.5px]">
+        <NetworkInfo
+          status={connected
+            ? "connected"
+            : exitReason
+            ? "no-shell"
+            : "no-server"}
+        />
+      </div>
+    {/if}
   </div>
 
   {#if showChat}
@@ -426,7 +445,10 @@
             const cols = ws.cols + 10;
             srocket?.send({ move: [id, { ...ws, rows, cols }] });
           }}
-          on:bringToFront={() => srocket?.send({ move: [id, null] })}
+          on:bringToFront={() => {
+            showNetworkInfo = false;
+            srocket?.send({ move: [id, null] });
+          }}
           on:startMove={({ detail: event }) => {
             const [x, y] = normalizePosition(event);
             moving = id;
@@ -434,8 +456,12 @@
             movingSize = ws;
             movingIsDone = false;
           }}
-          on:focus={() => (focused = [...focused, id])}
-          on:blur={() => (focused = focused.filter((i) => i !== id))}
+          on:focus={() => {
+            focused = [...focused, id];
+          }}
+          on:blur={() => {
+            focused = focused.filter((i) => i !== id);
+          }}
         />
 
         <!-- User avatars -->

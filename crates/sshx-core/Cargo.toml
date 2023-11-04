@@ -1,6 +1,12 @@
 [package]
 name = "sshx-core"
-version = "0.1.0"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+description.workspace = true
+repository.workspace = true
+documentation.workspace = true
+keywords.workspace = true
 edition = "2021"
 
 [dependencies]

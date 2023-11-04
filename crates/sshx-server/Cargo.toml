@@ -1,6 +1,12 @@
 [package]
 name = "sshx-server"
-version = "0.1.0"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+description.workspace = true
+repository.workspace = true
+documentation.workspace = true
+keywords.workspace = true
 edition = "2021"
 
 [dependencies]
@@ -24,7 +30,7 @@ rand.workspace = true
 redis = { version = "0.23.3", features = ["tokio-rustls-comp", "tls-rustls-webpki-roots"] }
 serde.workspace = true
 sha2 = "0.10.7"
-sshx-core = { path = "../sshx-core" }
+sshx-core = { version = "0.2.0", path = "../sshx-core" }
 tokio.workspace = true
 tokio-stream.workspace = true
 tokio-tungstenite = "0.20.0"

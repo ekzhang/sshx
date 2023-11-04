@@ -2,6 +2,15 @@
 members = ["crates/*"]
 resolver = "2"
 
+[workspace.package]
+version = "0.2.0"
+authors = ["Eric Zhang <ekzhang1@gmail.com>"]
+license = "MIT"
+description = "A secure web-based, collaborative terminal."
+repository = "https://github.com/ekzhang/sshx"
+documentation = "https://sshx.io"
+keywords = ["ssh", "share", "terminal", "collaborative"]
+
 [workspace.dependencies]
 anyhow = "1.0.62"
 clap = { version = "4.4.2", features = ["derive", "env"] }

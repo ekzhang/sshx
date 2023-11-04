@@ -1,7 +1,17 @@
 <script lang="ts">
+  import { settings } from "$lib/settings";
   import OverlayMenu from "./OverlayMenu.svelte";
 
   export let open: boolean;
+
+  let nameValue = "";
+  let initialized = false;
+
+  $: open, (initialized = false);
+  $: if (open && !initialized) {
+    initialized = true;
+    nameValue = $settings.name;
+  }
 </script>
 
 <OverlayMenu
@@ -19,7 +29,19 @@
           How you appear to other users online.
         </p>
       </div>
-      <div class="text-red-500">TODO</div>
+      <div>
+        <input
+          class="px-3 py-1.5 rounded-md bg-zinc-700 outline-none focus:ring-2 focus:ring-indigo-500"
+          placeholder="Your name"
+          bind:value={nameValue}
+          maxlength="50"
+          on:input={() => {
+            if (nameValue.length >= 2) {
+              settings.set({ ...$settings, name: nameValue });
+            }
+          }}
+        />
+      </div>
     </div>
     <div class="item">
       <div class="flex-1">

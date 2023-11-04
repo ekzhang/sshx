@@ -23,6 +23,7 @@
       placeholder="Your name"
       required
       minlength="2"
+      maxlength="50"
       bind:value
     />
     <button

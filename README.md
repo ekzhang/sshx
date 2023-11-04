@@ -2,6 +2,8 @@
 
 A secure web-based, collaborative terminal.
 
+![](https://i.imgur.com/Q3qKAHW.png)
+
 **Features:**
 
 - Run a single command to share your terminal with anyone.

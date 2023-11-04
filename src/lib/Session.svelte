@@ -367,6 +367,8 @@
             : exitReason
             ? "no-shell"
             : "no-server"}
+          serverLatency={12300}
+          shellLatency={38}
         />
       </div>
     {/if}

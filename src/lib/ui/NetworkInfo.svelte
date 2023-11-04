@@ -2,6 +2,29 @@
   import { fade } from "svelte/transition";
 
   export let status: "connected" | "no-server" | "no-shell";
+
+  export let serverLatency: number | null;
+  export let shellLatency: number | null;
+
+  function displayLatency(latency: number) {
+    if (latency <= 950) {
+      return `${Math.round(Math.max(0, latency))} ms`;
+    } else {
+      return `${(latency / 1000).toFixed(1)} s`;
+    }
+  }
+
+  function colorLatency(latency: number | null) {
+    if (latency === null) {
+      return "";
+    } else if (latency < 80) {
+      return "text-green-300";
+    } else if (latency < 300) {
+      return "text-yellow-300";
+    } else {
+      return "text-red-300";
+    }
+  }
 </script>
 
 <div
@@ -10,7 +33,7 @@
   out:fade|local={{ duration: 75 }}
 >
   <div class="absolute left-[calc(50%-8px)] top-[-16px] w-4 h-4">
-    <svg viewBox="0 0 16px 16px">
+    <svg viewBox="0 0 16 16">
       <path d="M 0 12 L 8 0 L 16 12 Z" fill="#222" stroke="#333" />
     </svg>
   </div>
@@ -18,9 +41,11 @@
   <h2 class="font-medium mb-1 text-center">Network</h2>
   <p class="text-zinc-400 text-sm text-center">
     {#if status === "connected"}
-      Connected, estimating latency…
-      <br />
-      Total latency: 32 ms
+      {#if serverLatency === null || shellLatency === null}
+        Connected, estimating latency…
+      {:else}
+        Total latency: {displayLatency(serverLatency + shellLatency)}
+      {/if}
     {:else}
       You are currently disconnected.
     {/if}
@@ -38,13 +63,21 @@
     <p class="text-xs text-zinc-300 w-8">You</p>
 
     {#if status === "connected"}
-      <p class="text-xs w-14 text-left">~12.3 s</p>
+      <p class="text-xs w-14 text-left {colorLatency(serverLatency)}">
+        {#if serverLatency !== null}
+          ~{displayLatency(serverLatency)}
+        {/if}
+      </p>
     {/if}
 
     <p class="text-xs text-zinc-300">Server</p>
 
     {#if status === "connected"}
-      <p class="text-xs w-14 text-right">~32 ms</p>
+      <p class="text-xs w-14 text-right {colorLatency(shellLatency)}">
+        {#if shellLatency !== null}
+          ~{displayLatency(shellLatency)}
+        {/if}
+      </p>
     {/if}
 
     <p class="text-xs text-zinc-300 w-8 text-right">Shell</p>
@@ -57,7 +90,7 @@
   }
 
   .ball.filled {
-    @apply bg-zinc-600;
+    @apply border border-zinc-300 bg-zinc-600;
   }
 
   .ball:not(.filled) {

@@ -116,6 +116,9 @@
   let chatMessages: ChatMessage[] = [];
   let newMessages = false;
 
+  let serverLatencies: number[] = [];
+  let shellLatencies: number[] = [];
+
   onMount(async () => {
     // The page hash sets the end-to-end encryption key.
     const key = window.location.hash?.slice(1) ?? "";
@@ -176,6 +179,12 @@
           chatMessages.push({ uid, name, msg, sentAt: new Date() });
           chatMessages = chatMessages;
           if (!showChat) newMessages = true;
+        } else if (message.shellLatency !== undefined) {
+          const shellLatency = Number(message.shellLatency);
+          shellLatencies = [...shellLatencies, shellLatency].slice(-10);
+        } else if (message.pong !== undefined) {
+          const serverLatency = Date.now() - Number(message.pong);
+          serverLatencies = [...serverLatencies, serverLatency].slice(-10);
         } else if (message.error) {
           console.warn("Server error: " + message.error);
         }
@@ -193,6 +202,8 @@
         connected = false;
         subscriptions.clear();
         users = [];
+        serverLatencies = [];
+        shellLatencies = [];
       },
 
       onClose(event) {
@@ -206,6 +217,27 @@
   });
 
   onDestroy(() => srocket?.dispose());
+
+  // Send periodic ping messages for latency estimation.
+  onMount(() => {
+    const pingIntervalId = window.setInterval(() => {
+      if (srocket?.connected) {
+        srocket.send({ ping: BigInt(Date.now()) });
+      }
+    }, 2000);
+    return () => window.clearInterval(pingIntervalId);
+  });
+
+  function integerMedian(values: number[]) {
+    if (values.length === 0) {
+      return null;
+    }
+    const sorted = values.toSorted();
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 !== 0
+      ? sorted[mid]
+      : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
+  }
 
   $: if ($settings.name) {
     srocket?.send({ setName: $settings.name });
@@ -367,8 +399,8 @@
             : exitReason
             ? "no-shell"
             : "no-server"}
-          serverLatency={12300}
-          shellLatency={38}
+          serverLatency={integerMedian(serverLatencies)}
+          shellLatency={integerMedian(shellLatencies)}
         />
       </div>
     {/if}

@@ -55,6 +55,10 @@ export class Srocket<T, U> {
     this.#reconnect();
   }
 
+  get connected() {
+    return this.#connected;
+  }
+
   /** Queue a message to send to the server, with "at-most-once" semantics. */
   send(message: U) {
     const data = encode(message);

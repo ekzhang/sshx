@@ -7,8 +7,10 @@
   export let shellLatency: number | null;
 
   function displayLatency(latency: number) {
-    if (latency <= 950) {
-      return `${Math.round(Math.max(0, latency))} ms`;
+    if (latency < 1) {
+      return "1 ms";
+    } else if (latency <= 950) {
+      return `${Math.round(latency)} ms`;
     } else {
       return `${(latency / 1000).toFixed(1)} s`;
     }

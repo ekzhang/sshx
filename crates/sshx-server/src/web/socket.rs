@@ -202,6 +202,9 @@ async fn handle_socket(socket: &mut WebSocket, session: Arc<Session>) -> Result<
             WsClient::Chat(msg) => {
                 session.send_chat(user_id, &msg)?;
             }
+            WsClient::Ping(ts) => {
+                send(socket, WsServer::Pong(ts)).await?;
+            }
         }
     }
     Ok(())

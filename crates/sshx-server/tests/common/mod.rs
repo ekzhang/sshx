@@ -179,6 +179,8 @@ impl ClientSocket {
                     WsServer::Hear(id, name, msg) => {
                         self.messages.push((id, name, msg));
                     }
+                    WsServer::ShellLatency(_) => {}
+                    WsServer::Pong(_) => {}
                     WsServer::Error(err) => self.errors.push(err),
                 }
             }

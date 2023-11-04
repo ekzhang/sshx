@@ -68,6 +68,7 @@ message ClientUpdate {
     TerminalData data = 2;      // Stream data from the terminal.
     NewShell created_shell = 3; // Acknowledge that a new shell was created.
     uint32 closed_shell = 4;    // Acknowledge that a shell was closed.
+    fixed64 pong = 14;          // Response for latency measurement.
     string error = 15;
   }
 }
@@ -80,6 +81,7 @@ message ServerUpdate {
     uint32 close_shell = 3;    // ID of a shell to close.
     SequenceNumbers sync = 4;  // Periodic sequence number sync.
     TerminalSize resize = 5;   // Resize a terminal window.
+    fixed64 ping = 14;         // Request a pong, with the timestamp.
     string error = 15;
   }
 }

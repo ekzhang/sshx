@@ -107,7 +107,7 @@ impl Session {
             counter: IdCounter::default(),
             last_accessed: Mutex::new(now),
             source: watch::channel(Vec::new()).0,
-            broadcast: broadcast::channel(32).0,
+            broadcast: broadcast::channel(64).0,
             update_tx,
             update_rx,
             sync_notify: Notify::new(),
@@ -349,6 +349,11 @@ impl Session {
             .send(WsServer::Hear(id, name, msg.into()))
             .ok();
         Ok(())
+    }
+
+    /// Send a measurement of the shell latency.
+    pub fn send_latency_measurement(&self, latency: u64) {
+        self.broadcast.send(WsServer::ShellLatency(latency)).ok();
     }
 
     /// Register a backend client heartbeat, refreshing the timestamp.

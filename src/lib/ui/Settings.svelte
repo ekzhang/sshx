@@ -31,7 +31,7 @@
       </div>
       <div>
         <input
-          class="px-3 py-1.5 rounded-md bg-zinc-700 outline-none focus:ring-2 focus:ring-indigo-500"
+          class="w-52 px-3 py-1.5 rounded-md bg-zinc-700 outline-none focus:ring-2 focus:ring-indigo-500"
           placeholder="Your name"
           bind:value={nameValue}
           maxlength="50"

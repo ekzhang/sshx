@@ -178,6 +178,10 @@ impl Controller {
                         warn!(%msg.id, "received resize for non-existing shell");
                     }
                 }
+                ServerMessage::Ping(ts) => {
+                    // Echo back the timestamp, for stateless latency measurement.
+                    send_msg(&tx, ClientMessage::Pong(ts)).await?;
+                }
                 ServerMessage::Error(err) => {
                     error!(?err, "error received from server");
                 }

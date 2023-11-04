@@ -1,7 +1,7 @@
 //! Defines gRPC routes and application request logic.
 
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, SystemTime};
 
 use base64::prelude::{Engine as _, BASE64_STANDARD};
 use hmac::Mac;
@@ -21,6 +21,9 @@ use crate::ServerState;
 
 /// Interval for synchronizing sequence numbers with the client.
 pub const SYNC_INTERVAL: Duration = Duration::from_secs(5);
+
+/// Interval for measuring client latency.
+pub const PING_INTERVAL: Duration = Duration::from_secs(2);
 
 /// Server that handles gRPC requests from the sshx command-line client.
 #[derive(Clone)]
@@ -133,16 +136,24 @@ async fn handle_streaming(
     session: &Session,
     mut stream: Streaming<ClientUpdate>,
 ) -> Result<(), &'static str> {
-    let mut interval = time::interval(SYNC_INTERVAL);
-    interval.set_missed_tick_behavior(MissedTickBehavior::Delay);
+    let mut sync_interval = time::interval(SYNC_INTERVAL);
+    sync_interval.set_missed_tick_behavior(MissedTickBehavior::Delay);
+
+    let mut ping_interval = time::interval(PING_INTERVAL);
+    ping_interval.set_missed_tick_behavior(MissedTickBehavior::Delay);
+
     loop {
         tokio::select! {
             // Send periodic sync messages to the client.
-            _ = interval.tick() => {
+            _ = sync_interval.tick() => {
                 let msg = ServerMessage::Sync(session.sequence_numbers());
                 if !send_msg(tx, msg).await {
                     return Err("failed to send sync message");
                 }
+            }
+            // Send periodic pings to the client.
+            _ = ping_interval.tick() => {
+                send_msg(tx, ServerMessage::Ping(get_time_ms())).await;
             }
             // Send buffered server updates to the client.
             Ok(msg) = session.update_rx().recv() => {
@@ -195,6 +206,10 @@ async fn handle_update(tx: &ServerTx, session: &Session, update: ClientUpdate) -
                 return send_err(tx, format!("close shell: {:?}", err)).await;
             }
         }
+        Some(ClientMessage::Pong(ts)) => {
+            let latency = get_time_ms().saturating_sub(ts);
+            session.send_latency_measurement(latency);
+        }
         Some(ClientMessage::Error(err)) => {
             // TODO: Propagate these errors to listeners on the web interface?
             error!(?err, "error received from client");
@@ -215,4 +230,11 @@ async fn send_msg(tx: &ServerTx, message: ServerMessage) -> bool {
 /// Attempt to send an error string to the client.
 async fn send_err(tx: &ServerTx, err: String) -> bool {
     send_msg(tx, ServerMessage::Error(err)).await
+}
+
+fn get_time_ms() -> u64 {
+    SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .expect("system time is before the UNIX epoch")
+        .as_millis() as u64
 }

@@ -40,7 +40,7 @@
         {#if showCloseButton}
           <button
             class="absolute top-4 right-4 p-1 rounded hover:bg-zinc-700 active:bg-indigo-700 transition-colors"
-            aria-label="Close settings"
+            aria-label="Close {title}"
             on:click={() => dispatch("close")}
           >
             <XIcon class="h-5 w-5" />

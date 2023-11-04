@@ -59,6 +59,10 @@ pub enum WsServer {
     Chunks(Sid, u64, Vec<Bytes>),
     /// Get a chat message tuple `(uid, name, text)` from the room.
     Hear(Uid, String, String),
+    /// Forward a latency measurement between the server and backend shell.
+    ShellLatency(u64),
+    /// Echo back a timestamp, for the the client's own latency measurement.
+    Pong(u64),
     /// Alert the client of an application error.
     Error(String),
 }
@@ -87,4 +91,6 @@ pub enum WsClient {
     Subscribe(Sid, u64),
     /// Send a a chat message to the room.
     Chat(String),
+    /// Send a ping to the server, for latency measurement.
+    Ping(u64),
 }

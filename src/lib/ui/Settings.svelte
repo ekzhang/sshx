@@ -48,7 +48,7 @@
         <p class="font-medium mb-2">Color palette</p>
         <p class="text-sm text-zinc-400">Color scheme for text in terminals.</p>
       </div>
-      <div class="text-red-500">TODO</div>
+      <div class="text-red-500">Coming soon</div>
     </div>
     <div class="item">
       <div class="flex-1">
@@ -57,7 +57,7 @@
           How live cursors should be displayed.
         </p>
       </div>
-      <div class="text-red-500">TODO</div>
+      <div class="text-red-500">Coming soon</div>
     </div>
   </div>
 

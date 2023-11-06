@@ -12,6 +12,17 @@
     initialized = true;
     nameValue = $settings.name;
   }
+
+  import themes from "./themes";
+  let themeOptions = Object.keys(themes);
+  let selectedTheme = $settings.theme || themeOptions[0];
+
+  function handleThemeChange() {
+    settings.update((curSettings) => ({
+      ...curSettings,
+      theme: selectedTheme,
+    }));
+  }
 </script>
 
 <OverlayMenu
@@ -37,7 +48,10 @@
           maxlength="50"
           on:input={() => {
             if (nameValue.length >= 2) {
-              settings.set({ ...$settings, name: nameValue });
+              settings.update((curSettings) => ({
+                ...curSettings,
+                name: nameValue,
+              }));
             }
           }}
         />
@@ -48,7 +62,17 @@
         <p class="font-medium mb-2">Color palette</p>
         <p class="text-sm text-zinc-400">Color scheme for text in terminals.</p>
       </div>
-      <div class="text-red-500">Coming soon</div>
+      <div>
+        <select
+          class="w-52 px-3 py-1.5 rounded-md bg-zinc-700 outline-none focus:ring-2 focus:ring-indigo-500"
+          bind:value={selectedTheme}
+          on:change={handleThemeChange}
+        >
+          {#each themeOptions as themeName}
+            <option value={themeName}>{themeName}</option>
+          {/each}
+        </select>
+      </div>
     </div>
     <div class="item">
       <div class="flex-1">

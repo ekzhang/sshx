@@ -41,7 +41,7 @@ impl StorageMesh {
     pub fn new(redis_url: &str, host: Option<&str>) -> Result<Self> {
         let redis = deadpool_redis::Config::from_url(redis_url)
             .builder()?
-            .max_size(2048)
+            .max_size(4)
             .wait_timeout(Some(Duration::from_secs(5)))
             .runtime(deadpool_redis::Runtime::Tokio1)
             .build()?;

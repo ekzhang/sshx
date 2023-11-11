@@ -14,11 +14,11 @@ use tracing::{error, info};
 #[clap(author, version, about, long_about = None)]
 struct Args {
     /// Specify port to listen on.
-    #[clap(long, default_value_t = 8051)]
+    #[clap(long, default_value_t = 8051, env = "SSHX_PORT")]
     port: u16,
 
     /// Which IP address or network interface to listen on.
-    #[clap(long, value_parser, default_value = "::1")]
+    #[clap(long, value_parser, default_value = "::1", env = "SSHX_LISTEN")]
     listen: IpAddr,
 
     /// Secret used for signing session tokens.
@@ -26,7 +26,7 @@ struct Args {
     secret: Option<String>,
 
     /// Override the origin URL returned by the Open() RPC.
-    #[clap(long)]
+    #[clap(long, env = "SSHX_OVERRIDE_ORIGIN")]
     override_origin: Option<String>,
 
     /// URL of the Redis server that stores session data.
@@ -34,7 +34,7 @@ struct Args {
     redis_url: Option<String>,
 
     /// Hostname of this server, if running multiple servers.
-    #[clap(long)]
+    #[clap(long, env = "SSHX_HOST")]
     host: Option<String>,
 }
 

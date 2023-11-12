@@ -51,7 +51,10 @@ jobs:
 ```
 
 We don't have a prepackaged action because it's just a single command. It works
-anywhere: GitLab CI, CircleCI, CI on your Raspberry Pi, etc.
+anywhere: GitLab CI, CircleCI, Buildkite, CI on your Raspberry Pi, etc.
+
+Be careful adding this to a public GitHub repository, as any user can view the
+logs of a CI job while it is running.
 
 ## Development
 

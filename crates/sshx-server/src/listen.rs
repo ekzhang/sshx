@@ -58,8 +58,6 @@ pub(crate) async fn start_server(
             }
         },
     );
-    let svc = ServiceBuilder::new().buffer(8).service(svc).boxed_clone();
-
     let make_svc = make_service_fn(move |_| {
         let svc = svc.clone();
         async { Ok::<_, std::convert::Infallible>(svc) }

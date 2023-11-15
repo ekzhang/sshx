@@ -15,6 +15,7 @@ use nix::errno::Errno;
 use nix::libc::{login_tty, TIOCGWINSZ, TIOCSWINSZ};
 use nix::pty::{self, Winsize};
 use nix::sys::signal::{kill, Signal::SIGKILL};
+use nix::sys::wait::waitpid;
 use nix::unistd::{execvp, fork, ForkResult, Pid};
 use pin_project::{pin_project, pinned_drop};
 use tokio::fs::File;
@@ -146,10 +147,16 @@ impl AsyncWrite for Terminal {
 impl PinnedDrop for Terminal {
     fn drop(self: Pin<&mut Self>) {
         let this = self.project();
-        trace!(child = %this.child, "dropping terminal");
+        let child = *this.child;
+        trace!(%child, "dropping terminal");
 
-        // Reap the child process on closure so that it doesn't keep running.
-        kill(*this.child, SIGKILL).ok();
+        // Kill the child process on closure so that it doesn't keep running.
+        kill(child, SIGKILL).ok();
+
+        // Reap the zombie process in a background thread.
+        std::thread::spawn(move || {
+            waitpid(child, None).ok();
+        });
     }
 }
 

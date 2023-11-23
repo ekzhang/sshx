@@ -47,7 +47,10 @@ fn print_greeting(shell: &str, controller: &Controller) {
 
 #[tokio::main]
 async fn start(args: Args) -> Result<()> {
-    let shell = args.shell.unwrap_or_else(get_default_shell);
+    let shell = match args.shell {
+        Some(shell) => shell,
+        None => get_default_shell().await,
+    };
 
     let runner = Runner::Shell(shell.clone());
     let mut controller = Controller::new(&args.server, runner).await?;

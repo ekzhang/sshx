@@ -13,7 +13,7 @@ use tracing::{error, info, trace};
 async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
 
-    let shell = get_default_shell();
+    let shell = get_default_shell().await;
     info!(%shell, "using default shell");
 
     let mut terminal = Terminal::new(&shell).await?;

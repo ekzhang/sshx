@@ -18,13 +18,23 @@ use nix::sys::signal::{kill, Signal::SIGKILL};
 use nix::sys::wait::waitpid;
 use nix::unistd::{execvp, fork, ForkResult, Pid};
 use pin_project::{pin_project, pinned_drop};
-use tokio::fs::File;
+use tokio::fs::{self, File};
 use tokio::io::{self, AsyncRead, AsyncWrite};
 use tracing::{instrument, trace};
 
 /// Returns the default shell on this system.
-pub fn get_default_shell() -> String {
-    env::var("SHELL").unwrap_or_else(|_| String::from("/bin/bash"))
+pub async fn get_default_shell() -> String {
+    if let Ok(shell) = env::var("SHELL") {
+        if !shell.is_empty() {
+            return shell;
+        }
+    }
+    for shell in ["/bin/bash", "/bin/sh"] {
+        if fs::metadata(shell).await.is_ok() {
+            return shell.to_string();
+        }
+    }
+    String::from("sh")
 }
 
 /// An object that stores the state for a terminal session.

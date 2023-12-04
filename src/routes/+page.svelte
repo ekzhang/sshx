@@ -10,13 +10,31 @@
     RefreshCwIcon,
     Share2Icon,
   } from "svelte-feather-icons";
+  import { browser } from "$app/environment";
 
   let installationEl: HTMLDivElement;
+
+  function get_base_url(): string {
+    if (browser) {
+      return window.location.origin;
+    } else {
+      return "https://sshx.io";
+    }
+  }
+
+  function get_sshx_command(): string {
+    let base_url = get_base_url();
+    if (base_url === "https://sshx.io") {
+      return "sshx";
+    } else {
+      return `sshx --server ${base_url}`;
+    }
+  }
 
   const installs = [
     {
       title: "macOS / Linux",
-      steps: `curl -sSf https://sshx.io/get | sh`,
+      steps: `curl -sSf ${get_base_url()}/get | sh`,
     },
     {
       title: "Rust (from source)",
@@ -198,7 +216,7 @@
 
         <p class="text-gray-400">Run this command in your favorite terminal.</p>
 
-        <pre class="rounded">sshx</pre>
+        <pre class="rounded">{get_sshx_command()}</pre>
 
         <p class="text-gray-400">
           This kicks off a live, encrypted session. Open the link in your web

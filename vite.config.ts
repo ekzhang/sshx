@@ -7,7 +7,7 @@ const commitHash = execSync("git rev-parse --short HEAD").toString().trim();
 
 export default defineConfig({
   define: {
-    __APP_VERSION__: JSON.stringify("0.2.1-" + commitHash),
+    __APP_VERSION__: JSON.stringify("0.2.2-" + commitHash),
   },
 
   plugins: [sveltekit()],

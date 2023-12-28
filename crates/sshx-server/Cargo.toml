@@ -30,7 +30,7 @@ rand.workspace = true
 redis = { version = "0.23.3", features = ["tokio-rustls-comp", "tls-rustls-webpki-roots"] }
 serde.workspace = true
 sha2 = "0.10.7"
-sshx-core = { version = "0.2.1", path = "../sshx-core" }
+sshx-core = { version = "0.2.2", path = "../sshx-core" }
 tokio.workspace = true
 tokio-stream.workspace = true
 tokio-tungstenite = "0.20.0"

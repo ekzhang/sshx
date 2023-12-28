@@ -93,8 +93,12 @@ frontend in parallel on your machine.
 
 ## Deployment
 
-The application servers are deployed on [Fly.io](https://fly.io/).
+I host the application servers on [Fly.io](https://fly.io/) and with
+[Redis Cloud](https://redis.com/).
 
-```shell
-fly deploy
-```
+Self-hosted deployments are not supported at the moment. If you want to deploy
+sshx, you'll need to properly implement HTTP/TCP reverse proxies, gRPC
+forwarding, TLS termination, private mesh networking, and graceful shutdown.
+
+Please do not run the development commands in a public setting, as this is
+insecure.

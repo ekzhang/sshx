@@ -23,7 +23,7 @@ const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(2);
 
 /// Handles a single session's communication with the remote server.
 pub struct Controller {
-    client: SshxServiceClient<Channel>,
+    origin: String,
     runner: Runner,
     encrypt: Encrypt,
     encryption_key: String,
@@ -49,7 +49,7 @@ impl Controller {
         let encryption_key2 = encryption_key.clone();
         let kdf_task = task::spawn_blocking(move || Encrypt::new(&encryption_key2));
 
-        let mut client = SshxServiceClient::connect(String::from(origin)).await?;
+        let mut client = Self::connect(origin).await?;
         let encrypt = kdf_task.await?;
 
         let req = OpenRequest {
@@ -61,7 +61,7 @@ impl Controller {
 
         let (output_tx, output_rx) = mpsc::channel(64);
         Ok(Self {
-            client,
+            origin: origin.into(),
             runner,
             encrypt,
             encryption_key,
@@ -72,6 +72,15 @@ impl Controller {
             output_tx,
             output_rx,
         })
+    }
+
+    /// Create a new gRPC client to the HTTP(S) origin.
+    ///
+    /// This is used on reconnection to the server, since some replicas may be
+    /// gracefully shutting down, which means connected clients need to start a
+    /// new TCP handshake.
+    async fn connect(origin: &str) -> Result<SshxServiceClient<Channel>, tonic::transport::Error> {
+        SshxServiceClient::connect(String::from(origin)).await
     }
 
     /// Returns the name of the session.
@@ -114,7 +123,8 @@ impl Controller {
         let hello = ClientMessage::Hello(format!("{},{}", self.name, self.token));
         send_msg(&tx, hello).await?;
 
-        let resp = self.client.channel(ReceiverStream::new(rx)).await?;
+        let mut client = Self::connect(&self.origin).await?;
+        let resp = client.channel(ReceiverStream::new(rx)).await?;
         let mut messages = resp.into_inner(); // A stream of server messages.
 
         let mut interval = time::interval(HEARTBEAT_INTERVAL);
@@ -224,7 +234,8 @@ impl Controller {
             name: self.name.clone(),
             token: self.token.clone(),
         };
-        self.client.clone().close(req).await?;
+        let mut client = Self::connect(&self.origin).await?;
+        client.close(req).await?;
         Ok(())
     }
 }

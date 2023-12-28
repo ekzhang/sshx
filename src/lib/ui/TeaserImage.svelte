@@ -10,8 +10,7 @@
   } from "svelte-feather-icons";
 </script>
 
-<!-- svelte-ignore a11y-click-events-have-key-events -->
-<div class="rounded-lg border border-white/20 overflow-hidden" on:click>
+<div class="rounded-lg border border-white/20 overflow-hidden">
   <div class="flex bg-zinc-900 items-end">
     <div class="px-4 py-3 flex gap-1.5">
       <div class="w-2.5 h-2.5 rounded-full bg-red-500" />
@@ -42,8 +41,11 @@
       <MoreVerticalIcon class="w-4 h-4 text-zinc-300" />
     </div>
   </div>
-  <img
-    src="https://i.imgur.com/Q3qKAHW.png"
-    alt="Browser with multiple terminal windows and live cursors"
-  />
+  <video muted autoplay loop>
+    <source
+      src="https://sshx.s3.amazonaws.com/media/teaser-video.mov"
+      type="video/mp4"
+    />
+    <track kind="captions" />
+  </video>
 </div>

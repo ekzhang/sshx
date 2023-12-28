@@ -159,7 +159,7 @@
     </div>
 
     <div class="my-48 hidden md:block">
-      <TeaserImage on:click={scrollToInstallation} />
+      <TeaserImage />
     </div>
 
     <h2 bind:this={installationEl} class="mt-40 mb-16">

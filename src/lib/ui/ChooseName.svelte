@@ -19,7 +19,7 @@
 >
   <form class="flex gap-2" on:submit|preventDefault={handleSubmit}>
     <input
-      class="flex-1 w-full px-3 py-2 rounded outline-none text-gray-300 bg-zinc-800"
+      class="flex-1 w-full px-3 py-2 rounded outline-none text-zinc-300 bg-zinc-800"
       placeholder="Your name"
       required
       minlength="2"

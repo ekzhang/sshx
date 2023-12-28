@@ -15,7 +15,7 @@
         class="w-3.5 h-3.5 rounded-full"
       />
       <div
-        class="text-sm font-semibold bg-gray-800 px-1.5 py-0.5 rounded text-gray-300"
+        class="text-sm font-semibold bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-300"
       >
         {user.name}
       </div>

@@ -7,7 +7,7 @@
 <main class="p-4 max-w-xl mx-auto my-6 md:my-12 lg:my-24">
   <img class="h-16 -mx-2" src={logotypeDark} alt="sshx logo" />
 
-  <div class="space-y-4 mt-6 mb-8 text-gray-300">
+  <div class="space-y-4 mt-6 mb-8 text-zinc-300">
     <p>
       {#if $page.status === 404}
         <b class="text-white">404 Not Found.</b> We couldn't find this page, sorry!
@@ -16,7 +16,7 @@
       {/if}
     </p>
     {#if $page.status !== 404}
-      <pre class="whitespace-pre-wrap break-all p-3 rounded bg-gray-900">
+      <pre class="whitespace-pre-wrap break-all p-3 rounded bg-zinc-900">
 {JSON.stringify($page.error, null, 2)}
 </pre>
     {/if}

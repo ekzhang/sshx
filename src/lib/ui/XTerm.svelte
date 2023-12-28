@@ -239,7 +239,7 @@
       </CircleButtons>
     </div>
     <div
-      class="p-2 text-sm text-gray-300 text-center font-bold overflow-hidden whitespace-nowrap text-ellipsis w-0 flex-grow-[4]"
+      class="p-2 text-sm text-zinc-300 text-center font-bold overflow-hidden whitespace-nowrap text-ellipsis w-0 flex-grow-[4]"
     >
       {currentTitle}
     </div>

@@ -60,7 +60,7 @@
     <CircleButtons>
       <CircleButton kind="red" on:click={() => dispatch("close")} />
     </CircleButtons>
-    <div class="ml-2.5 text-gray-300 text-sm font-bold">Chat Messages</div>
+    <div class="ml-2.5 text-zinc-300 text-sm font-bold">Chat Messages</div>
   </div>
 
   <div class="px-3 py-2 flex-1 overflow-y-auto" bind:this={scroller}>
@@ -85,7 +85,7 @@
 
   <form class="relative p-3" on:submit|preventDefault={handleSubmit}>
     <input
-      class="w-full rounded-2xl bg-zinc-800 pl-3.5 pr-9 py-1.5 outline-none text-gray-300 focus:ring-2 focus:ring-indigo-500/50"
+      class="w-full rounded-2xl bg-zinc-800 pl-3.5 pr-9 py-1.5 outline-none text-zinc-300 focus:ring-2 focus:ring-indigo-500/50"
       placeholder="Aa"
       bind:value={text}
     />

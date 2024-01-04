@@ -11,6 +11,7 @@ set +e
 case "$(uname -s)" in
   Linux*) suffix="-unknown-linux-musl";;
   Darwin*) suffix="-apple-darwin";;
+  FreeBSD*) suffix="-unknown-freebsd";;
   *) echo "Unsupported OS $(uname -s)"; exit 1;;
 esac
 
@@ -19,6 +20,10 @@ case "$(uname -m)" in
   x86_64 | x64 | amd64) arch="x86_64";;
   *) echo "Unsupported arch $(uname -m)"; exit 1;;
 esac
+
+if [ $suffix -eq "-unknown-freebsd" && $arch -eq "aarch64" ]; then
+  echo "Unsupported arch $(uname -m) in $(uname -s)"
+fi
 
 url="https://s3.amazonaws.com/sshx/sshx-${arch}${suffix}.tar.gz"
 temp=$(mktemp)

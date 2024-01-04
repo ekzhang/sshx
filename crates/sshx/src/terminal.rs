@@ -29,7 +29,12 @@ pub async fn get_default_shell() -> String {
             return shell;
         }
     }
-    for shell in ["/bin/bash", "/bin/sh"] {
+    for shell in [
+        "/bin/bash",
+        "/bin/sh",
+        "/usr/local/bin/bash",
+        "/usr/local/bin/sh",
+    ] {
         if fs::metadata(shell).await.is_ok() {
             return shell.to_string();
         }

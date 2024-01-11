@@ -27,9 +27,17 @@ curl -sSf https://sshx.io/get | sh
 Supports Linux and MacOS, on both x86_64 and arm64 architectures. The
 precompiled Linux binaries are statically linked.
 
+If you just want to try it out without installing, use:
+
+```shell
+curl -sSf https://sshx.io/get | sh -s run
+```
+
+Inspect the script for additional options.
+
 ### CI/CD
 
-You can also use sshx in continuous integration workflows to help debug tricky
+You can run sshx in continuous integration workflows to help debug tricky
 issues, like in GitHub Actions.
 
 ```yaml
@@ -44,7 +52,7 @@ jobs:
 
       # ... other steps ...
 
-      - run: curl -sSf https://sshx.io/get | sh && sshx
+      - run: curl -sSf https://sshx.io/get | sh -s run
       #      ^
       #      └ This will open a remote terminal session and print the URL. It
       #        should take under a second.

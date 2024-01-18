@@ -8,6 +8,7 @@
   } from "svelte-feather-icons";
 
   import logo from "$lib/assets/logo.svg";
+  import UserButton from "clerk-sveltekit/client/UserButton.svelte";
 
   export let connected: boolean;
   export let newMessages: boolean;
@@ -45,6 +46,9 @@
       </button>
       <button class="icon-button" on:click={() => dispatch("settings")}>
         <SettingsIcon strokeWidth={1.5} class="p-0.5" />
+      </button>
+      <button class="icon-button">
+        <UserButton strokeWidth={1.5} class="p-0.5" />
       </button>
     </div>
 

@@ -21,6 +21,8 @@
   import { TouchZoom, INITIAL_ZOOM } from "./action/touchZoom";
   import { arrangeNewTerminal } from "./arrange";
   import { settings } from "./settings";
+  import SignedOut from "clerk-sveltekit/client/SignedOut.svelte";
+  import Login from "./ui/Login.svelte";
 
   export let id: string;
 
@@ -397,8 +399,8 @@
           status={connected
             ? "connected"
             : exitReason
-            ? "no-shell"
-            : "no-server"}
+              ? "no-shell"
+              : "no-server"}
           serverLatency={integerMedian(serverLatencies)}
           shellLatency={integerMedian(shellLatencies)}
         />
@@ -544,3 +546,7 @@
     {/each}
   </div>
 </main>
+
+<SignedOut>
+  <Login {id} />
+</SignedOut>

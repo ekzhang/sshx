@@ -12,7 +12,7 @@ FROM node:lts-alpine as frontend
 RUN apk --no-cache add git
 WORKDIR /usr/src/app
 COPY . .
-RUN npm ci
+RUN npm ci --force
 RUN npm run build
 
 FROM alpine:latest

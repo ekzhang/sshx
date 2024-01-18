@@ -102,6 +102,7 @@ impl Controller {
     pub async fn run(&mut self) -> ! {
         let mut last_retry = Instant::now();
         let mut retries = 0;
+        let max_retries = 7; // 63 seconds of total retry time
         loop {
             if let Err(err) = self.try_channel().await {
                 if last_retry.elapsed() >= Duration::from_secs(10) {
@@ -111,6 +112,12 @@ impl Controller {
                 error!(%err, "disconnected, retrying in {secs}s...");
                 time::sleep(Duration::from_secs(secs)).await;
                 retries += 1;
+
+                if retries >= max_retries {
+                    error!("max retries exceeded, closing session");
+                    self.close().await.ok();
+                    std::process::exit(1);
+                }
             }
             last_retry = Instant::now();
         }

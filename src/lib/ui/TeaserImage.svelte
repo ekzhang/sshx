@@ -41,7 +41,7 @@
       <MoreVerticalIcon class="w-4 h-4 text-zinc-300" />
     </div>
   </div>
-  <video muted autoplay loop>
+  <video playsinline muted autoplay loop controls>
     <source
       src="https://sshx.s3.amazonaws.com/media/teaser-video.mov"
       type="video/mp4"

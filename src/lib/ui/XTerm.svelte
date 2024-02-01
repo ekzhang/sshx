@@ -44,8 +44,6 @@
   import CircleButtons from "./CircleButtons.svelte";
   import { TypeAheadAddon } from "$lib/typeahead";
 
-  const theme = themes.defaultDark;
-
   /** Used to determine Cmd versus Ctrl keyboard shortcuts. */
   const isMac = browser && navigator.platform.startsWith("Mac");
 
@@ -67,6 +65,16 @@
 
   export let termEl: HTMLDivElement = null as any; // suppress "missing prop" warning
   let term: Terminal | null = null;
+
+  import { settings } from "$lib/settings";
+  import type { ITheme } from "xterm";
+
+  let theme: ITheme = themes.defaultDark;
+
+  $: if ($settings.theme && term) {
+    theme = themes[$settings.theme];
+    term.options.theme = themes[$settings.theme];
+  }
 
   let loaded = false;
   let focused = false;

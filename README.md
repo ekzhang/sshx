@@ -24,8 +24,8 @@ Just run this command to get the `sshx` binary for your platform.
 curl -sSf https://sshx.io/get | sh
 ```
 
-Supports Linux and MacOS, on both x86_64 and arm64 architectures. The
-precompiled Linux binaries are statically linked.
+Supports Linux and MacOS on x86_64 and ARM64 architectures, as well as embedded
+ARMv6 and ARMv7-A systems. The precompiled Linux binaries are statically linked.
 
 If you just want to try it out without installing, use:
 

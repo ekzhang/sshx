@@ -20,6 +20,8 @@ esac
 case "$(uname -m)" in
   aarch64 | aarch64_be | arm64 | armv8b | armv8l) arch="aarch64";;
   x86_64 | x64 | amd64) arch="x86_64";;
+  armv6l) arch="arm"; suffix+="eabihf";;
+  armv7l) arch="armv7"; suffix+="eabihf";;
   *) echo "Unsupported arch $(uname -m)"; exit 1;;
 esac
 

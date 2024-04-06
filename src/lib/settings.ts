@@ -18,7 +18,7 @@ export const settings: Readable<Settings> = derived(
     const name = $storedSettings.name ?? "";
 
     let theme = $storedSettings.theme;
-    if (!theme || Object.hasOwn(themes, theme)) {
+    if (!theme || !Object.hasOwn(themes, theme)) {
       theme = defaultTheme;
     }
 

@@ -1,13 +1,13 @@
 import { persisted } from "svelte-persisted-store";
-import type themes from "./ui/themes.ts";
+import { type ThemeName, defaultTheme } from "./ui/themes";
 
 export type SettingsStore = {
   name: string;
-  theme: keyof typeof themes;
+  theme: ThemeName;
 };
 
 /** A persisted store for settings of the current user. */
 export const settings = persisted<SettingsStore>("sshx-settings-store", {
   name: "",
-  theme: "defaultDark",
+  theme: defaultTheme,
 });

@@ -39,9 +39,10 @@
   import type { Terminal } from "sshx-xterm";
   import { Buffer } from "buffer";
 
-  import themes from "./themes";
+  import themes, { defaultTheme } from "./themes";
   import CircleButton from "./CircleButton.svelte";
   import CircleButtons from "./CircleButtons.svelte";
+  import { settings } from "$lib/settings";
   import { TypeAheadAddon } from "$lib/typeahead";
 
   /** Used to determine Cmd versus Ctrl keyboard shortcuts. */
@@ -66,14 +67,13 @@
   export let termEl: HTMLDivElement = null as any; // suppress "missing prop" warning
   let term: Terminal | null = null;
 
-  import { settings } from "$lib/settings";
-  import type { ITheme } from "xterm";
+  $: theme = themes.hasOwnProperty($settings.theme)
+    ? themes[$settings.theme]
+    : themes[defaultTheme];
 
-  let theme: ITheme = themes.defaultDark;
-
-  $: if ($settings.theme && term) {
-    theme = themes[$settings.theme];
-    term.options.theme = themes[$settings.theme];
+  $: if (term) {
+    // If the theme changes, update existing terminals' appearance.
+    term.options.theme = theme;
   }
 
   let loaded = false;

@@ -1,7 +1,7 @@
 import type { ITheme } from "sshx-xterm";
 
 /** VSCode default dark theme, from https://glitchbone.github.io/vscode-base16-term/. */
-export const defaultDark: ITheme = {
+const defaultDark: ITheme = {
   foreground: "#d8d8d8",
   background: "#181818",
 
@@ -27,7 +27,7 @@ export const defaultDark: ITheme = {
 };
 
 /** Hybrid theme from https://terminal.sexy/, using Alacritty export format. */
-export const hybrid: ITheme = {
+const hybrid: ITheme = {
   foreground: "#c5c8c6",
   background: "#1d1f21",
 
@@ -51,7 +51,7 @@ export const hybrid: ITheme = {
 };
 
 /** Below themes are converted from https://github.com/alacritty/alacritty-theme/. */
-export const rosePine: ITheme = {
+const rosePine: ITheme = {
   foreground: "#e0def4",
   background: "#191724",
 
@@ -76,28 +76,7 @@ export const rosePine: ITheme = {
   brightWhite: "#e0def4",
 };
 
-export const nord: ITheme = {
-  foreground: "#d8dee9",
-  background: "#2e3440",
-  black: "#3b4252",
-  red: "#bf616a",
-  green: "#a3be8c",
-  yellow: "#ebcb8b",
-  blue: "#81a1c1",
-  magenta: "#b48ead",
-  cyan: "#88c0d0",
-  white: "#e5e9f0",
-  brightBlack: "#4c566a",
-  brightRed: "#bf616a",
-  brightGreen: "#a3be8c",
-  brightYellow: "#ebcb8b",
-  brightBlue: "#81a1c1",
-  brightMagenta: "#b48ead",
-  brightCyan: "#8fbcbb",
-  brightWhite: "#eceff4",
-};
-
-export const ubuntu: ITheme = {
+const ubuntu: ITheme = {
   foreground: "#eeeeec",
   background: "#300a24",
   black: "#2e3436",
@@ -118,7 +97,7 @@ export const ubuntu: ITheme = {
   brightWhite: "#eeeeec",
 };
 
-export const dracula: ITheme = {
+const dracula: ITheme = {
   foreground: "#f8f8f2",
   background: "#282a36",
   black: "#000000",
@@ -139,7 +118,7 @@ export const dracula: ITheme = {
   brightWhite: "#ffffff",
 };
 
-export const githubDark: ITheme = {
+const githubDark: ITheme = {
   foreground: "#d1d5da",
   background: "#24292e",
   black: "#586069",
@@ -160,7 +139,7 @@ export const githubDark: ITheme = {
   brightWhite: "#fafbfc",
 };
 
-export const gruvboxDark: ITheme = {
+const gruvboxDark: ITheme = {
   foreground: "#ebdbb2",
   background: "#282828",
   black: "#282828",
@@ -181,7 +160,7 @@ export const gruvboxDark: ITheme = {
   brightWhite: "#ebdbb2",
 };
 
-export const solarizedDark: ITheme = {
+const solarizedDark: ITheme = {
   foreground: "#839496",
   background: "#002b36",
   black: "#073642",
@@ -202,7 +181,7 @@ export const solarizedDark: ITheme = {
   brightWhite: "#fdf6e3",
 };
 
-export const tokyoNight: ITheme = {
+const tokyoNight: ITheme = {
   foreground: "#a9b1d6",
   background: "#1a1b26",
   black: "#32344a",
@@ -224,16 +203,19 @@ export const tokyoNight: ITheme = {
 };
 
 const themes = {
-  defaultDark,
-  hybrid,
-  rosePine,
-  nord,
-  ubuntu,
-  dracula,
-  githubDark,
-  gruvboxDark,
-  solarizedDark,
-  tokyoNight,
+  "VS Code Dark": defaultDark,
+  Hybrid: hybrid,
+  "Rosé Pine": rosePine,
+  Ubuntu: ubuntu,
+  Dracula: dracula,
+  "GitHub Dark": githubDark,
+  "Gruvbox Dark": gruvboxDark,
+  "Solarized Dark": solarizedDark,
+  "Tokyo Night": tokyoNight,
 };
+
+export type ThemeName = keyof typeof themes;
+
+export const defaultTheme: ThemeName = "VS Code Dark";
 
 export default themes;

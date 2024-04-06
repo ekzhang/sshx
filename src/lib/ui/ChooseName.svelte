@@ -7,7 +7,10 @@
   let value = "";
 
   function handleSubmit() {
-    settings.set({ ...settings, name: value });
+    settings.update((curSettings) => ({
+      ...curSettings,
+      name: value,
+    }));
   }
 </script>
 

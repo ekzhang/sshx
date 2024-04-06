@@ -151,7 +151,6 @@ impl Controller {
                         .context("server message is missing")?
                 }
                 _ = &mut reconnect => {
-                    dbg!("reconnecting");
                     return Ok(()); // Reconnect to the server.
                 }
             };

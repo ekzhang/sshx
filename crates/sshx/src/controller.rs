@@ -22,8 +22,8 @@ use crate::runner::{Runner, ShellData};
 /// Interval for sending empty heartbeat messages to the server.
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(2);
 
-/// Interval to automatically re-establish connections.
-const RECONNECT_INTERVAL: Duration = Duration::from_secs(10);
+/// Interval to automatically reestablish connections.
+const RECONNECT_INTERVAL: Duration = Duration::from_secs(60);
 
 /// Handles a single session's communication with the remote server.
 pub struct Controller {

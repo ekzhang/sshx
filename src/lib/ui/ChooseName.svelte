@@ -2,15 +2,12 @@
   import { browser } from "$app/environment";
 
   import OverlayMenu from "./OverlayMenu.svelte";
-  import { settings } from "$lib/settings";
+  import { settings, updateSettings } from "$lib/settings";
 
   let value = "";
 
   function handleSubmit() {
-    settings.update((curSettings) => ({
-      ...curSettings,
-      name: value,
-    }));
+    updateSettings({ name: value });
   }
 </script>
 

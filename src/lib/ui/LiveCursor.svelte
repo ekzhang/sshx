@@ -51,7 +51,7 @@
   </svg>
   {#if showName || hovering || time - lastMove < 1500}
     <p
-      class="mt-4 bg-zinc-700 text-xs px-1.5 py-[1px] rounded font-bold"
+      class="mt-4 bg-zinc-700 text-xs px-1.5 py-[1px] rounded font-medium"
       transition:fade|local={{ duration: 150 }}
     >
       {user.name}

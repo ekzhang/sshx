@@ -1,32 +1,23 @@
 <script lang="ts">
-  import { settings } from "$lib/settings";
   import { ChevronDownIcon } from "svelte-feather-icons";
+
+  import { settings, updateSettings } from "$lib/settings";
   import OverlayMenu from "./OverlayMenu.svelte";
-  import themes, { defaultTheme, type ThemeName } from "./themes";
+  import themes, { type ThemeName } from "./themes";
 
   export let open: boolean;
 
-  let nameValue = "";
+  let inputName: string;
+  let inputTheme: ThemeName;
+  let inputScrollback: number;
+
   let initialized = false;
-
   $: open, (initialized = false);
-  $: if (open && !initialized) {
+  $: if (!initialized) {
     initialized = true;
-    nameValue = $settings.name;
-  }
-
-  let selectedTheme: ThemeName; // Bound to the settings input.
-  if (Object.hasOwn(themes, $settings.theme)) {
-    selectedTheme = $settings.theme;
-  } else {
-    selectedTheme = defaultTheme;
-  }
-
-  function handleThemeChange() {
-    settings.update((curSettings) => ({
-      ...curSettings,
-      theme: selectedTheme,
-    }));
+    inputName = $settings.name;
+    inputTheme = $settings.theme;
+    inputScrollback = $settings.scrollback;
   }
 </script>
 
@@ -39,33 +30,28 @@
 >
   <div class="flex flex-col gap-4">
     <div class="item">
-      <div class="flex-1">
-        <p class="font-medium mb-2">Name</p>
-        <p class="text-sm text-zinc-400">
-          Choose how you appear to other users.
-        </p>
+      <div>
+        <p class="item-title">Name</p>
+        <p class="item-subtitle">Choose how you appear to other users.</p>
       </div>
       <div>
         <input
           class="input-common"
           placeholder="Your name"
-          bind:value={nameValue}
+          bind:value={inputName}
           maxlength="50"
           on:input={() => {
-            if (nameValue.length >= 2) {
-              settings.update((curSettings) => ({
-                ...curSettings,
-                name: nameValue,
-              }));
+            if (inputName.length >= 2) {
+              updateSettings({ name: inputName });
             }
           }}
         />
       </div>
     </div>
     <div class="item">
-      <div class="flex-1">
-        <p class="font-medium mb-2">Color palette</p>
-        <p class="text-sm text-zinc-400">Color theme for text in terminals.</p>
+      <div>
+        <p class="item-title">Color palette</p>
+        <p class="item-subtitle">Color theme for text in terminals.</p>
       </div>
       <div class="relative">
         <ChevronDownIcon
@@ -73,8 +59,8 @@
         />
         <select
           class="input-common !pr-5"
-          bind:value={selectedTheme}
-          on:change={handleThemeChange}
+          bind:value={inputTheme}
+          on:change={() => updateSettings({ theme: inputTheme })}
         >
           {#each Object.keys(themes) as themeName (themeName)}
             <option value={themeName}>{themeName}</option>
@@ -82,10 +68,31 @@
         </select>
       </div>
     </div>
+    <div class="item">
+      <div>
+        <p class="item-title">Scrollback</p>
+        <p class="item-subtitle">
+          Lines of previous text displayed in the terminal window.
+        </p>
+      </div>
+      <div>
+        <input
+          type="number"
+          class="input-common"
+          bind:value={inputScrollback}
+          on:input={() => {
+            if (inputScrollback >= 0) {
+              updateSettings({ scrollback: inputScrollback });
+            }
+          }}
+          step="100"
+        />
+      </div>
+    </div>
     <!-- <div class="item">
-      <div class="flex-1">
-        <p class="font-medium mb-2">Cursor style</p>
-        <p class="text-sm text-zinc-400">Style of live cursors.</p>
+      <div>
+        <p class="item-title">Cursor style</p>
+        <p class="item-subtitle">Style of live cursors.</p>
       </div>
       <div class="text-red-500">Coming soon</div>
     </div> -->
@@ -102,6 +109,18 @@
 <style lang="postcss">
   .item {
     @apply bg-zinc-800/25 rounded-lg p-4 flex gap-4 flex-col sm:flex-row items-start;
+  }
+
+  .item > div:first-child {
+    @apply flex-1;
+  }
+
+  .item-title {
+    @apply font-medium text-zinc-200 mb-1;
+  }
+
+  .item-subtitle {
+    @apply text-sm text-zinc-400;
   }
 
   .input-common {

@@ -97,7 +97,7 @@
 
     <div class="pb-12 md:pb-36">
       <button
-        class="bg-pink-700 hover:bg-pink-600 active:ring-4 active:ring-pink-500/50 text-lg font-semibold px-8 py-2 rounded-full"
+        class="bg-pink-700 hover:bg-pink-600 active:ring-4 active:ring-pink-500/50 text-lg font-medium px-8 py-2 rounded-full"
         on:click={scrollToInstallation}
       >
         Get Started
@@ -163,7 +163,7 @@
     </div>
 
     <h2 bind:this={installationEl} class="mt-40 mb-16">
-      Get started in <span class="title-gradient">two quick steps</span>
+      Get started with <span class="title-gradient">two quick steps</span>
     </h2>
 
     <div
@@ -240,16 +240,16 @@
 
 <style lang="postcss">
   h1 {
-    @apply font-bold text-4xl sm:text-5xl max-w-[26ch] py-2;
+    @apply font-medium text-4xl sm:text-5xl max-w-[26ch] py-2 sm:tracking-tight;
     line-height: 1.15;
   }
 
   h2 {
-    @apply font-bold text-3xl sm:text-4xl md:text-center scroll-mt-16;
+    @apply font-medium text-3xl sm:text-4xl md:text-center scroll-mt-16;
   }
 
   b {
-    @apply text-zinc-300 font-semibold;
+    @apply text-zinc-300 font-medium;
   }
 
   code {
@@ -296,7 +296,7 @@
   }
 
   .feature-block h3 {
-    @apply font-semibold mb-2;
+    @apply font-medium mb-2;
   }
 
   .feature-block p {
@@ -308,7 +308,7 @@
   }
 
   .step-heading {
-    @apply text-2xl text-zinc-200 font-semibold flex items-center md:justify-center;
+    @apply text-2xl text-zinc-200 font-medium flex items-center md:justify-center;
   }
 
   .pill {

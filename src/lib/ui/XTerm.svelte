@@ -39,7 +39,7 @@
   import type { Terminal } from "sshx-xterm";
   import { Buffer } from "buffer";
 
-  import themes, { defaultTheme } from "./themes";
+  import themes from "./themes";
   import CircleButton from "./CircleButton.svelte";
   import CircleButtons from "./CircleButtons.svelte";
   import { settings } from "$lib/settings";
@@ -67,13 +67,12 @@
   export let termEl: HTMLDivElement = null as any; // suppress "missing prop" warning
   let term: Terminal | null = null;
 
-  $: theme = Object.hasOwn(themes, $settings.theme)
-    ? themes[$settings.theme]
-    : themes[defaultTheme];
+  $: theme = themes[$settings.theme];
 
   $: if (term) {
     // If the theme changes, update existing terminals' appearance.
     term.options.theme = theme;
+    term.options.scrollback = $settings.scrollback;
   }
 
   let loaded = false;
@@ -140,7 +139,7 @@
       fontWeight: 400,
       fontWeightBold: 500,
       lineHeight: 1.06,
-      scrollback: 5000,
+      scrollback: $settings.scrollback,
       theme,
     });
 
@@ -247,7 +246,7 @@
       </CircleButtons>
     </div>
     <div
-      class="p-2 text-sm text-zinc-300 text-center font-bold overflow-hidden whitespace-nowrap text-ellipsis w-0 flex-grow-[4]"
+      class="p-2 text-sm text-zinc-300 text-center font-medium overflow-hidden whitespace-nowrap text-ellipsis w-0 flex-grow-[4]"
     >
       {currentTitle}
     </div>

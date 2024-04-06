@@ -60,7 +60,7 @@
     <CircleButtons>
       <CircleButton kind="red" on:click={() => dispatch("close")} />
     </CircleButtons>
-    <div class="ml-2.5 text-zinc-300 text-sm font-bold">Chat Messages</div>
+    <div class="ml-3 text-zinc-300 text-sm font-medium">Chat Messages</div>
   </div>
 
   <div class="px-3 py-2 flex-1 overflow-y-auto" bind:this={scroller}>

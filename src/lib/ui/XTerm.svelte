@@ -67,7 +67,7 @@
   export let termEl: HTMLDivElement = null as any; // suppress "missing prop" warning
   let term: Terminal | null = null;
 
-  $: theme = themes.hasOwnProperty($settings.theme)
+  $: theme = Object.hasOwn(themes, $settings.theme)
     ? themes[$settings.theme]
     : themes[defaultTheme];
 

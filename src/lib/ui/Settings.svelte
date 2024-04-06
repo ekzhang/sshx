@@ -16,7 +16,7 @@
   }
 
   let selectedTheme: ThemeName; // Bound to the settings input.
-  if (themes.hasOwnProperty($settings.theme)) {
+  if (Object.hasOwn(themes, $settings.theme)) {
     selectedTheme = $settings.theme;
   } else {
     selectedTheme = defaultTheme;

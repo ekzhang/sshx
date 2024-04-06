@@ -31,7 +31,7 @@
 
   <a
     href="/"
-    class="inline-block font-semibold px-6 py-2 rounded-full bg-indigo-900 hover:bg-indigo-700"
+    class="inline-block font-medium px-6 py-2 rounded-full bg-indigo-900 hover:bg-indigo-700"
     >Return home</a
   >
 </main>

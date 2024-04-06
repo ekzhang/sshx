@@ -163,7 +163,7 @@
     </div>
 
     <h2 bind:this={installationEl} class="mt-40 mb-16">
-      Get started in <span class="title-gradient">two quick steps</span>
+      Get started with <span class="title-gradient">two quick steps</span>
     </h2>
 
     <div

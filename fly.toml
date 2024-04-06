@@ -1,7 +1,7 @@
 app = "sshx"
 primary_region = "ewr"
 kill_signal = "SIGINT"
-kill_timeout = 5
+kill_timeout = 90
 
 [experimental]
   auto_rollback = true

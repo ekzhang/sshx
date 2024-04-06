@@ -1,6 +1,7 @@
 //! Network gRPC client allowing server control of terminals.
 
 use std::collections::HashMap;
+use std::pin::pin;
 
 use anyhow::{Context, Result};
 use sshx_core::proto::{
@@ -20,6 +21,9 @@ use crate::runner::{Runner, ShellData};
 
 /// Interval for sending empty heartbeat messages to the server.
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(2);
+
+/// Interval to automatically reestablish connections.
+const RECONNECT_INTERVAL: Duration = Duration::from_secs(60);
 
 /// Handles a single session's communication with the remote server.
 pub struct Controller {
@@ -129,6 +133,7 @@ impl Controller {
 
         let mut interval = time::interval(HEARTBEAT_INTERVAL);
         interval.set_missed_tick_behavior(MissedTickBehavior::Delay);
+        let mut reconnect = pin!(time::sleep(RECONNECT_INTERVAL));
         loop {
             let message = tokio::select! {
                 _ = interval.tick() => {
@@ -144,6 +149,9 @@ impl Controller {
                     item.context("server closed connection")??
                         .server_message
                         .context("server message is missing")?
+                }
+                _ = &mut reconnect => {
+                    return Ok(()); // Reconnect to the server.
                 }
             };
 

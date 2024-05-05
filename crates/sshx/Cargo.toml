@@ -26,3 +26,4 @@ tokio-stream.workspace = true
 tonic.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
+whoami = { version = "1.5.1", default-features = false }

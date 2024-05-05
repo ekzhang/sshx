@@ -40,6 +40,7 @@ message TerminalSize {
 message OpenRequest {
   string origin = 1;         // Web origin of the server.
   bytes encrypted_zeros = 2; // Encrypted zero block, for client verification.
+  string name = 3;           // Name of the session (user@hostname).
 }
 
 // Details of a newly-created sshx session.
@@ -101,6 +102,7 @@ message SerializedSession {
   map<uint32, SerializedShell> shells = 2;
   uint32 next_sid = 3;
   uint32 next_uid = 4;
+  string name = 5;
 }
 
 message SerializedShell {

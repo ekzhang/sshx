@@ -14,7 +14,7 @@ pub mod common;
 #[tokio::test]
 async fn test_handshake() -> Result<()> {
     let server = TestServer::new().await;
-    let controller = Controller::new(&server.endpoint(), Runner::Echo).await?;
+    let controller = Controller::new(&server.endpoint(), "", Runner::Echo).await?;
     controller.close().await?;
     Ok(())
 }
@@ -23,7 +23,7 @@ async fn test_handshake() -> Result<()> {
 async fn test_command() -> Result<()> {
     let server = TestServer::new().await;
     let runner = Runner::Shell("/bin/bash".into());
-    let mut controller = Controller::new(&server.endpoint(), runner).await?;
+    let mut controller = Controller::new(&server.endpoint(), "", runner).await?;
 
     let session = server
         .state()
@@ -69,7 +69,7 @@ async fn test_ws_missing() -> Result<()> {
 async fn test_ws_basic() -> Result<()> {
     let server = TestServer::new().await;
 
-    let mut controller = Controller::new(&server.endpoint(), Runner::Echo).await?;
+    let mut controller = Controller::new(&server.endpoint(), "", Runner::Echo).await?;
     let name = controller.name().to_owned();
     let key = controller.encryption_key().to_owned();
     tokio::spawn(async move { controller.run().await });
@@ -101,7 +101,7 @@ async fn test_ws_basic() -> Result<()> {
 async fn test_ws_resize() -> Result<()> {
     let server = TestServer::new().await;
 
-    let mut controller = Controller::new(&server.endpoint(), Runner::Echo).await?;
+    let mut controller = Controller::new(&server.endpoint(), "", Runner::Echo).await?;
     let name = controller.name().to_owned();
     let key = controller.encryption_key().to_owned();
     tokio::spawn(async move { controller.run().await });
@@ -145,7 +145,7 @@ async fn test_ws_resize() -> Result<()> {
 async fn test_users_join() -> Result<()> {
     let server = TestServer::new().await;
 
-    let mut controller = Controller::new(&server.endpoint(), Runner::Echo).await?;
+    let mut controller = Controller::new(&server.endpoint(), "", Runner::Echo).await?;
     let name = controller.name().to_owned();
     let key = controller.encryption_key().to_owned();
     tokio::spawn(async move { controller.run().await });
@@ -174,7 +174,7 @@ async fn test_users_join() -> Result<()> {
 async fn test_users_metadata() -> Result<()> {
     let server = TestServer::new().await;
 
-    let mut controller = Controller::new(&server.endpoint(), Runner::Echo).await?;
+    let mut controller = Controller::new(&server.endpoint(), "", Runner::Echo).await?;
     let name = controller.name().to_owned();
     let key = controller.encryption_key().to_owned();
     tokio::spawn(async move { controller.run().await });
@@ -199,7 +199,7 @@ async fn test_users_metadata() -> Result<()> {
 async fn test_chat_messages() -> Result<()> {
     let server = TestServer::new().await;
 
-    let mut controller = Controller::new(&server.endpoint(), Runner::Echo).await?;
+    let mut controller = Controller::new(&server.endpoint(), "", Runner::Echo).await?;
     let name = controller.name().to_owned();
     let key = controller.encryption_key().to_owned();
     tokio::spawn(async move { controller.run().await });

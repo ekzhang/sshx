@@ -154,7 +154,7 @@ impl ClientSocket {
         let flush_task = async {
             while let Some(msg) = self.recv().await {
                 match msg {
-                    WsServer::Hello(user_id) => self.user_id = user_id,
+                    WsServer::Hello(user_id, _) => self.user_id = user_id,
                     WsServer::InvalidAuth() => panic!("invalid authentication"),
                     WsServer::Users(users) => self.users = BTreeMap::from_iter(users),
                     WsServer::UserDiff(id, maybe_user) => {

@@ -90,12 +90,13 @@ async fn handle_socket(socket: &mut WebSocket, session: Arc<Session>) -> Result<
         })
     }
 
+    let metadata = session.metadata();
     let user_id = session.counter().next_uid();
     session.sync_now();
-    send(socket, WsServer::Hello(user_id)).await?;
+    send(socket, WsServer::Hello(user_id, metadata.name.clone())).await?;
 
     match recv(socket).await? {
-        Some(WsClient::Authenticate(bytes)) if bytes == session.metadata().encrypted_zeros => {}
+        Some(WsClient::Authenticate(bytes)) if bytes == metadata.encrypted_zeros => {}
         _ => {
             send(socket, WsServer::InvalidAuth()).await?;
             return Ok(());

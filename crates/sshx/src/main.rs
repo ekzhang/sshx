@@ -62,7 +62,7 @@ async fn start(args: Args) -> Result<()> {
             // Trim domain information like .lan or .local
             let host = host.split('.').next().unwrap_or(&host);
             name += "@";
-            name += &host;
+            name += host;
         }
         name
     });

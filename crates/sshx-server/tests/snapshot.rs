@@ -16,7 +16,7 @@ pub mod common;
 async fn test_basic_restore() -> Result<()> {
     let server = TestServer::new().await;
 
-    let mut controller = Controller::new(&server.endpoint(), Runner::Echo).await?;
+    let mut controller = Controller::new(&server.endpoint(), "", Runner::Echo).await?;
     let name = controller.name().to_owned();
     let key = controller.encryption_key().to_owned();
     tokio::spawn(async move { controller.run().await });

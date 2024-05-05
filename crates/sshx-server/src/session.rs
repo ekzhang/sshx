@@ -30,6 +30,9 @@ const SHELL_STORED_BYTES: u64 = 1 << 21; // 2 MiB
 pub struct Metadata {
     /// Used to validate that clients have the correct encryption key.
     pub encrypted_zeros: Bytes,
+
+    /// Name of the session (human-readable).
+    pub name: String,
 }
 
 /// In-memory state for a single sshx session.

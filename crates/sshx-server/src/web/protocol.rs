@@ -46,7 +46,7 @@ pub struct WsUser {
 #[serde(rename_all = "camelCase")]
 pub enum WsServer {
     /// Initial server message, with the user's ID and session metadata.
-    Hello(Uid),
+    Hello(Uid, String),
     /// The user's authentication was invalid.
     InvalidAuth(),
     /// A snapshot of all current users in the session.

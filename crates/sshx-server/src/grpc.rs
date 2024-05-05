@@ -55,6 +55,7 @@ impl SshxService for GrpcServer {
             None => {
                 let metadata = Metadata {
                     encrypted_zeros: request.encrypted_zeros,
+                    name: request.name,
                 };
                 self.0.insert(&name, Arc::new(Session::new(metadata)));
             }

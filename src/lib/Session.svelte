@@ -1,5 +1,12 @@
 <script lang="ts">
-  import { onDestroy, onMount, tick, beforeUpdate, afterUpdate } from "svelte";
+  import {
+    onDestroy,
+    onMount,
+    tick,
+    beforeUpdate,
+    afterUpdate,
+    createEventDispatcher,
+  } from "svelte";
   import { fade } from "svelte/transition";
   import { debounce, throttle } from "lodash-es";
 
@@ -23,6 +30,8 @@
   import { settings } from "./settings";
 
   export let id: string;
+
+  const dispatch = createEventDispatcher<{ receiveName: string }>();
 
   // The magic numbers "left" and "top" are used to approximately center the
   // terminal at the time that it is first created.
@@ -128,7 +137,8 @@
     srocket = new Srocket<WsServer, WsClient>(`/api/s/${id}`, {
       onMessage(message) {
         if (message.hello) {
-          userId = message.hello;
+          userId = message.hello[0];
+          dispatch("receiveName", message.hello[1]);
           makeToast({
             kind: "success",
             message: `Connected to the server.`,

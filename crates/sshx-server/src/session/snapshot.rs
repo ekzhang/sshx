@@ -61,6 +61,7 @@ impl Session {
                 .collect(),
             next_sid: ids.0 .0,
             next_uid: ids.1 .0,
+            name: self.metadata().name.clone(),
         };
         let data = message.encode_to_vec();
         ensure!(data.len() < MAX_SNAPSHOT_SIZE, "snapshot too large");
@@ -73,6 +74,7 @@ impl Session {
         let message = SerializedSession::decode(&*data)?;
         let metadata = Metadata {
             encrypted_zeros: message.encrypted_zeros,
+            name: message.name,
         };
 
         let session = Self::new(metadata);

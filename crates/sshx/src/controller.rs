@@ -46,19 +46,21 @@ pub struct Controller {
 
 impl Controller {
     /// Construct a new controller, connecting to the remote server.
-    pub async fn new(origin: &str, runner: Runner) -> Result<Self> {
+    pub async fn new(origin: &str, name: &str, runner: Runner) -> Result<Self> {
         debug!(%origin, "connecting to server");
         let encryption_key = rand_alphanumeric(14); // 83.3 bits of entropy
 
-        let encryption_key2 = encryption_key.clone();
-        let kdf_task = task::spawn_blocking(move || Encrypt::new(&encryption_key2));
-
+        let kdf_task = {
+            let encryption_key = encryption_key.clone();
+            task::spawn_blocking(move || Encrypt::new(&encryption_key))
+        };
         let mut client = Self::connect(origin).await?;
         let encrypt = kdf_task.await?;
 
         let req = OpenRequest {
             origin: origin.into(),
             encrypted_zeros: encrypt.zeros().into(),
+            name: name.into(),
         };
         let mut resp = client.open(req).await?.into_inner();
         resp.url = resp.url + "#" + &encryption_key;

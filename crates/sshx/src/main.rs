@@ -22,6 +22,10 @@ struct Args {
     /// Quiet mode, only prints the URL to stdout.
     #[clap(short, long)]
     quiet: bool,
+
+    /// Session name displayed in the title (defaults to user@hostname).
+    #[clap(long)]
+    name: Option<String>,
 }
 
 fn print_greeting(shell: &str, controller: &Controller) {
@@ -52,8 +56,19 @@ async fn start(args: Args) -> Result<()> {
         None => get_default_shell().await,
     };
 
+    let name = args.name.unwrap_or_else(|| {
+        let mut name = whoami::username();
+        if let Ok(host) = whoami::fallible::hostname() {
+            // Trim domain information like .lan or .local
+            let host = host.split('.').next().unwrap_or(&host);
+            name += "@";
+            name += host;
+        }
+        name
+    });
+
     let runner = Runner::Shell(shell.clone());
-    let mut controller = Controller::new(&args.server, runner).await?;
+    let mut controller = Controller::new(&args.server, &name, runner).await?;
     if args.quiet {
         println!("{}", controller.url());
     } else {

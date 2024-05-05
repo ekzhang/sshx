@@ -138,7 +138,6 @@
       onMessage(message) {
         if (message.hello) {
           userId = message.hello[0];
-          console.log(message.hello);
           dispatch("receiveName", message.hello[1]);
           makeToast({
             kind: "success",

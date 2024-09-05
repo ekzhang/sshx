@@ -134,6 +134,11 @@
     encrypt = await Encrypt.new(key);
     const encryptedZeros = await encrypt.zeros();
 
+    const searchParams = new URLSearchParams(window.location.search);
+    if (searchParams.get("hide_key") === "true") {
+      window.location.hash = "";
+    }
+
     srocket = new Srocket<WsServer, WsClient>(`/api/s/${id}`, {
       onMessage(message) {
         if (message.hello) {

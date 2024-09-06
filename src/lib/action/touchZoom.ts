@@ -51,7 +51,7 @@ function debounce<T extends (...args: any[]) => void>(fn: T, ms = 0) {
 
 const MIN_ZOOM = 0.35;
 const MAX_ZOOM = 2;
-export const INITIAL_ZOOM = 0.9;
+export const INITIAL_ZOOM = 1.0;
 
 export class TouchZoom {
   #node: HTMLElement;

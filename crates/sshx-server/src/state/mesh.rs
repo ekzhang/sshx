@@ -147,7 +147,7 @@ impl StorageMesh {
     /// Notify a host that a session has been transferred.
     pub async fn notify_transfer(&self, name: &str, host: &str) -> Result<()> {
         let mut conn = self.redis.get().await?;
-        conn.publish(format!("transfers:{host}"), name).await?;
+        () = conn.publish(format!("transfers:{host}"), name).await?;
         Ok(())
     }
 

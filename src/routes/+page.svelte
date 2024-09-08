@@ -17,7 +17,7 @@
 
   const installs = [
     {
-      title: "macOS / Linux",
+      title: "Prebuilt binary",
       steps: `curl -sSf https://sshx.io/get | sh`,
     },
     {
@@ -119,7 +119,9 @@
           <HardDriveIcon size="14" />
         </div>
         <h3>Cross-platform</h3>
-        <p>Install the client in under a second, on macOS and Linux.</p>
+        <p>
+          Install the client in under a second, on macOS, Linux, and Windows.
+        </p>
       </div>
       <div class="feature-block">
         <div class="feature-icon">

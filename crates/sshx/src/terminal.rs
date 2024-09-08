@@ -22,7 +22,7 @@ mod tests {
 
     #[tokio::test]
     async fn winsize() -> Result<()> {
-        let terminal = Terminal::new("/bin/sh").await?;
+        let mut terminal = Terminal::new("/bin/sh").await?;
         assert_eq!(terminal.get_winsize()?, (0, 0));
         terminal.set_winsize(120, 72)?;
         assert_eq!(terminal.get_winsize()?, (120, 72));

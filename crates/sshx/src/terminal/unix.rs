@@ -110,7 +110,7 @@ impl Terminal {
     }
 
     /// Set the window size of the TTY.
-    pub fn set_winsize(&self, rows: u16, cols: u16) -> Result<()> {
+    pub fn set_winsize(&mut self, rows: u16, cols: u16) -> Result<()> {
         nix::ioctl_write_ptr_bad!(ioctl_set_winsize, TIOCSWINSZ, Winsize);
         let winsize = make_winsize(rows, cols);
         // Safety: The master file descriptor was created by openpty().

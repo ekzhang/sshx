@@ -43,6 +43,23 @@ jobs:
 
       - run: cargo clippy --all-targets -- -D warnings
 
+  windows_test:
+    name: Client test (Windows)
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: arduino/setup-protoc@v2
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - run: cargo test
+
   web:
     name: Web lint, check, and build
     runs-on: ubuntu-latest

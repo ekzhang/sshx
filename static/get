@@ -14,12 +14,14 @@ set +e
 case "$(uname -s)" in
   Linux*) suffix="-unknown-linux-musl";;
   Darwin*) suffix="-apple-darwin";;
+  MINGW*|MSYS*|CYGWIN*) suffix="-pc-windows-msvc";;
   *) echo "Unsupported OS $(uname -s)"; exit 1;;
 esac
 
 case "$(uname -m)" in
   aarch64 | aarch64_be | arm64 | armv8b | armv8l) arch="aarch64";;
   x86_64 | x64 | amd64) arch="x86_64";;
+  i686 | i386) arch="i686";;
   armv6l) arch="arm"; suffix="${suffix}eabihf";;
   armv7l) arch="armv7"; suffix="${suffix}eabihf";;
   *) echo "Unsupported arch $(uname -m)"; exit 1;;

@@ -54,13 +54,17 @@ targets=(
 )
 for target in "${targets[@]}"
 do
-  echo "compress: target/$target/release/sshx"
-  tar czf $temp -C target/$target/release sshx
-  aws s3 cp $temp s3://sshx/sshx-$target.tar.gz
-
   if [[ ! $target == *"windows"* ]]; then
+    echo "compress: target/$target/release/sshx"
+    tar czf $temp -C target/$target/release sshx
+    aws s3 cp $temp s3://sshx/sshx-$target.tar.gz
+
     echo "compress: target/$target/release/sshx-server"
     tar czf $temp -C target/$target/release sshx-server
     aws s3 cp $temp s3://sshx/sshx-server-$target.tar.gz
+  else
+    echo "compress: target/$target/release/sshx.exe"
+    zip -j $temp target/$target/release/sshx.exe
+    aws s3 cp $temp s3://sshx/sshx-$target.zip
   fi
 done

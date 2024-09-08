@@ -35,6 +35,11 @@ cargo build --release --target x86_64-apple-darwin
 # aarch64-apple-darwin: for macOS on Apple Silicon
 cargo build --release --target aarch64-apple-darwin
 
+# *-pc-windows-msvc: for Windows, requires cargo-xwin
+cargo xwin build -p sshx --release --target x86_64-pc-windows-msvc
+cargo xwin build -p sshx --release --target i686-pc-windows-msvc
+cargo xwin build -p sshx --release --target aarch64-pc-windows-msvc
+
 temp=$(mktemp)
 targets=(
   x86_64-unknown-linux-musl
@@ -43,6 +48,9 @@ targets=(
   armv7-unknown-linux-musleabihf
   x86_64-apple-darwin
   aarch64-apple-darwin
+  x86_64-pc-windows-msvc
+  i686-pc-windows-msvc
+  aarch64-pc-windows-msvc
 )
 for target in "${targets[@]}"
 do
@@ -50,7 +58,9 @@ do
   tar czf $temp -C target/$target/release sshx
   aws s3 cp $temp s3://sshx/sshx-$target.tar.gz
 
-  echo "compress: target/$target/release/sshx-server"
-  tar czf $temp -C target/$target/release sshx-server
-  aws s3 cp $temp s3://sshx/sshx-server-$target.tar.gz
+  if [[ ! $target == *"windows"* ]]; then
+    echo "compress: target/$target/release/sshx-server"
+    tar czf $temp -C target/$target/release sshx-server
+    aws s3 cp $temp s3://sshx/sshx-server-$target.tar.gz
+  fi
 done

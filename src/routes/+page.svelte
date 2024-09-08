@@ -1,9 +1,12 @@
 <script lang="ts">
   import {
     CastIcon,
+    DownloadIcon,
+    GitBranchIcon,
     HardDriveIcon,
     ImageIcon,
     LockIcon,
+    PackageIcon,
     RefreshCwIcon,
     Share2Icon,
   } from "svelte-feather-icons";
@@ -41,19 +44,15 @@
   }
 </script>
 
-<svelte:head>
-  <style>
-    body {
-      overflow-x: hidden;
-    }
-  </style>
-</svelte:head>
-
-<main class="max-w-screen-xl mx-auto px-4 md:px-8 lg:px-16">
+<main
+  class="max-w-screen-xl mx-auto px-4 md:px-8 lg:px-16 text-zinc-100 overflow-x-hidden"
+>
   <header class="mt-6 mb-4 sm:my-8 md:my-12">
     <img class="h-12 sm:h-16 -mx-1" src={logotypeDark} alt="sshx logo" />
   </header>
-  <h1>
+  <h1
+    class="font-medium text-3xl sm:text-4xl md:text-5xl max-w-[26ch] py-2 mb-6 md:mb-0 sm:tracking-tight leading-[1.15]"
+  >
     A secure web-based,
     <span class="title-gradient">collaborative</span> terminal
   </h1>
@@ -153,11 +152,19 @@
     <TeaserImage />
   </div>
 
-  <h2 bind:this={installationEl} class="mt-32 mb-12">Installation</h2>
+  <h2
+    bind:this={installationEl}
+    class="mt-32 mb-12 font-medium text-3xl sm:text-4xl md:text-center scroll-mt-16"
+  >
+    Installation
+  </h2>
 
   <section class="installation-section">
-    <h3 class="text-xl sm:text-lg">macOS / Linux</h3>
-    <div class="text-sm text-zinc-400 pt-2 md:text-base md:pt-0.5">
+    <h3 class="text-xl sm:text-lg">
+      <DownloadIcon size="20" class="text-zinc-400 inline-block mr-1 mb-0.5" />
+      macOS / Linux
+    </h3>
+    <div class="text-sm text-zinc-400 md:text-base md:pt-0.5">
       <p class="mb-3">Run the following in your terminal:</p>
       <CopyableCode value="curl -sSf https://sshx.io/get | sh" />
 
@@ -194,8 +201,11 @@
   </section>
 
   <section class="installation-section">
-    <h3 class="text-xl sm:text-lg">Windows</h3>
-    <div class="text-sm text-zinc-400 pt-2 md:text-base md:pt-0.5">
+    <h3 class="text-xl sm:text-lg">
+      <DownloadIcon size="20" class="text-zinc-400 inline-block mr-1 mb-0.5" />
+      Windows
+    </h3>
+    <div class="text-sm text-zinc-400 md:text-base md:pt-0.5">
       <p class="mb-3">Download the executable for your platform.</p>
 
       <div class="flex flex-wrap gap-2">
@@ -216,22 +226,28 @@
   </section>
 
   <section class="installation-section">
-    <h3 class="text-xl sm:text-lg">Compile from source</h3>
-    <div class="text-sm text-zinc-400 pt-2 md:text-base md:pt-0.5">
+    <h3 class="text-xl sm:text-lg">
+      <PackageIcon size="20" class="text-zinc-400 inline-block mr-1 mb-0.5" />
+      Build from source
+    </h3>
+    <div class="text-sm text-zinc-400 md:text-base md:pt-0.5">
       <p class="mb-3">
         Ensure you have up-to-date versions of Rust and protoc. Compile sshx and
-        add it to your system path.
+        add it to the system path.
       </p>
       <CopyableCode value="cargo install sshx" />
     </div>
   </section>
 
   <section class="installation-section">
-    <h3 class="text-xl sm:text-lg">GitHub Actions</h3>
-    <div class="text-sm text-zinc-400 pt-2 md:text-base md:pt-0.5">
+    <h3 class="text-xl sm:text-lg">
+      <GitBranchIcon size="20" class="text-zinc-400 inline-block mr-1 mb-0.5" />
+      GitHub Actions
+    </h3>
+    <div class="text-sm text-zinc-400 md:text-base md:pt-0.5">
       <p class="mb-3">
-        On GitHub Actions or other CI providers, use the following command. This
-        pauses the workflow and starts a collaborative session.
+        On GitHub Actions or other CI providers, run this command. It pauses the
+        workflow and starts a collaborative session.
       </p>
       <CopyableCode value="curl -sSf https://sshx.io/get | sh -s run" />
     </div>
@@ -258,19 +274,6 @@
 </main>
 
 <style lang="postcss">
-  main {
-    @apply text-zinc-100;
-  }
-
-  h1 {
-    @apply font-medium text-3xl sm:text-4xl md:text-5xl max-w-[26ch] py-2 mb-6 md:mb-0 sm:tracking-tight;
-    line-height: 1.15;
-  }
-
-  h2 {
-    @apply font-medium text-3xl sm:text-4xl md:text-center scroll-mt-16;
-  }
-
   b {
     @apply text-zinc-300 font-medium;
   }
@@ -327,7 +330,7 @@
   }
 
   .installation-section {
-    @apply grid sm:grid-cols-[200px,1fr] gap-x-10 gap-y-4 max-w-4xl mx-auto lg:border lg:rounded-lg lg:border-white/10 lg:hover:border-white/30 lg:p-6 transition-colors;
+    @apply grid sm:grid-cols-[200px,1fr] gap-x-10 gap-y-4 max-w-4xl mx-auto lg:border lg:rounded-lg lg:border-white/10 lg:p-6;
     @apply mb-16 lg:mb-8;
   }
 </style>

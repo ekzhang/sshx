@@ -58,7 +58,7 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
-      - run: cargo test
+      - run: cargo test -p sshx
 
   web:
     name: Web lint, check, and build

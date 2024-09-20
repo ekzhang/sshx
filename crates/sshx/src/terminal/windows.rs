@@ -40,9 +40,6 @@ pub struct Terminal {
     winsize: (u16, u16),
 }
 
-unsafe impl Send for Terminal {}
-unsafe impl Sync for Terminal {}
-
 impl Terminal {
     /// Create a new terminal, with attached PTY.
     #[instrument]
@@ -55,10 +52,8 @@ impl Terminal {
         command.env("TERM_PROGRAM", "sshx");
         command.env_remove("TERM_PROGRAM_VERSION");
 
-        // Note: This may briefly block the event loop while the process is being
-        // spawned. I don't have a good alternative for this though, since the Process
-        // has WinAPI wrapper types that are `!Send`.
-        let mut child = conpty::Process::spawn(command)?;
+        let mut child =
+            tokio::task::spawn_blocking(move || conpty::Process::spawn(command)).await??;
         let reader = File::from_std(child.output()?.into());
         let writer = File::from_std(child.input()?.into());
 

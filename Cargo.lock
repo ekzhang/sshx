@@ -434,7 +434,7 @@ dependencies = [
 [[package]]
 name = "conpty"
 version = "0.6.0"
-source = "git+https://github.com/zhiburt/conpty?branch=master#28633878aae06b348111e4991c779ba9bff3a704"
+source = "git+https://github.com/zhiburt/conpty?branch=master#e743f93f1bd4cbc4626c20c0d33d6ecd485821d7"
 dependencies = [
  "windows",
 ]

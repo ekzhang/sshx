@@ -179,7 +179,7 @@
           >macOS x86-64 (Intel)</DownloadLink
         >
       </div>
-      <div class="flex flex-wrap gap-2">
+      <div class="flex flex-wrap gap-2 mb-2">
         <DownloadLink
           href="https://sshx.s3.amazonaws.com/sshx-aarch64-unknown-linux-musl.tar.gz"
           >Linux ARM64</DownloadLink
@@ -195,6 +195,12 @@
         <DownloadLink
           href="https://sshx.s3.amazonaws.com/sshx-armv7-unknown-linux-musleabihf.tar.gz"
           >Linux ARMv7</DownloadLink
+        >
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <DownloadLink
+          href="https://sshx.s3.amazonaws.com/sshx-x86_64-unknown-freebsd.tar.gz"
+          >FreeBSD x86-64</DownloadLink
         >
       </div>
     </div>
@@ -246,8 +252,8 @@
     </h3>
     <div class="text-sm text-zinc-400 md:text-base md:pt-0.5">
       <p class="mb-3">
-        On GitHub Actions or other CI providers, run this command. It pauses the
-        workflow and starts a collaborative session.
+        On GitHub Actions or other CI providers, run this command. It pauses
+        your workflow and starts a collaborative session.
       </p>
       <CopyableCode value="curl -sSf https://sshx.io/get | sh -s run" />
     </div>
@@ -330,7 +336,7 @@
   }
 
   .installation-section {
-    @apply grid sm:grid-cols-[200px,1fr] gap-x-10 gap-y-4 max-w-4xl mx-auto lg:border lg:rounded-lg lg:border-white/10 lg:p-6;
+    @apply grid sm:grid-cols-[200px,1fr] gap-x-10 gap-y-4 max-w-4xl mx-auto sm:border-t sm:border-white/10 sm:py-6 lg:px-2;
     @apply mb-16 lg:mb-8;
   }
 </style>

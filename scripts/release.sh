@@ -35,6 +35,9 @@ cargo build --release --target x86_64-apple-darwin
 # aarch64-apple-darwin: for macOS on Apple Silicon
 cargo build --release --target aarch64-apple-darwin
 
+# x86_64-unknown-freebsd: for FreeBSD
+cross build --release --target x86_64-unknown-freebsd
+
 # *-pc-windows-msvc: for Windows, requires cargo-xwin
 cargo xwin build -p sshx --release --target x86_64-pc-windows-msvc
 cargo xwin build -p sshx --release --target i686-pc-windows-msvc
@@ -48,6 +51,7 @@ targets=(
   armv7-unknown-linux-musleabihf
   x86_64-apple-darwin
   aarch64-apple-darwin
+  x86_64-unknown-freebsd
   x86_64-pc-windows-msvc
   i686-pc-windows-msvc
   aarch64-pc-windows-msvc

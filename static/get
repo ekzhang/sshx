@@ -14,6 +14,7 @@ set +e
 case "$(uname -s)" in
   Linux*) suffix="-unknown-linux-musl";;
   Darwin*) suffix="-apple-darwin";;
+  FreeBSD*) suffix="-unknown-freebsd";;
   *) echo "Unsupported OS $(uname -s)"; exit 1;;
 esac
 

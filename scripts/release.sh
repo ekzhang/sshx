@@ -39,9 +39,10 @@ cargo build --release --target aarch64-apple-darwin
 cross build --release --target x86_64-unknown-freebsd
 
 # *-pc-windows-msvc: for Windows, requires cargo-xwin
-cargo xwin build -p sshx --release --target x86_64-pc-windows-msvc
-cargo xwin build -p sshx --release --target i686-pc-windows-msvc
-cargo xwin build -p sshx --release --target aarch64-pc-windows-msvc
+XWIN_ARCH=x86,x86_64,aarch64 cargo xwin build -p sshx --release --target x86_64-pc-windows-msvc
+XWIN_ARCH=x86,x86_64,aarch64 cargo xwin build -p sshx --release --target i686-pc-windows-msvc
+# Does not work, see https://github.com/rust-cross/cargo-xwin/issues/76
+# XWIN_ARCH=x86,x86_64,aarch64 cargo xwin build -p sshx --release --target aarch64-pc-windows-msvc
 
 temp=$(mktemp)
 targets=(
@@ -68,7 +69,7 @@ do
     aws s3 cp $temp s3://sshx/sshx-server-$target.tar.gz
   else
     echo "compress: target/$target/release/sshx.exe"
-    zip -j $temp target/$target/release/sshx.exe
+    rm $temp && zip -j $temp target/$target/release/sshx.exe
     aws s3 cp $temp s3://sshx/sshx-$target.zip
   fi
 done

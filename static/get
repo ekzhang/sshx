@@ -21,10 +21,6 @@ case "$(uname -m)" in
   *) echo "Unsupported arch $(uname -m)"; exit 1;;
 esac
 
-if [ $suffix -eq "-unknown-freebsd" && $arch -eq "aarch64" ]; then
-  echo "Unsupported arch $(uname -m) in $(uname -s)"
-fi
-
 url="https://s3.amazonaws.com/sshx/sshx-${arch}${suffix}.tar.gz"
 temp=$(mktemp)
 

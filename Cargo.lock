@@ -1770,7 +1770,7 @@ checksum = "6980e8d7511241f8acf4aebddbb1ff938df5eebe98691418c4468d0b72a96a67"
 
 [[package]]
 name = "sshx"
-version = "0.2.4"
+version = "0.2.5"
 dependencies = [
  "aes",
  "ansi_term",
@@ -1795,7 +1795,7 @@ dependencies = [
 
 [[package]]
 name = "sshx-core"
-version = "0.2.4"
+version = "0.2.5"
 dependencies = [
  "prost",
  "rand",
@@ -1806,7 +1806,7 @@ dependencies = [
 
 [[package]]
 name = "sshx-server"
-version = "0.2.4"
+version = "0.2.5"
 dependencies = [
  "anyhow",
  "async-channel",

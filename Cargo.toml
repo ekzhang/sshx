@@ -3,7 +3,7 @@ members = ["crates/*"]
 resolver = "2"
 
 [workspace.package]
-version = "0.2.4"
+version = "0.2.5"
 authors = ["Eric Zhang <ekzhang1@gmail.com>"]
 license = "MIT"
 description = "A secure web-based, collaborative terminal."
@@ -17,7 +17,7 @@ clap = { version = "4.5.17", features = ["derive", "env"] }
 prost = "0.12.6"
 rand = "0.8.5"
 serde = { version = "1.0.188", features = ["derive", "rc"] }
-sshx-core = { version = "0.2.4", path = "crates/sshx-core" }
+sshx-core = { version = "0.2.5", path = "crates/sshx-core" }
 tokio = { version = "1.40.0", features = ["full"] }
 tokio-stream = { version = "0.1.14", features = ["sync"] }
 tonic = { version = "0.11.0", features = ["tls", "tls-webpki-roots"] }

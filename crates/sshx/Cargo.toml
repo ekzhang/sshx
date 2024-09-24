@@ -32,4 +32,4 @@ close_fds = "0.3.2"
 nix = { version = "0.27.1", features = ["ioctl", "process", "signal", "term"] }
 
 [target.'cfg(windows)'.dependencies]
-conpty = { git = "https://github.com/zhiburt/conpty", branch = "master" }
+conpty = "0.7.0"

@@ -15,6 +15,9 @@ case "$(uname -s)" in
   Linux*) suffix="-unknown-linux-musl";;
   Darwin*) suffix="-apple-darwin";;
   FreeBSD*) suffix="-unknown-freebsd";;
+  MINGW*|MSYS*|CYGWIN*)
+    echo "You are on Windows. Please visit sshx.io to download the executable.";
+    exit 1;;
   *) echo "Unsupported OS $(uname -s)"; exit 1;;
 esac
 

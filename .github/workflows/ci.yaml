@@ -14,13 +14,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: nightly
-          components: rustfmt
+      - run: rustup toolchain install nightly --profile minimal -c rustfmt
 
       - run: cargo +nightly fmt -- --check
 
@@ -29,13 +25,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - uses: arduino/setup-protoc@v2
 
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
+      - run: rustup toolchain install stable
 
       - uses: Swatinem/rust-cache@v2
 
@@ -43,14 +37,29 @@ jobs:
 
       - run: cargo clippy --all-targets -- -D warnings
 
+  windows_test:
+    name: Client test (Windows)
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: arduino/setup-protoc@v2
+
+      - run: rustup toolchain install stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - run: cargo test -p sshx
+
   web:
     name: Web lint, check, and build
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
           node-version: "18"
 
@@ -72,7 +81,7 @@ jobs:
       cancel-in-progress: true
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - uses: superfly/flyctl-actions/setup-flyctl@v1
 

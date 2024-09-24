@@ -25,7 +25,10 @@ curl -sSf https://sshx.io/get | sh
 ```
 
 Supports Linux and MacOS on x86_64 and ARM64 architectures, as well as embedded
-ARMv6 and ARMv7-A systems. The precompiled Linux binaries are statically linked.
+ARMv6 and ARMv7-A systems. The Linux binaries are statically linked.
+
+For Windows, there are binaries for x86_64 and x86, linked to MSVC for maximum
+compatibility.
 
 If you just want to try it out without installing, use:
 

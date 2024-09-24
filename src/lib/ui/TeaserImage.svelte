@@ -10,7 +10,7 @@
   } from "svelte-feather-icons";
 </script>
 
-<div class="rounded-lg border border-white/20 overflow-hidden">
+<div class="rounded-lg border border-white/10 overflow-hidden">
   <div class="flex bg-zinc-900 items-end">
     <div class="px-4 py-3 flex gap-1.5">
       <div class="w-2.5 h-2.5 rounded-full bg-red-500" />

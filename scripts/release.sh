@@ -35,7 +35,14 @@ cargo build --release --target x86_64-apple-darwin
 # aarch64-apple-darwin: for macOS on Apple Silicon
 cargo build --release --target aarch64-apple-darwin
 
+# x86_64-unknown-freebsd: for FreeBSD
 cross build --release --target x86_64-unknown-freebsd
+
+# *-pc-windows-msvc: for Windows, requires cargo-xwin
+XWIN_ARCH=x86,x86_64,aarch64 cargo xwin build -p sshx --release --target x86_64-pc-windows-msvc
+XWIN_ARCH=x86,x86_64,aarch64 cargo xwin build -p sshx --release --target i686-pc-windows-msvc
+# Does not work, see https://github.com/rust-cross/cargo-xwin/issues/76
+# XWIN_ARCH=x86,x86_64,aarch64 cargo xwin build -p sshx --release --target aarch64-pc-windows-msvc
 
 temp=$(mktemp)
 targets=(
@@ -46,14 +53,23 @@ targets=(
   x86_64-apple-darwin
   aarch64-apple-darwin
   x86_64-unknown-freebsd
+  x86_64-pc-windows-msvc
+  i686-pc-windows-msvc
+  # aarch64-pc-windows-msvc
 )
 for target in "${targets[@]}"
 do
-  echo "compress: target/$target/release/sshx"
-  tar czf $temp -C target/$target/release sshx
-  aws s3 cp $temp s3://sshx/sshx-$target.tar.gz
+  if [[ ! $target == *"windows"* ]]; then
+    echo "compress: target/$target/release/sshx"
+    tar czf $temp -C target/$target/release sshx
+    aws s3 cp $temp s3://sshx/sshx-$target.tar.gz
 
-  echo "compress: target/$target/release/sshx-server"
-  tar czf $temp -C target/$target/release sshx-server
-  aws s3 cp $temp s3://sshx/sshx-server-$target.tar.gz
+    echo "compress: target/$target/release/sshx-server"
+    tar czf $temp -C target/$target/release sshx-server
+    aws s3 cp $temp s3://sshx/sshx-server-$target.tar.gz
+  else
+    echo "compress: target/$target/release/sshx.exe"
+    rm $temp && zip -j $temp target/$target/release/sshx.exe
+    aws s3 cp $temp s3://sshx/sshx-$target.zip
+  fi
 done

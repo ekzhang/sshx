@@ -14,7 +14,7 @@
   import logotypeDark from "$lib/assets/logotype-dark.svg";
   import landingGraphic from "$lib/assets/landing-graphic.svg";
   import landingBackground from "$lib/assets/landing-background.svg";
-  import TeaserImage from "$lib/ui/TeaserImage.svelte";
+  import TeaserVideo from "$lib/ui/TeaserVideo.svelte";
   import CopyableCode from "$lib/ui/CopyableCode.svelte";
   import DownloadLink from "$lib/ui/DownloadLink.svelte";
 
@@ -149,7 +149,7 @@
   </div>
 
   <div class="my-48 hidden md:block">
-    <TeaserImage />
+    <TeaserVideo />
   </div>
 
   <h2

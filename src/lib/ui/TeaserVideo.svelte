@@ -41,10 +41,16 @@
       <MoreVerticalIcon class="w-4 h-4 text-zinc-300" />
     </div>
   </div>
-  <video playsinline muted autoplay loop controls>
+  <video playsinline muted autoplay loop controls width={2476} height={1534}>
+    <!-- HEVC (Safari) -->
     <source
-      src="https://sshx.s3.amazonaws.com/media/teaser-video.mov"
-      type="video/mp4"
+      src="https://sshx.s3.amazonaws.com/media/teaser-video.mp4"
+      type={`video/mp4; codecs="hvc1"`}
+    />
+    <!-- VP9 (Chrome and other browsers) -->
+    <source
+      src="https://sshx.s3.amazonaws.com/media/teaser-video.webm"
+      type="video/webm"
     />
     <track kind="captions" />
   </video>

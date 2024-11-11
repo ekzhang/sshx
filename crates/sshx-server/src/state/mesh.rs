@@ -12,7 +12,7 @@ use tracing::error;
 use crate::session::Session;
 
 /// Interval for syncing the latest session state into persistent storage.
-const STORAGE_SYNC_INTERVAL: Duration = Duration::from_secs(10);
+const STORAGE_SYNC_INTERVAL: Duration = Duration::from_secs(20);
 
 /// Length of time a key lasts in Redis before it is expired.
 const STORAGE_EXPIRY: Duration = Duration::from_secs(300);

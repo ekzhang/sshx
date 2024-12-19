@@ -120,7 +120,8 @@ impl Controller {
         self.write_url.as_ref()
     }
 
-    /// Returns whether this session has a separate write URL (reader mode enabled)
+    /// Returns whether this session has a separate write URL (reader mode
+    /// enabled)
     pub fn has_write_url(&self) -> bool {
         self.write_url.is_some()
     }

@@ -27,7 +27,8 @@ struct Args {
     #[clap(long)]
     name: Option<String>,
 
-    /// Enable read-only access mode - generates separate URLs for viewers and editors.
+    /// Enable read-only access mode - generates separate URLs for viewers and
+    /// editors.
     #[clap(long)]
     enable_readers: bool,
 }

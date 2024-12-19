@@ -73,7 +73,8 @@ pub enum WsServer {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub enum WsClient {
-    /// Authenticate the user's encryption key by zeros block and write password (if provided).
+    /// Authenticate the user's encryption key by zeros block and write password
+    /// (if provided).
     Authenticate(Bytes, Option<Bytes>),
     /// Set the name of the current user.
     SetName(String),

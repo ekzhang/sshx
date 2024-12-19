@@ -107,7 +107,8 @@ async fn handle_socket(socket: &mut WebSocket, session: Arc<Session>) -> Result<
                 // No password provided and none stored, it means users can write (Default)
                 (_, None) => true,
 
-                // Both password provided and stored, validate they match using constant-time comparison.
+                // Both password provided and stored, validate they match using constant-time
+                // comparison.
                 (Some(provided_password), Some(stored_password)) => {
                     if !constant_time_eq(&provided_password, stored_password.as_bytes()) {
                         send(socket, WsServer::InvalidAuth()).await?;

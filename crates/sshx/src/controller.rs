@@ -67,7 +67,7 @@ impl Controller {
             origin: origin.into(),
             encrypted_zeros: encrypt.zeros().into(),
             name: name.into(),
-            enable_readers: enable_readers.clone(),
+            enable_readers: *enable_readers,
         };
         let mut resp = client.open(req).await?.into_inner();
         resp.url = resp.url + "#" + &encryption_key;

@@ -105,6 +105,7 @@
   const chunknums: Record<number, number> = {};
   const locks: Record<number, any> = {};
   let userId = 0;
+  let hasWriteAccess: boolean | null = null;
   let users: [number, WsUser][] = [];
   let shells: [number, WsWinsize][] = [];
   let subscriptions = new Set<number>();
@@ -127,7 +128,9 @@
 
   onMount(async () => {
     // The page hash sets the end-to-end encryption key.
-    const key = window.location.hash?.slice(1) ?? "";
+    const key = window.location.hash?.slice(1).split(",")[0] ?? "";
+    const writePassword = window.location.hash?.slice(1).split(",")[1] ?? "";
+    
     encrypt = await Encrypt.new(key);
     const encryptedZeros = await encrypt.zeros();
 
@@ -161,6 +164,7 @@
             }
           });
         } else if (message.users) {
+          hasWriteAccess = message.users.some(([uid, user]) => uid === userId && user.canWrite);
           users = message.users;
         } else if (message.userDiff) {
           const [id, update] = message.userDiff;
@@ -198,7 +202,10 @@
       },
 
       onConnect() {
-        srocket?.send({ authenticate: encryptedZeros });
+
+        const writePasswordBytes = writePassword ? new TextEncoder().encode(writePassword) : null;
+
+        srocket?.send({ authenticate: [encryptedZeros, writePasswordBytes] });
         if ($settings.name) {
           srocket?.send({ setName: $settings.name });
         }
@@ -253,6 +260,14 @@
   let counter = 0n;
 
   async function handleCreate() {
+
+    if (!hasWriteAccess) {
+      makeToast({
+        kind: "info",
+        message: "You are in read-only mode and cannot create new terminals.",
+      });
+      return;
+    }
     if (shells.length >= 14) {
       makeToast({
         kind: "error",
@@ -385,6 +400,7 @@
     <Toolbar
       {connected}
       {newMessages}
+      hasWriteAccess={hasWriteAccess}
       on:create={handleCreate}
       on:chat={() => {
         showChat = !showChat;
@@ -441,6 +457,22 @@
     style:background-position="{-zoom * center[0]}px {-zoom * center[1]}px"
   />
 
+  {#if userId && !hasWriteAccess}
+    <div class="w-fit flex justify-center pointer-events-none z-10 ">
+      <div 
+        class="flex items-center gap-2 px-3 py-1.5 bg-blue-600/60 backdrop-blur-sm 
+              text-xs font-medium text-white rounded-md border border-blue-800"
+        style="box-shadow: 0 0 0 1px rgba(30, 58, 138, 0.2), 0 2px 6px rgba(30, 58, 138, 0.3)"
+      >
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+        </svg>
+        <span>Read Only</span>
+      </div>
+    </div>
+  {/if}
+
   <div class="py-2">
     {#if exitReason !== null}
       <div class="text-red-400">{exitReason}</div>
@@ -472,9 +504,10 @@
           cols={ws.cols}
           bind:write={writers[id]}
           bind:termEl={termElements[id]}
-          on:data={({ detail: data }) => handleInput(id, data)}
+          on:data={({ detail: data }) => hasWriteAccess && handleInput(id, data)}
           on:close={() => srocket?.send({ close: id })}
           on:shrink={() => {
+            if (!hasWriteAccess) return;
             const rows = Math.max(ws.rows - 4, TERM_MIN_ROWS);
             const cols = Math.max(ws.cols - 10, TERM_MIN_COLS);
             if (rows !== ws.rows || cols !== ws.cols) {
@@ -482,15 +515,18 @@
             }
           }}
           on:expand={() => {
+            if (!hasWriteAccess) return;
             const rows = ws.rows + 4;
             const cols = ws.cols + 10;
             srocket?.send({ move: [id, { ...ws, rows, cols }] });
           }}
           on:bringToFront={() => {
+            if (!hasWriteAccess) return;
             showNetworkInfo = false;
             srocket?.send({ move: [id, null] });
           }}
           on:startMove={({ detail: event }) => {
+            if (!hasWriteAccess) return;
             const [x, y] = normalizePosition(event);
             moving = id;
             movingOrigin = [x - ws.x, y - ws.y];
@@ -498,6 +534,7 @@
             movingIsDone = false;
           }}
           on:focus={() => {
+            if (!hasWriteAccess) return;
             focused = [...focused, id];
           }}
           on:blur={() => {

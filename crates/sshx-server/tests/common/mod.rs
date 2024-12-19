@@ -113,7 +113,7 @@ impl ClientSocket {
 
     async fn authenticate(&mut self) {
         let encrypted_zeros = self.encrypt.zeros().into();
-        self.send(WsClient::Authenticate(encrypted_zeros)).await;
+        self.send(WsClient::Authenticate(encrypted_zeros, None)).await;
     }
 
     pub async fn send(&mut self, msg: WsClient) {

@@ -50,12 +50,20 @@ impl SshxService for GrpcServer {
         }
         let name = rand_alphanumeric(10);
         info!(%name, "creating new session");
+
+        let write_password = if request.enable_readers {
+            Some(rand_alphanumeric(8))
+        } else {
+            None
+        };
+
         match self.0.lookup(&name) {
             Some(_) => return Err(Status::already_exists("generated duplicate ID")),
             None => {
                 let metadata = Metadata {
                     encrypted_zeros: request.encrypted_zeros,
                     name: request.name,
+                    write_password: write_password.clone(),
                 };
                 self.0.insert(&name, Arc::new(Session::new(metadata)));
             }
@@ -66,6 +74,7 @@ impl SshxService for GrpcServer {
             name,
             token: BASE64_STANDARD.encode(token.into_bytes()),
             url,
+            write_password: write_password.unwrap_or_default()
         }))
     }
 

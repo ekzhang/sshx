@@ -35,6 +35,7 @@ pub struct Controller {
     name: String,
     token: String,
     url: String,
+    write_url: Option<String>,
 
     /// Channels with backpressure routing messages to each shell task.
     shells_tx: HashMap<Sid, mpsc::Sender<ShellData>>,
@@ -46,7 +47,7 @@ pub struct Controller {
 
 impl Controller {
     /// Construct a new controller, connecting to the remote server.
-    pub async fn new(origin: &str, name: &str, runner: Runner) -> Result<Self> {
+    pub async fn new(origin: &str, name: &str, runner: Runner, enable_readers: &bool) -> Result<Self> {
         debug!(%origin, "connecting to server");
         let encryption_key = rand_alphanumeric(14); // 83.3 bits of entropy
 
@@ -61,9 +62,19 @@ impl Controller {
             origin: origin.into(),
             encrypted_zeros: encrypt.zeros().into(),
             name: name.into(),
+            enable_readers: enable_readers.clone(),
         };
         let mut resp = client.open(req).await?.into_inner();
         resp.url = resp.url + "#" + &encryption_key;
+
+        let write_password = if resp.write_password.is_empty() {
+            None
+        } else {
+            Some(resp.write_password.clone())
+        };
+
+        let write_url = write_password.map(|wp| resp.url.clone() + "," + &wp);
+
 
         let (output_tx, output_rx) = mpsc::channel(64);
         Ok(Self {
@@ -74,6 +85,7 @@ impl Controller {
             name: resp.name,
             token: resp.token,
             url: resp.url,
+            write_url,
             shells_tx: HashMap::new(),
             output_tx,
             output_rx,
@@ -97,6 +109,16 @@ impl Controller {
     /// Returns the URL of the session.
     pub fn url(&self) -> &str {
         &self.url
+    }
+
+    /// Returns the write URL of the session, if it exists.
+    pub fn write_url(&self) -> Option<&String> {
+        self.write_url.as_ref()
+    }
+
+   /// Returns whether this session has a separate write URL (reader mode enabled)
+    pub fn has_write_url(&self) -> bool {
+        self.write_url.is_some()
     }
 
     /// Returns the encryption key for this session, hidden from the server.

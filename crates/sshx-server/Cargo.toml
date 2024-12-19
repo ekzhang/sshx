@@ -41,6 +41,7 @@ tower-http = { version = "0.4.4", features = ["fs", "redirect", "trace"] }
 tracing.workspace = true
 tracing-subscriber.workspace = true
 zstd = "0.12.4"
+constant_time_eq = "0.3.0"
 
 [dev-dependencies]
 reqwest = { version = "0.11.20", default-features = false, features = ["rustls-tls"] }

@@ -14,6 +14,7 @@ export type WsUser = {
   name: string;
   cursor: [number, number] | null;
   focus: number | null;
+  canWrite: boolean;
 };
 
 /** Server message type, see the Rust version. */
@@ -32,7 +33,7 @@ export type WsServer = {
 
 /** Client message type, see the Rust version. */
 export type WsClient = {
-  authenticate?: Uint8Array;
+  authenticate?: [Uint8Array, Uint8Array | null];
   setName?: string;
   setCursor?: [number, number] | null;
   setFocus?: number | null;

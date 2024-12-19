@@ -62,11 +62,14 @@ export class Srocket<T, U> {
   /** Queue a message to send to the server, with "at-most-once" semantics. */
   send(message: U) {
     const data = encode(message);
+
+    // Convert buffer to Uint8Array
+    const uint8Data = new Uint8Array(data);
     if (this.#connected && this.#ws) {
       this.#ws.send(data);
     } else {
       if (this.#buffer.length < BUFFER_SIZE) {
-        this.#buffer.push(data);
+        this.#buffer.push(uint8Data);
       }
     }
   }

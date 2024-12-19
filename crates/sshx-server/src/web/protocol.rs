@@ -39,6 +39,8 @@ pub struct WsUser {
     pub cursor: Option<(i32, i32)>,
     /// Currently focused terminal window ID.
     pub focus: Option<Sid>,
+    /// Whether the user has write permissions in the session.
+    pub can_write: bool,
 }
 
 /// A real-time message sent from the server over WebSocket.
@@ -71,8 +73,9 @@ pub enum WsServer {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub enum WsClient {
-    /// Authenticate the user's encryption key by zeros block.
-    Authenticate(Bytes),
+    /// Authenticate the user's encryption key by zeros block and write password
+    /// (if provided).
+    Authenticate(Bytes, Option<Bytes>),
     /// Set the name of the current user.
     SetName(String),
     /// Send real-time information about the user's cursor.

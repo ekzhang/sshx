@@ -130,7 +130,7 @@
     // The page hash sets the end-to-end encryption key.
     const key = window.location.hash?.slice(1).split(",")[0] ?? "";
     const writePassword = window.location.hash?.slice(1).split(",")[1] ?? "";
-    
+
     encrypt = await Encrypt.new(key);
     const encryptedZeros = await encrypt.zeros();
 
@@ -164,7 +164,9 @@
             }
           });
         } else if (message.users) {
-          hasWriteAccess = message.users.some(([uid, user]) => uid === userId && user.canWrite);
+          hasWriteAccess = message.users.some(
+            ([uid, user]) => uid === userId && user.canWrite,
+          );
           users = message.users;
         } else if (message.userDiff) {
           const [id, update] = message.userDiff;
@@ -202,8 +204,9 @@
       },
 
       onConnect() {
-
-        const writePasswordBytes = writePassword ? new TextEncoder().encode(writePassword) : null;
+        const writePasswordBytes = writePassword
+          ? new TextEncoder().encode(writePassword)
+          : null;
 
         srocket?.send({ authenticate: [encryptedZeros, writePasswordBytes] });
         if ($settings.name) {
@@ -260,7 +263,6 @@
   let counter = 0n;
 
   async function handleCreate() {
-
     if (!hasWriteAccess) {
       makeToast({
         kind: "info",
@@ -400,7 +402,7 @@
     <Toolbar
       {connected}
       {newMessages}
-      hasWriteAccess={hasWriteAccess}
+      {hasWriteAccess}
       on:create={handleCreate}
       on:chat={() => {
         showChat = !showChat;
@@ -458,15 +460,23 @@
   />
 
   {#if userId && !hasWriteAccess}
-    <div class="w-fit flex justify-center pointer-events-none z-10 ">
-      <div 
-        class="flex items-center gap-2 px-3 py-1.5 bg-blue-600/60 backdrop-blur-sm 
+    <div class="w-fit flex justify-center pointer-events-none z-10">
+      <div
+        class="flex items-center gap-2 px-3 py-1.5 bg-blue-600/60 backdrop-blur-sm
               text-xs font-medium text-white rounded-md border border-blue-800"
         style="box-shadow: 0 0 0 1px rgba(30, 58, 138, 0.2), 0 2px 6px rgba(30, 58, 138, 0.3)"
       >
-        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+        <svg
+          class="w-4 h-4"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
         </svg>
         <span>Read Only</span>
       </div>
@@ -504,7 +514,8 @@
           cols={ws.cols}
           bind:write={writers[id]}
           bind:termEl={termElements[id]}
-          on:data={({ detail: data }) => hasWriteAccess && handleInput(id, data)}
+          on:data={({ detail: data }) =>
+            hasWriteAccess && handleInput(id, data)}
           on:close={() => srocket?.send({ close: id })}
           on:shrink={() => {
             if (!hasWriteAccess) return;

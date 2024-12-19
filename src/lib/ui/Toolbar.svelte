@@ -35,7 +35,11 @@
         class="icon-button"
         on:click={() => dispatch("create")}
         disabled={!connected || !hasWriteAccess}
-        title={!connected ? "Not connected" : !hasWriteAccess ? "No write access" : "Create new terminal"}
+        title={!connected
+          ? "Not connected"
+          : !hasWriteAccess
+          ? "No write access"
+          : "Create new terminal"}
       >
         <PlusCircleIcon strokeWidth={1.5} class="p-0.5" />
       </button>

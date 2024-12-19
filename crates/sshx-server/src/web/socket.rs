@@ -114,10 +114,10 @@ async fn handle_socket(socket: &mut WebSocket, session: Arc<Session>) -> Result<
                         return Ok(());
                     }
                     true
-                },
+                }
 
                 // Password stored but not provided, user can't write (Read-Only)
-                (None, Some(_)) => false
+                (None, Some(_)) => false,
             };
 
             // Create user and return both guard and can_write status
@@ -125,7 +125,7 @@ async fn handle_socket(socket: &mut WebSocket, session: Arc<Session>) -> Result<
             session.update_user(user_id, |user| {
                 user.can_write = can_write;
             })?;
-            
+
             (user_guard, can_write)
         }
         _ => {
@@ -169,7 +169,7 @@ async fn handle_socket(socket: &mut WebSocket, session: Arc<Session>) -> Result<
         };
 
         match msg {
-            WsClient::Authenticate(_,_) => {}
+            WsClient::Authenticate(_, _) => {}
             WsClient::SetName(name) => {
                 if !name.is_empty() {
                     session.update_user(user_id, |user| user.name = name)?;

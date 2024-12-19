@@ -47,7 +47,12 @@ pub struct Controller {
 
 impl Controller {
     /// Construct a new controller, connecting to the remote server.
-    pub async fn new(origin: &str, name: &str, runner: Runner, enable_readers: &bool) -> Result<Self> {
+    pub async fn new(
+        origin: &str,
+        name: &str,
+        runner: Runner,
+        enable_readers: &bool,
+    ) -> Result<Self> {
         debug!(%origin, "connecting to server");
         let encryption_key = rand_alphanumeric(14); // 83.3 bits of entropy
 
@@ -74,7 +79,6 @@ impl Controller {
         };
 
         let write_url = write_password.map(|wp| resp.url.clone() + "," + &wp);
-
 
         let (output_tx, output_rx) = mpsc::channel(64);
         Ok(Self {
@@ -116,7 +120,7 @@ impl Controller {
         self.write_url.as_ref()
     }
 
-   /// Returns whether this session has a separate write URL (reader mode enabled)
+    /// Returns whether this session has a separate write URL (reader mode enabled)
     pub fn has_write_url(&self) -> bool {
         self.write_url.is_some()
     }

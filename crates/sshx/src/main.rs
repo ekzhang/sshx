@@ -50,13 +50,13 @@ fn print_greeting(shell: &str, controller: &Controller) {
             version = Green.paint(&version_str),
             arr = Green.paint("➜"),
             link_v = Cyan.underline().paint(controller.url()),
-            link_e = Cyan.underline().paint(controller.write_url().map(|s| s.as_str()).unwrap_or("")),
+            link_e = Cyan
+                .underline()
+                .paint(controller.write_url().map(|s| s.as_str()).unwrap_or("")),
             shell_v = Fixed(8).paint(shell),
         );
-
     } else {
-
-    println!(
+        println!(
             r#"
       {sshx} {version}
     

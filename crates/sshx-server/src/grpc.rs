@@ -74,7 +74,7 @@ impl SshxService for GrpcServer {
             name,
             token: BASE64_STANDARD.encode(token.into_bytes()),
             url,
-            write_password: write_password.unwrap_or_default()
+            write_password: write_password.unwrap_or_default(),
         }))
     }
 

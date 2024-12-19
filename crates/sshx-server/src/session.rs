@@ -33,7 +33,7 @@ pub struct Metadata {
 
     /// Name of the session (human-readable).
     pub name: String,
-    
+
     /// Password for write access to the session.
     pub write_password: Option<String>,
 }

@@ -43,9 +43,9 @@ fn print_greeting(shell: &str, controller: &Controller) {
             r#"
       {sshx} {version}
     
-      {arr}  Read-Only Link:  {link_v}
-      {arr}  Writable Link:  {link_e}
-      {arr}  Shell: {shell_v}
+      {arr}  Read-only link:  {link_v}
+      {arr}  Writable  link:  {link_e}
+      {arr}  Shell:           {shell_v}
     "#,
             sshx = Green.bold().paint("sshx"),
             version = Green.paint(&version_str),
@@ -92,7 +92,7 @@ async fn start(args: Args) -> Result<()> {
     });
 
     let runner = Runner::Shell(shell.clone());
-    let mut controller = Controller::new(&args.server, &name, runner, &args.enable_readers).await?;
+    let mut controller = Controller::new(&args.server, &name, runner, args.enable_readers).await?;
     if args.quiet {
         println!("{}", controller.url());
     } else {

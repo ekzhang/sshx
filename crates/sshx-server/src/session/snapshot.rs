@@ -62,7 +62,7 @@ impl Session {
             next_sid: ids.0 .0,
             next_uid: ids.1 .0,
             name: self.metadata().name.clone(),
-            write_password: self.metadata().write_password.clone().unwrap_or_default(),
+            encrypted_write_zeros: self.metadata().encrypted_write_zeros.clone(),
         };
         let data = message.encode_to_vec();
         ensure!(data.len() < MAX_SNAPSHOT_SIZE, "snapshot too large");
@@ -74,16 +74,10 @@ impl Session {
         let data = zstd::bulk::decompress(data, MAX_SNAPSHOT_SIZE)?;
         let message = SerializedSession::decode(&*data)?;
 
-        let write_password = if message.write_password.is_empty() {
-            None
-        } else {
-            Some(message.write_password)
-        };
-
         let metadata = Metadata {
             encrypted_zeros: message.encrypted_zeros,
             name: message.name,
-            write_password,
+            encrypted_write_zeros: message.encrypted_write_zeros,
         };
 
         let session = Self::new(metadata);

@@ -93,6 +93,7 @@
   }
 
   let encrypt: Encrypt;
+  let write_password_encrypt: Encrypt | null = null;
   let srocket: Srocket<WsServer, WsClient> | null = null;
 
   let connected = false;
@@ -129,10 +130,17 @@
   onMount(async () => {
     // The page hash sets the end-to-end encryption key.
     const key = window.location.hash?.slice(1).split(",")[0] ?? "";
-    const writePassword = window.location.hash?.slice(1).split(",")[1] ?? "";
+    const writePassword = window.location.hash?.slice(1).split(",")[1] ?? null;
 
     encrypt = await Encrypt.new(key);
     const encryptedZeros = await encrypt.zeros();
+
+    write_password_encrypt = writePassword
+      ? await Encrypt.new(writePassword)
+      : null;
+    const writeEncryptedZeros = write_password_encrypt
+      ? await write_password_encrypt.zeros()
+      : null;
 
     srocket = new Srocket<WsServer, WsClient>(`/api/s/${id}`, {
       onMessage(message) {
@@ -204,11 +212,7 @@
       },
 
       onConnect() {
-        const writePasswordBytes = writePassword
-          ? new TextEncoder().encode(writePassword)
-          : null;
-
-        srocket?.send({ authenticate: [encryptedZeros, writePasswordBytes] });
+        srocket?.send({ authenticate: [encryptedZeros, writeEncryptedZeros] });
         if ($settings.name) {
           srocket?.send({ setName: $settings.name });
         }
@@ -459,35 +463,37 @@
     style:background-position="{-zoom * center[0]}px {-zoom * center[1]}px"
   />
 
-  {#if userId && !hasWriteAccess}
-    <div class="w-fit flex justify-center pointer-events-none z-10">
-      <div
-        class="flex items-center gap-2 px-3 py-1.5 bg-blue-600/60 backdrop-blur-sm
-              text-xs font-medium text-white rounded-md border border-blue-800"
-        style="box-shadow: 0 0 0 1px rgba(30, 58, 138, 0.2), 0 2px 6px rgba(30, 58, 138, 0.3)"
-      >
-        <svg
-          class="w-4 h-4"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-        </svg>
-        <span>Read Only</span>
-      </div>
-    </div>
-  {/if}
-
   <div class="py-2">
     {#if exitReason !== null}
       <div class="text-red-400">{exitReason}</div>
     {:else if connected}
-      <div class="text-green-400">You are connected!</div>
+      <div class="flex">
+        <div class="text-green-400">You are connected!</div>
+        {#if userId && !hasWriteAccess}
+          <div
+            class="bg-yellow-900 text-yellow-200 px-1 py-0.5 rounded ml-3 inline-flex items-center gap-1"
+          >
+            <svg
+              class="w-3.5 h-3.5"
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              ><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle
+                cx="12"
+                cy="12"
+                r="3"
+              /></svg
+            >
+            <span class="text-xs">Read-only</span>
+          </div>
+        {/if}
+      </div>
     {:else}
       <div class="text-yellow-400">Connecting…</div>
     {/if}

@@ -8,10 +8,10 @@ use axum::extract::{
 };
 use axum::response::IntoResponse;
 use bytes::Bytes;
-use constant_time_eq::constant_time_eq;
 use futures_util::SinkExt;
 use sshx_core::proto::{server_update::ServerMessage, NewShell, TerminalInput, TerminalSize};
 use sshx_core::Sid;
+use subtle::ConstantTimeEq;
 use tokio::sync::mpsc;
 use tokio_stream::StreamExt;
 use tracing::{error, info_span, warn, Instrument};
@@ -98,19 +98,21 @@ async fn handle_socket(socket: &mut WebSocket, session: Arc<Session>) -> Result<
 
     let (user_guard, _) = match recv(socket).await? {
         Some(WsClient::Authenticate(bytes, write_password_bytes)) => {
-            if bytes != metadata.encrypted_zeros {
+            // `ct_eq` returns a `Choice`, and `unwrap_u8()` converts it to 1 (equal) or 0
+            // (not equal).
+            if bytes.ct_eq(metadata.encrypted_zeros.as_ref()).unwrap_u8() != 1 {
                 send(socket, WsServer::InvalidAuth()).await?;
                 return Ok(());
             }
 
-            let can_write = match (write_password_bytes, &metadata.write_password) {
+            let can_write = match (write_password_bytes, &metadata.encrypted_write_zeros) {
                 // No password provided and none stored, it means users can write (Default)
                 (_, None) => true,
 
                 // Both password provided and stored, validate they match using constant-time
                 // comparison.
                 (Some(provided_password), Some(stored_password)) => {
-                    if !constant_time_eq(&provided_password, stored_password.as_bytes()) {
+                    if provided_password.ct_eq(stored_password).unwrap_u8() != 1 {
                         send(socket, WsServer::InvalidAuth()).await?;
                         return Ok(());
                     }
@@ -122,10 +124,7 @@ async fn handle_socket(socket: &mut WebSocket, session: Arc<Session>) -> Result<
             };
 
             // Create user and return both guard and can_write status
-            let user_guard = session.user_scope(user_id)?;
-            session.update_user(user_id, |user| {
-                user.can_write = can_write;
-            })?;
+            let user_guard = session.user_scope(user_id, can_write)?;
 
             (user_guard, can_write)
         }

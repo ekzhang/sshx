@@ -35,7 +35,7 @@ pub struct Metadata {
     pub name: String,
 
     /// Password for write access to the session.
-    pub write_password: Option<String>,
+    pub encrypted_write_zeros: Option<Bytes>,
 }
 
 /// In-memory state for a single sshx session.
@@ -310,7 +310,7 @@ impl Session {
     }
 
     /// Add a new user, and return a guard that removes the user when dropped.
-    pub fn user_scope(&self, id: Uid) -> Result<impl Drop + '_> {
+    pub fn user_scope(&self, id: Uid, can_write: bool) -> Result<impl Drop + '_> {
         use std::collections::hash_map::Entry::*;
 
         #[must_use]
@@ -328,7 +328,7 @@ impl Session {
                     name: format!("User {id}"),
                     cursor: None,
                     focus: None,
-                    can_write: false,
+                    can_write,
                 };
                 v.insert(user.clone());
                 self.broadcast.send(WsServer::UserDiff(id, Some(user))).ok();

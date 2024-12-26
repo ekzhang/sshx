@@ -51,34 +51,46 @@ impl Controller {
         origin: &str,
         name: &str,
         runner: Runner,
-        enable_readers: &bool,
+        enable_readers: bool,
     ) -> Result<Self> {
         debug!(%origin, "connecting to server");
         let encryption_key = rand_alphanumeric(14); // 83.3 bits of entropy
+        let write_password = rand_alphanumeric(14); // 83.3 bits of entropy
 
         let kdf_task = {
             let encryption_key = encryption_key.clone();
             task::spawn_blocking(move || Encrypt::new(&encryption_key))
         };
+
+        let kdf_write_password_task = {
+            let write_password = write_password.clone();
+            task::spawn_blocking(move || Encrypt::new(&write_password))
+        };
+
         let mut client = Self::connect(origin).await?;
         let encrypt = kdf_task.await?;
+        let encrypt_write_password = kdf_write_password_task.await?;
+        let encrypted_write_zeros = if enable_readers {
+            Some(encrypt_write_password.zeros().into())
+        } else {
+            None
+        };
 
         let req = OpenRequest {
             origin: origin.into(),
             encrypted_zeros: encrypt.zeros().into(),
             name: name.into(),
-            enable_readers: *enable_readers,
+            enable_readers,
+            encrypted_write_zeros,
         };
         let mut resp = client.open(req).await?.into_inner();
         resp.url = resp.url + "#" + &encryption_key;
 
-        let write_password = if resp.write_password.is_empty() {
-            None
+        let write_url = if enable_readers {
+            Some(resp.url.clone() + "," + &write_password)
         } else {
-            Some(resp.write_password.clone())
+            None
         };
-
-        let write_url = write_password.map(|wp| resp.url.clone() + "," + &wp);
 
         let (output_tx, output_rx) = mpsc::channel(64);
         Ok(Self {

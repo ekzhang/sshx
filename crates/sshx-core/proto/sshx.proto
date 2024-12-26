@@ -41,7 +41,8 @@ message OpenRequest {
   string origin = 1;         // Web origin of the server.
   bytes encrypted_zeros = 2; // Encrypted zero block, for client verification.
   string name = 3;           // Name of the session (user@hostname).
-  bool enable_readers = 4;  // Enable read-only mode for the session.
+  bool enable_readers = 4;   // Enable read-only mode for the session.
+  optional bytes encrypted_write_zeros = 5;    // Encrypted zero block for the write password (for verification).
 }
 
 // Details of a newly-created sshx session.
@@ -49,7 +50,6 @@ message OpenResponse {
   string name = 1;  // Name of the session.
   string token = 2; // Signed verification token for the client.
   string url = 3;   // Public web URL to view the session.
-  string write_password = 4; // Password for write access (when readers mode enabled)
 }
 
 // Sequence numbers for all active shells, used for synchronization.
@@ -105,7 +105,7 @@ message SerializedSession {
   uint32 next_sid = 3;
   uint32 next_uid = 4;
   string name = 5;
-  string write_password = 6;
+  optional bytes encrypted_write_zeros = 6;
 }
 
 message SerializedShell {

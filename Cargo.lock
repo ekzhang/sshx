@@ -441,12 +441,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "constant_time_eq"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7c74b8349d32d297c9134b8c88677813a227df8f779daa29bfc29c183fe3dca6"
-
-[[package]]
 name = "core-foundation"
 version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1822,7 +1816,6 @@ dependencies = [
  "bytes",
  "ciborium",
  "clap",
- "constant_time_eq",
  "dashmap",
  "deadpool",
  "deadpool-redis",
@@ -1838,6 +1831,7 @@ dependencies = [
  "sha2",
  "sshx",
  "sshx-core",
+ "subtle",
  "tokio",
  "tokio-stream",
  "tokio-tungstenite",

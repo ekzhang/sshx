@@ -28,6 +28,7 @@
   import { TouchZoom, INITIAL_ZOOM } from "./action/touchZoom";
   import { arrangeNewTerminal } from "./arrange";
   import { settings } from "./settings";
+  import { EyeIcon } from "svelte-feather-icons";
 
   export let id: string;
 
@@ -93,7 +94,6 @@
   }
 
   let encrypt: Encrypt;
-  let write_password_encrypt: Encrypt | null = null;
   let srocket: Srocket<WsServer, WsClient> | null = null;
 
   let connected = false;
@@ -135,12 +135,9 @@
     encrypt = await Encrypt.new(key);
     const encryptedZeros = await encrypt.zeros();
 
-    write_password_encrypt = writePassword
-      ? await Encrypt.new(writePassword)
-      : null;
-    const writeEncryptedZeros = write_password_encrypt
-      ? await write_password_encrypt.zeros()
-      : null;
+    const writeEncryptedZeros = writePassword 
+    ? await (await Encrypt.new(writePassword)).zeros()
+    : null;
 
     srocket = new Srocket<WsServer, WsClient>(`/api/s/${id}`, {
       onMessage(message) {
@@ -473,23 +470,7 @@
           <div
             class="bg-yellow-900 text-yellow-200 px-1 py-0.5 rounded ml-3 inline-flex items-center gap-1"
           >
-            <svg
-              class="w-3.5 h-3.5"
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              ><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle
-                cx="12"
-                cy="12"
-                r="3"
-              /></svg
-            >
+            <EyeIcon size="14" />
             <span class="text-xs">Read-only</span>
           </div>
         {/if}

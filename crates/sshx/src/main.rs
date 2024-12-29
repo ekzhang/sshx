@@ -43,10 +43,10 @@ fn print_greeting(shell: &str, controller: &Controller) {
             r#"
       {sshx} {version}
     
-      {arr}  Read-only link:  {link_v}
-      {arr}  Writable  link:  {link_e}
-      {arr}  Shell:           {shell_v}
-    "#,
+      {arr}  Read-only link: {link_v}
+      {arr}  Writable link:  {link_e}
+      {arr}  Shell:          {shell_v}
+"#,
             sshx = Green.bold().paint("sshx"),
             version = Green.paint(&version_str),
             arr = Green.paint("➜"),
@@ -63,7 +63,7 @@ fn print_greeting(shell: &str, controller: &Controller) {
     
       {arr}  Link:  {link_v}
       {arr}  Shell: {shell_v}
-    "#,
+"#,
             sshx = Green.bold().paint("sshx"),
             version = Green.paint(&version_str),
             arr = Green.paint("➜"),

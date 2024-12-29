@@ -11,7 +11,7 @@ use bytes::Bytes;
 use futures_util::SinkExt;
 use sshx_core::proto::{server_update::ServerMessage, NewShell, TerminalInput, TerminalSize};
 use sshx_core::Sid;
-use subtle::ConstantTimeEq;
+use subtle::{Choice, ConstantTimeEq};
 use tokio::sync::mpsc;
 use tokio_stream::StreamExt;
 use tracing::{error, info_span, warn, Instrument};
@@ -98,9 +98,8 @@ async fn handle_socket(socket: &mut WebSocket, session: Arc<Session>) -> Result<
 
     let (user_guard, _) = match recv(socket).await? {
         Some(WsClient::Authenticate(bytes, write_password_bytes)) => {
-            // `ct_eq` returns a `Choice`, and `unwrap_u8()` converts it to 1 (equal) or 0
-            // (not equal).
-            if bytes.ct_eq(metadata.encrypted_zeros.as_ref()).unwrap_u8() != 1 {
+            // Constant-time comparison of bytes, converting Choice to bool
+            if !<Choice as Into<bool>>::into(bytes.ct_eq(metadata.encrypted_zeros.as_ref())) {
                 send(socket, WsServer::InvalidAuth()).await?;
                 return Ok(());
             }
@@ -112,7 +111,7 @@ async fn handle_socket(socket: &mut WebSocket, session: Arc<Session>) -> Result<
                 // Both password provided and stored, validate they match using constant-time
                 // comparison.
                 (Some(provided_password), Some(stored_password)) => {
-                    if provided_password.ct_eq(stored_password).unwrap_u8() != 1 {
+                    if !<Choice as Into<bool>>::into(provided_password.ct_eq(stored_password)) {
                         send(socket, WsServer::InvalidAuth()).await?;
                         return Ok(());
                     }

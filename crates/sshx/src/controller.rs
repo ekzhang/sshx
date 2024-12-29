@@ -55,23 +55,27 @@ impl Controller {
     ) -> Result<Self> {
         debug!(%origin, "connecting to server");
         let encryption_key = rand_alphanumeric(14); // 83.3 bits of entropy
-        let write_password = rand_alphanumeric(14); // 83.3 bits of entropy
 
         let kdf_task = {
             let encryption_key = encryption_key.clone();
             task::spawn_blocking(move || Encrypt::new(&encryption_key))
         };
 
-        let kdf_write_password_task = {
-            let write_password = write_password.clone();
-            task::spawn_blocking(move || Encrypt::new(&write_password))
+        let (write_password, kdf_write_password_task) = if enable_readers {
+            let write_password = rand_alphanumeric(14); // 83.3 bits of entropy
+            let task = {
+                let write_password = write_password.clone();
+                task::spawn_blocking(move || Encrypt::new(&write_password))
+            };
+            (Some(write_password), Some(task))
+        } else {
+            (None, None)
         };
 
         let mut client = Self::connect(origin).await?;
         let encrypt = kdf_task.await?;
-        let encrypt_write_password = kdf_write_password_task.await?;
-        let encrypted_write_zeros = if enable_readers {
-            Some(encrypt_write_password.zeros().into())
+        let encrypted_write_zeros = if let Some(task) = kdf_write_password_task {
+            Some(task.await?.zeros().into())
         } else {
             None
         };
@@ -86,7 +90,7 @@ impl Controller {
         let mut resp = client.open(req).await?.into_inner();
         resp.url = resp.url + "#" + &encryption_key;
 
-        let write_url = if enable_readers {
+        let write_url = if let (true, Some(write_password)) = (enable_readers, write_password) {
             Some(resp.url.clone() + "," + &write_password)
         } else {
             None

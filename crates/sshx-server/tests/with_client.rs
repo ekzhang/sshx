@@ -57,9 +57,11 @@ async fn test_ws_missing() -> Result<()> {
     let server = TestServer::new().await;
 
     let bad_endpoint = format!("ws://{}/not/an/endpoint", server.local_addr());
-    assert!(ClientSocket::connect(&bad_endpoint, "").await.is_err());
+    assert!(ClientSocket::connect(&bad_endpoint, "", None)
+        .await
+        .is_err());
 
-    let mut s = ClientSocket::connect(&server.ws_endpoint("foobar"), "").await?;
+    let mut s = ClientSocket::connect(&server.ws_endpoint("foobar"), "", None).await?;
     s.expect_close(4404).await;
 
     Ok(())
@@ -74,7 +76,7 @@ async fn test_ws_basic() -> Result<()> {
     let key = controller.encryption_key().to_owned();
     tokio::spawn(async move { controller.run().await });
 
-    let mut s = ClientSocket::connect(&server.ws_endpoint(&name), &key).await?;
+    let mut s = ClientSocket::connect(&server.ws_endpoint(&name), &key, None).await?;
     s.flush().await;
     assert_eq!(s.user_id, Uid(1));
 
@@ -106,7 +108,7 @@ async fn test_ws_resize() -> Result<()> {
     let key = controller.encryption_key().to_owned();
     tokio::spawn(async move { controller.run().await });
 
-    let mut s = ClientSocket::connect(&server.ws_endpoint(&name), &key).await?;
+    let mut s = ClientSocket::connect(&server.ws_endpoint(&name), &key, None).await?;
 
     s.send(WsClient::Move(Sid(1), None)).await; // error: does not exist yet!
     s.flush().await;
@@ -151,16 +153,16 @@ async fn test_users_join() -> Result<()> {
     tokio::spawn(async move { controller.run().await });
 
     let endpoint = server.ws_endpoint(&name);
-    let mut s1 = ClientSocket::connect(&endpoint, &key).await?;
+    let mut s1 = ClientSocket::connect(&endpoint, &key, None).await?;
     s1.flush().await;
     assert_eq!(s1.users.len(), 1);
 
-    let mut s2 = ClientSocket::connect(&endpoint, &key).await?;
+    let mut s2 = ClientSocket::connect(&endpoint, &key, None).await?;
     s2.flush().await;
     assert_eq!(s2.users.len(), 2);
 
     drop(s2);
-    let mut s3 = ClientSocket::connect(&endpoint, &key).await?;
+    let mut s3 = ClientSocket::connect(&endpoint, &key, None).await?;
     s3.flush().await;
     assert_eq!(s3.users.len(), 2);
 
@@ -180,7 +182,7 @@ async fn test_users_metadata() -> Result<()> {
     tokio::spawn(async move { controller.run().await });
 
     let endpoint = server.ws_endpoint(&name);
-    let mut s = ClientSocket::connect(&endpoint, &key).await?;
+    let mut s = ClientSocket::connect(&endpoint, &key, None).await?;
     s.flush().await;
     assert_eq!(s.users.len(), 1);
     assert_eq!(s.users.get(&s.user_id).unwrap().cursor, None);
@@ -205,8 +207,8 @@ async fn test_chat_messages() -> Result<()> {
     tokio::spawn(async move { controller.run().await });
 
     let endpoint = server.ws_endpoint(&name);
-    let mut s1 = ClientSocket::connect(&endpoint, &key).await?;
-    let mut s2 = ClientSocket::connect(&endpoint, &key).await?;
+    let mut s1 = ClientSocket::connect(&endpoint, &key, None).await?;
+    let mut s2 = ClientSocket::connect(&endpoint, &key, None).await?;
 
     s1.send(WsClient::SetName("billy".into())).await;
     s1.send(WsClient::Chat("hello there!".into())).await;
@@ -219,10 +221,65 @@ async fn test_chat_messages() -> Result<()> {
         (s1.user_id, "billy".into(), "hello there!".into())
     );
 
-    let mut s3 = ClientSocket::connect(&endpoint, &key).await?;
+    let mut s3 = ClientSocket::connect(&endpoint, &key, None).await?;
     s3.flush().await;
     assert_eq!(s1.messages.len(), 1);
     assert_eq!(s3.messages.len(), 0);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_read_write_permissions() -> Result<()> {
+    let server = TestServer::new().await;
+
+    // create controller with read-only mode enabled
+    let mut controller = Controller::new(&server.endpoint(), "", Runner::Echo, true).await?;
+    let name = controller.name().to_owned();
+    let key = controller.encryption_key().to_owned();
+    let write_url = controller
+        .write_url()
+        .expect("Should have write URL when enable_readers is true")
+        .clone();
+
+    tokio::spawn(async move { controller.run().await });
+
+    let write_password = write_url
+        .split(',')
+        .nth(1)
+        .expect("Write URL should contain password");
+
+    // connect with write access
+    let mut writer =
+        ClientSocket::connect(&server.ws_endpoint(&name), &key, Some(write_password)).await?;
+    writer.flush().await;
+
+    // test write permissions
+    writer.send(WsClient::Create(0, 0)).await;
+    writer.flush().await;
+    assert_eq!(
+        writer.shells.len(),
+        1,
+        "Writer should be able to create a shell"
+    );
+    assert!(writer.errors.is_empty(), "Writer should not receive errors");
+
+    // connect with read-only access
+    let mut reader = ClientSocket::connect(&server.ws_endpoint(&name), &key, None).await?;
+    reader.flush().await;
+
+    // test read-only restrictions
+    reader.send(WsClient::Create(0, 0)).await;
+    reader.flush().await;
+    assert!(
+        !reader.errors.is_empty(),
+        "Reader should receive an error when attempting to create shell"
+    );
+    assert_eq!(
+        reader.shells.len(),
+        1,
+        "Reader should still see the existing shell"
+    );
 
     Ok(())
 }

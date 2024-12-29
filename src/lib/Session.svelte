@@ -135,9 +135,9 @@
     encrypt = await Encrypt.new(key);
     const encryptedZeros = await encrypt.zeros();
 
-    const writeEncryptedZeros = writePassword 
-    ? await (await Encrypt.new(writePassword)).zeros()
-    : null;
+    const writeEncryptedZeros = writePassword
+      ? await (await Encrypt.new(writePassword)).zeros()
+      : null;
 
     srocket = new Srocket<WsServer, WsClient>(`/api/s/${id}`, {
       onMessage(message) {

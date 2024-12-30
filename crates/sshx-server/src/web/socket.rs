@@ -11,6 +11,7 @@ use bytes::Bytes;
 use futures_util::SinkExt;
 use sshx_core::proto::{server_update::ServerMessage, NewShell, TerminalInput, TerminalSize};
 use sshx_core::Sid;
+use subtle::ConstantTimeEq;
 use tokio::sync::mpsc;
 use tokio_stream::StreamExt;
 use tracing::{error, info_span, warn, Instrument};
@@ -95,15 +96,38 @@ async fn handle_socket(socket: &mut WebSocket, session: Arc<Session>) -> Result<
     session.sync_now();
     send(socket, WsServer::Hello(user_id, metadata.name.clone())).await?;
 
-    match recv(socket).await? {
-        Some(WsClient::Authenticate(bytes)) if bytes == metadata.encrypted_zeros => {}
+    let can_write = match recv(socket).await? {
+        Some(WsClient::Authenticate(bytes, write_password_bytes)) => {
+            // Constant-time comparison of bytes, converting Choice to bool
+            if !bool::from(bytes.ct_eq(metadata.encrypted_zeros.as_ref())) {
+                send(socket, WsServer::InvalidAuth()).await?;
+                return Ok(());
+            }
+
+            match (write_password_bytes, &metadata.write_password_hash) {
+                // No password needed, so all users can write (default).
+                (_, None) => true,
+
+                // Password stored but not provided, user is read-only.
+                (None, Some(_)) => false,
+
+                // Password stored and provided, compare them.
+                (Some(provided), Some(stored)) => {
+                    if !bool::from(provided.ct_eq(stored)) {
+                        send(socket, WsServer::InvalidAuth()).await?;
+                        return Ok(());
+                    }
+                    true
+                }
+            }
+        }
         _ => {
             send(socket, WsServer::InvalidAuth()).await?;
             return Ok(());
         }
-    }
+    };
 
-    let _user_guard = session.user_scope(user_id)?;
+    let _user_guard = session.user_scope(user_id, can_write)?;
 
     let update_tx = session.update_tx(); // start listening for updates before any state reads
     let mut broadcast_stream = session.subscribe_broadcast();
@@ -138,7 +162,7 @@ async fn handle_socket(socket: &mut WebSocket, session: Arc<Session>) -> Result<
         };
 
         match msg {
-            WsClient::Authenticate(_) => {}
+            WsClient::Authenticate(_, _) => {}
             WsClient::SetName(name) => {
                 if !name.is_empty() {
                     session.update_user(user_id, |user| user.name = name)?;
@@ -151,6 +175,10 @@ async fn handle_socket(socket: &mut WebSocket, session: Arc<Session>) -> Result<
                 session.update_user(user_id, |user| user.focus = id)?;
             }
             WsClient::Create(x, y) => {
+                if let Err(e) = session.check_write_permission(user_id) {
+                    send(socket, WsServer::Error(e.to_string())).await?;
+                    continue;
+                }
                 let id = session.counter().next_sid();
                 session.sync_now();
                 let new_shell = NewShell { id: id.0, x, y };
@@ -159,9 +187,17 @@ async fn handle_socket(socket: &mut WebSocket, session: Arc<Session>) -> Result<
                     .await?;
             }
             WsClient::Close(id) => {
+                if let Err(e) = session.check_write_permission(user_id) {
+                    send(socket, WsServer::Error(e.to_string())).await?;
+                    continue;
+                }
                 update_tx.send(ServerMessage::CloseShell(id.0)).await?;
             }
             WsClient::Move(id, winsize) => {
+                if let Err(e) = session.check_write_permission(user_id) {
+                    send(socket, WsServer::Error(e.to_string())).await?;
+                    continue;
+                }
                 if let Err(err) = session.move_shell(id, winsize) {
                     send(socket, WsServer::Error(err.to_string())).await?;
                     continue;
@@ -176,6 +212,10 @@ async fn handle_socket(socket: &mut WebSocket, session: Arc<Session>) -> Result<
                 }
             }
             WsClient::Data(id, data, offset) => {
+                if let Err(e) = session.check_write_permission(user_id) {
+                    send(socket, WsServer::Error(e.to_string())).await?;
+                    continue;
+                }
                 let input = TerminalInput {
                     id: id.0,
                     data,

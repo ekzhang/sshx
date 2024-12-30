@@ -26,6 +26,11 @@ struct Args {
     /// Session name displayed in the title (defaults to user@hostname).
     #[clap(long)]
     name: Option<String>,
+
+    /// Enable read-only access mode - generates separate URLs for viewers and
+    /// editors.
+    #[clap(long)]
+    enable_readers: bool,
 }
 
 fn print_greeting(shell: &str, controller: &Controller) {
@@ -33,20 +38,37 @@ fn print_greeting(shell: &str, controller: &Controller) {
         Some(version) => format!("v{version}"),
         None => String::from("[dev]"),
     };
+    if let Some(write_url) = controller.write_url() {
+        println!(
+            r#"
+      {sshx} {version}
 
-    println!(
-        r#"
-  {sshx} {version}
-
-  {arr}  Link:  {link_v}
-  {arr}  Shell: {shell_v}
+      {arr}  Read-only link: {link_v}
+      {arr}  Writable link:  {link_e}
+      {arr}  Shell:          {shell_v}
 "#,
-        sshx = Green.bold().paint("sshx"),
-        version = Green.paint(&version_str),
-        arr = Green.paint("➜"),
-        link_v = Cyan.underline().paint(controller.url()),
-        shell_v = Fixed(8).paint(shell),
-    );
+            sshx = Green.bold().paint("sshx"),
+            version = Green.paint(&version_str),
+            arr = Green.paint("➜"),
+            link_v = Cyan.underline().paint(controller.url()),
+            link_e = Cyan.underline().paint(write_url),
+            shell_v = Fixed(8).paint(shell),
+        );
+    } else {
+        println!(
+            r#"
+      {sshx} {version}
+
+      {arr}  Link:  {link_v}
+      {arr}  Shell: {shell_v}
+"#,
+            sshx = Green.bold().paint("sshx"),
+            version = Green.paint(&version_str),
+            arr = Green.paint("➜"),
+            link_v = Cyan.underline().paint(controller.url()),
+            shell_v = Fixed(8).paint(shell),
+        );
+    }
 }
 
 #[tokio::main]
@@ -68,7 +90,7 @@ async fn start(args: Args) -> Result<()> {
     });
 
     let runner = Runner::Shell(shell.clone());
-    let mut controller = Controller::new(&args.server, &name, runner).await?;
+    let mut controller = Controller::new(&args.server, &name, runner, args.enable_readers).await?;
     if args.quiet {
         println!("{}", controller.url());
     } else {

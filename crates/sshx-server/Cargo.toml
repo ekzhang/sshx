@@ -31,6 +31,7 @@ redis = { version = "0.23.3", features = ["tokio-rustls-comp", "tls-rustls-webpk
 serde.workspace = true
 sha2 = "0.10.7"
 sshx-core.workspace = true
+subtle = "2.5.0"
 tokio.workspace = true
 tokio-stream.workspace = true
 tokio-tungstenite = "0.20.0"

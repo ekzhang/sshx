@@ -16,12 +16,12 @@ pub mod common;
 async fn test_basic_restore() -> Result<()> {
     let server = TestServer::new().await;
 
-    let mut controller = Controller::new(&server.endpoint(), "", Runner::Echo).await?;
+    let mut controller = Controller::new(&server.endpoint(), "", Runner::Echo, false).await?;
     let name = controller.name().to_owned();
     let key = controller.encryption_key().to_owned();
     tokio::spawn(async move { controller.run().await });
 
-    let mut s = ClientSocket::connect(&server.ws_endpoint(&name), &key).await?;
+    let mut s = ClientSocket::connect(&server.ws_endpoint(&name), &key, None).await?;
     s.flush().await;
     assert_eq!(s.user_id, Uid(1));
 
@@ -47,7 +47,7 @@ async fn test_basic_restore() -> Result<()> {
         .state()
         .insert(&name, Arc::new(Session::restore(&data)?));
 
-    let mut s = ClientSocket::connect(&server.ws_endpoint(&name), &key).await?;
+    let mut s = ClientSocket::connect(&server.ws_endpoint(&name), &key, None).await?;
     s.send(WsClient::Subscribe(Sid(1), 0)).await;
     s.flush().await;
 

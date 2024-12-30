@@ -35,6 +35,7 @@ pub struct Controller {
     name: String,
     token: String,
     url: String,
+    write_url: Option<String>,
 
     /// Channels with backpressure routing messages to each shell task.
     shells_tx: HashMap<Sid, mpsc::Sender<ShellData>>,
@@ -46,7 +47,12 @@ pub struct Controller {
 
 impl Controller {
     /// Construct a new controller, connecting to the remote server.
-    pub async fn new(origin: &str, name: &str, runner: Runner) -> Result<Self> {
+    pub async fn new(
+        origin: &str,
+        name: &str,
+        runner: Runner,
+        enable_readers: bool,
+    ) -> Result<Self> {
         debug!(%origin, "connecting to server");
         let encryption_key = rand_alphanumeric(14); // 83.3 bits of entropy
 
@@ -54,16 +60,40 @@ impl Controller {
             let encryption_key = encryption_key.clone();
             task::spawn_blocking(move || Encrypt::new(&encryption_key))
         };
+
+        let (write_password, kdf_write_password_task) = if enable_readers {
+            let write_password = rand_alphanumeric(14); // 83.3 bits of entropy
+            let task = {
+                let write_password = write_password.clone();
+                task::spawn_blocking(move || Encrypt::new(&write_password))
+            };
+            (Some(write_password), Some(task))
+        } else {
+            (None, None)
+        };
+
         let mut client = Self::connect(origin).await?;
         let encrypt = kdf_task.await?;
+        let write_password_hash = if let Some(task) = kdf_write_password_task {
+            Some(task.await?.zeros().into())
+        } else {
+            None
+        };
 
         let req = OpenRequest {
             origin: origin.into(),
             encrypted_zeros: encrypt.zeros().into(),
             name: name.into(),
+            write_password_hash,
         };
         let mut resp = client.open(req).await?.into_inner();
         resp.url = resp.url + "#" + &encryption_key;
+
+        let write_url = if let Some(write_password) = write_password {
+            Some(resp.url.clone() + "," + &write_password)
+        } else {
+            None
+        };
 
         let (output_tx, output_rx) = mpsc::channel(64);
         Ok(Self {
@@ -74,6 +104,7 @@ impl Controller {
             name: resp.name,
             token: resp.token,
             url: resp.url,
+            write_url,
             shells_tx: HashMap::new(),
             output_tx,
             output_rx,
@@ -97,6 +128,11 @@ impl Controller {
     /// Returns the URL of the session.
     pub fn url(&self) -> &str {
         &self.url
+    }
+
+    /// Returns the write URL of the session, if it exists.
+    pub fn write_url(&self) -> Option<&str> {
+        self.write_url.as_deref()
     }
 
     /// Returns the encryption key for this session, hidden from the server.

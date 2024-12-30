@@ -33,6 +33,9 @@ pub struct Metadata {
 
     /// Name of the session (human-readable).
     pub name: String,
+
+    /// Password for write access to the session.
+    pub write_password_hash: Option<Bytes>,
 }
 
 /// In-memory state for a single sshx session.
@@ -307,7 +310,7 @@ impl Session {
     }
 
     /// Add a new user, and return a guard that removes the user when dropped.
-    pub fn user_scope(&self, id: Uid) -> Result<impl Drop + '_> {
+    pub fn user_scope(&self, id: Uid, can_write: bool) -> Result<impl Drop + '_> {
         use std::collections::hash_map::Entry::*;
 
         #[must_use]
@@ -325,6 +328,7 @@ impl Session {
                     name: format!("User {id}"),
                     cursor: None,
                     focus: None,
+                    can_write,
                 };
                 v.insert(user.clone());
                 self.broadcast.send(WsServer::UserDiff(id, Some(user))).ok();
@@ -339,6 +343,16 @@ impl Session {
             warn!(%id, "invariant violation: removed user that does not exist");
         }
         self.broadcast.send(WsServer::UserDiff(id, None)).ok();
+    }
+
+    /// Check if a user has write permission in the session.
+    pub fn check_write_permission(&self, user_id: Uid) -> Result<()> {
+        let users = self.users.read();
+        let user = users.get(&user_id).context("user not found")?;
+        if !user.can_write {
+            bail!("No write permission");
+        }
+        Ok(())
     }
 
     /// Send a chat message into the room.

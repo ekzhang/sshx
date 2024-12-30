@@ -10,6 +10,7 @@
   import logo from "$lib/assets/logo.svg";
 
   export let connected: boolean;
+  export let hasWriteAccess: boolean | null;
   export let newMessages: boolean;
 
   const dispatch = createEventDispatcher<{
@@ -33,7 +34,12 @@
       <button
         class="icon-button"
         on:click={() => dispatch("create")}
-        disabled={!connected}
+        disabled={!connected || !hasWriteAccess}
+        title={!connected
+          ? "Not connected"
+          : !hasWriteAccess
+          ? "No write access"
+          : "Create new terminal"}
       >
         <PlusCircleIcon strokeWidth={1.5} class="p-0.5" />
       </button>

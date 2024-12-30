@@ -17,7 +17,7 @@
     "@tldraw/vec": "^1.9.2",
     "@use-gesture/vanilla": "^10.2.27",
     "buffer": "^6.0.3",
-    "cbor-x": "^1.5.4",
+    "cbor-x": "^1.6.0",
     "firacode": "^6.2.0",
     "fontfaceobserver": "^2.3.0",
     "lodash-es": "^4.17.21",

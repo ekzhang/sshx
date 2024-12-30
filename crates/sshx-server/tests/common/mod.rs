@@ -82,6 +82,7 @@ impl Drop for TestServer {
 pub struct ClientSocket {
     inner: WebSocketStream<MaybeTlsStream<TcpStream>>,
     encrypt: Encrypt,
+    write_encrypt: Option<Encrypt>,
 
     pub user_id: Uid,
     pub users: BTreeMap<Uid, WsUser>,
@@ -93,13 +94,14 @@ pub struct ClientSocket {
 
 impl ClientSocket {
     /// Connect to a WebSocket endpoint.
-    pub async fn connect(uri: &str, key: &str) -> Result<Self> {
+    pub async fn connect(uri: &str, key: &str, write_password: Option<&str>) -> Result<Self> {
         let (stream, resp) = tokio_tungstenite::connect_async(uri).await?;
         ensure!(resp.status() == StatusCode::SWITCHING_PROTOCOLS);
 
         let mut this = Self {
             inner: stream,
             encrypt: Encrypt::new(key),
+            write_encrypt: write_password.map(Encrypt::new),
             user_id: Uid(0),
             users: BTreeMap::new(),
             shells: BTreeMap::new(),
@@ -113,7 +115,10 @@ impl ClientSocket {
 
     async fn authenticate(&mut self) {
         let encrypted_zeros = self.encrypt.zeros().into();
-        self.send(WsClient::Authenticate(encrypted_zeros)).await;
+        let write_zeros = self.write_encrypt.as_ref().map(|e| e.zeros().into());
+
+        self.send(WsClient::Authenticate(encrypted_zeros, write_zeros))
+            .await;
     }
 
     pub async fn send(&mut self, msg: WsClient) {

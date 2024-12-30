@@ -38,9 +38,10 @@ message TerminalSize {
 
 // Request to open an sshx session.
 message OpenRequest {
-  string origin = 1;         // Web origin of the server.
-  bytes encrypted_zeros = 2; // Encrypted zero block, for client verification.
-  string name = 3;           // Name of the session (user@hostname).
+  string origin = 1;                      // Web origin of the server.
+  bytes encrypted_zeros = 2;              // Encrypted zero block, for client verification.
+  string name = 3;                        // Name of the session (user@hostname).
+  optional bytes write_password_hash = 4; // Hashed write password, if read-only mode is enabled.
 }
 
 // Details of a newly-created sshx session.
@@ -103,6 +104,7 @@ message SerializedSession {
   uint32 next_sid = 3;
   uint32 next_uid = 4;
   string name = 5;
+  optional bytes write_password_hash = 6;
 }
 
 message SerializedShell {

@@ -50,12 +50,14 @@ impl SshxService for GrpcServer {
         }
         let name = rand_alphanumeric(10);
         info!(%name, "creating new session");
+
         match self.0.lookup(&name) {
             Some(_) => return Err(Status::already_exists("generated duplicate ID")),
             None => {
                 let metadata = Metadata {
                     encrypted_zeros: request.encrypted_zeros,
                     name: request.name,
+                    write_password_hash: request.write_password_hash,
                 };
                 self.0.insert(&name, Arc::new(Session::new(metadata)));
             }

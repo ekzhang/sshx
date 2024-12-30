@@ -41,11 +41,11 @@ fn print_greeting(shell: &str, controller: &Controller) {
     if let Some(write_url) = controller.write_url() {
         println!(
             r#"
-      {sshx} {version}
+  {sshx} {version}
 
-      {arr}  Read-only link: {link_v}
-      {arr}  Writable link:  {link_e}
-      {arr}  Shell:          {shell_v}
+  {arr}  Read-only link: {link_v}
+  {arr}  Writable link:  {link_e}
+  {arr}  Shell:          {shell_v}
 "#,
             sshx = Green.bold().paint("sshx"),
             version = Green.paint(&version_str),
@@ -57,10 +57,10 @@ fn print_greeting(shell: &str, controller: &Controller) {
     } else {
         println!(
             r#"
-      {sshx} {version}
+  {sshx} {version}
 
-      {arr}  Link:  {link_v}
-      {arr}  Shell: {shell_v}
+  {arr}  Link:  {link_v}
+  {arr}  Shell: {shell_v}
 "#,
             sshx = Green.bold().paint("sshx"),
             version = Green.paint(&version_str),

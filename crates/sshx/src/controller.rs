@@ -131,14 +131,8 @@ impl Controller {
     }
 
     /// Returns the write URL of the session, if it exists.
-    pub fn write_url(&self) -> Option<&String> {
-        self.write_url.as_ref()
-    }
-
-    /// Returns whether this session has a separate write URL (reader mode
-    /// enabled)
-    pub fn has_write_url(&self) -> bool {
-        self.write_url.is_some()
+    pub fn write_url(&self) -> Option<&str> {
+        self.write_url.as_deref()
     }
 
     /// Returns the encryption key for this session, hidden from the server.

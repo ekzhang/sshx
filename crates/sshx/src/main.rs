@@ -38,11 +38,11 @@ fn print_greeting(shell: &str, controller: &Controller) {
         Some(version) => format!("v{version}"),
         None => String::from("[dev]"),
     };
-    if controller.has_write_url() {
+    if let Some(write_url) = controller.write_url() {
         println!(
             r#"
       {sshx} {version}
-    
+
       {arr}  Read-only link: {link_v}
       {arr}  Writable link:  {link_e}
       {arr}  Shell:          {shell_v}
@@ -51,16 +51,14 @@ fn print_greeting(shell: &str, controller: &Controller) {
             version = Green.paint(&version_str),
             arr = Green.paint("➜"),
             link_v = Cyan.underline().paint(controller.url()),
-            link_e = Cyan
-                .underline()
-                .paint(controller.write_url().map(|s| s.as_str()).unwrap_or("")),
+            link_e = Cyan.underline().paint(write_url),
             shell_v = Fixed(8).paint(shell),
         );
     } else {
         println!(
             r#"
       {sshx} {version}
-    
+
       {arr}  Link:  {link_v}
       {arr}  Shell: {shell_v}
 "#,

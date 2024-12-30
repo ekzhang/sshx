@@ -240,7 +240,7 @@ async fn test_read_write_permissions() -> Result<()> {
     let write_url = controller
         .write_url()
         .expect("Should have write URL when enable_readers is true")
-        .clone();
+        .to_string();
 
     tokio::spawn(async move { controller.run().await });
 

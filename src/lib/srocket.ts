@@ -61,15 +61,15 @@ export class Srocket<T, U> {
 
   /** Queue a message to send to the server, with "at-most-once" semantics. */
   send(message: U) {
-    const data = encode(message);
+    // Types in cbor-x are incorrect here, so cast to fix the error.
+    // See: https://github.com/kriszyp/cbor-x/issues/120
+    const data = <Uint8Array>(encode(message) as unknown);
 
-    // Convert buffer to Uint8Array
-    const uint8Data = new Uint8Array(data);
     if (this.#connected && this.#ws) {
       this.#ws.send(data);
     } else {
       if (this.#buffer.length < BUFFER_SIZE) {
-        this.#buffer.push(uint8Data);
+        this.#buffer.push(data);
       }
     }
   }

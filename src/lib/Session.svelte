@@ -464,7 +464,7 @@
     {#if exitReason !== null}
       <div class="text-red-400">{exitReason}</div>
     {:else if connected}
-      <div class="flex">
+      <div class="flex items-center">
         <div class="text-green-400">You are connected!</div>
         {#if userId && !hasWriteAccess}
           <div

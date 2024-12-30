@@ -62,7 +62,7 @@ impl Session {
             next_sid: ids.0 .0,
             next_uid: ids.1 .0,
             name: self.metadata().name.clone(),
-            encrypted_write_zeros: self.metadata().encrypted_write_zeros.clone(),
+            write_password_hash: self.metadata().write_password_hash.clone(),
         };
         let data = message.encode_to_vec();
         ensure!(data.len() < MAX_SNAPSHOT_SIZE, "snapshot too large");
@@ -77,7 +77,7 @@ impl Session {
         let metadata = Metadata {
             encrypted_zeros: message.encrypted_zeros,
             name: message.name,
-            encrypted_write_zeros: message.encrypted_write_zeros,
+            write_password_hash: message.write_password_hash,
         };
 
         let session = Self::new(metadata);

@@ -35,7 +35,7 @@ pub struct Metadata {
     pub name: String,
 
     /// Password for write access to the session.
-    pub encrypted_write_zeros: Option<Bytes>,
+    pub write_password_hash: Option<Bytes>,
 }
 
 /// In-memory state for a single sshx session.

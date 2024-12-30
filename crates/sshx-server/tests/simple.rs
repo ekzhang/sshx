@@ -15,8 +15,7 @@ async fn test_rpc() -> Result<()> {
         origin: "sshx.io".into(),
         encrypted_zeros: Encrypt::new("").zeros().into(),
         name: String::new(),
-        enable_readers: true,
-        encrypted_write_zeros: Some(Encrypt::new("").zeros().into()),
+        write_password_hash: None,
     };
     let resp = client.open(req).await?;
     assert!(!resp.into_inner().name.is_empty());

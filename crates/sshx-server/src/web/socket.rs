@@ -104,7 +104,7 @@ async fn handle_socket(socket: &mut WebSocket, session: Arc<Session>) -> Result<
                 return Ok(());
             }
 
-            match (write_password_bytes, &metadata.encrypted_write_zeros) {
+            match (write_password_bytes, &metadata.write_password_hash) {
                 // No password needed, so all users can write (default).
                 (_, None) => true,
 
@@ -112,8 +112,8 @@ async fn handle_socket(socket: &mut WebSocket, session: Arc<Session>) -> Result<
                 (None, Some(_)) => false,
 
                 // Password stored and provided, compare them.
-                (Some(provided_password), Some(stored_password)) => {
-                    if !bool::from(provided_password.ct_eq(stored_password)) {
+                (Some(provided), Some(stored)) => {
+                    if !bool::from(provided.ct_eq(stored)) {
                         send(socket, WsServer::InvalidAuth()).await?;
                         return Ok(());
                     }

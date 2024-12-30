@@ -74,7 +74,7 @@ impl Controller {
 
         let mut client = Self::connect(origin).await?;
         let encrypt = kdf_task.await?;
-        let encrypted_write_zeros = if let Some(task) = kdf_write_password_task {
+        let write_password_hash = if let Some(task) = kdf_write_password_task {
             Some(task.await?.zeros().into())
         } else {
             None
@@ -84,13 +84,12 @@ impl Controller {
             origin: origin.into(),
             encrypted_zeros: encrypt.zeros().into(),
             name: name.into(),
-            enable_readers,
-            encrypted_write_zeros,
+            write_password_hash,
         };
         let mut resp = client.open(req).await?.into_inner();
         resp.url = resp.url + "#" + &encryption_key;
 
-        let write_url = if let (true, Some(write_password)) = (enable_readers, write_password) {
+        let write_url = if let Some(write_password) = write_password {
             Some(resp.url.clone() + "," + &write_password)
         } else {
             None

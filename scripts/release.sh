@@ -28,8 +28,8 @@ CARGO_TARGET_ARMV7_UNKNOWN_LINUX_MUSLEABIHF_LINKER=armv7-unknown-linux-musleabih
 cargo build --release --target armv7-unknown-linux-musleabihf
 
 # x86_64-apple-darwin: for macOS on Intel
-SDKROOT=$(xcrun -sdk macosx13.3 --show-sdk-path) \
-MACOSX_DEPLOYMENT_TARGET=$(xcrun -sdk macosx13.3 --show-sdk-platform-version) \
+SDKROOT=$(xcrun -sdk macosx15.2 --show-sdk-path) \
+MACOSX_DEPLOYMENT_TARGET=$(xcrun -sdk macosx15.2 --show-sdk-platform-version) \
 cargo build --release --target x86_64-apple-darwin
 
 # aarch64-apple-darwin: for macOS on Apple Silicon

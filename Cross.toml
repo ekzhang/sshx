@@ -1,5 +1,15 @@
 [target.x86_64-unknown-freebsd]
 pre-build = [
     "apt-get update",
-    "apt install -y protobuf-compiler",
+
+    # Protobuf version is too outdated on the cargo-cross image, which is ubuntu:20.04.
+    # "apt install -y protobuf-compiler",
+
+    "apt install -y wget libarchive-tools",
+    "mkdir /protoc",
+    "wget -qO- https://github.com/protocolbuffers/protobuf/releases/download/v29.2/protoc-29.2-linux-x86_64.zip | bsdtar -xvf- -C /protoc",
+    "mv -v /protoc/bin/protoc /usr/local/bin && chmod +x /usr/local/bin/protoc",
+    "mkdir -p /usr/local/include/google/protobuf/",
+    "mv -v /protoc/include/google/protobuf/* /usr/local/include/google/protobuf/",
+    "rm -rf /protoc",
 ]

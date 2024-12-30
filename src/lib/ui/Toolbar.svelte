@@ -10,7 +10,7 @@
   import logo from "$lib/assets/logo.svg";
 
   export let connected: boolean;
-  export let hasWriteAccess: boolean | null;
+  export let hasWriteAccess: boolean | undefined;
   export let newMessages: boolean;
 
   const dispatch = createEventDispatcher<{
@@ -37,7 +37,7 @@
         disabled={!connected || !hasWriteAccess}
         title={!connected
           ? "Not connected"
-          : !hasWriteAccess
+          : hasWriteAccess === false // Only show the "No write access" title after confirming read-only mode.
           ? "No write access"
           : "Create new terminal"}
       >

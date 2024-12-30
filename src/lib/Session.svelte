@@ -106,10 +106,12 @@
   const chunknums: Record<number, number> = {};
   const locks: Record<number, any> = {};
   let userId = 0;
-  let hasWriteAccess: boolean | null = null;
   let users: [number, WsUser][] = [];
   let shells: [number, WsWinsize][] = [];
   let subscriptions = new Set<number>();
+
+  // May be undefined before `users` is first populated.
+  $: hasWriteAccess = users.find(([uid]) => uid === userId)?.[1]?.canWrite;
 
   let moving = -1; // Terminal ID that is being dragged.
   let movingOrigin = [0, 0]; // Coordinates of mouse at origin when drag started.
@@ -169,9 +171,6 @@
             }
           });
         } else if (message.users) {
-          hasWriteAccess = message.users.some(
-            ([uid, user]) => uid === userId && user.canWrite,
-          );
           users = message.users;
         } else if (message.userDiff) {
           const [id, update] = message.userDiff;
@@ -264,7 +263,7 @@
   let counter = 0n;
 
   async function handleCreate() {
-    if (!hasWriteAccess) {
+    if (hasWriteAccess === false) {
       makeToast({
         kind: "info",
         message: "You are in read-only mode and cannot create new terminals.",
@@ -466,7 +465,7 @@
     {:else if connected}
       <div class="flex items-center">
         <div class="text-green-400">You are connected!</div>
-        {#if userId && !hasWriteAccess}
+        {#if userId && hasWriteAccess === false}
           <div
             class="bg-yellow-900 text-yellow-200 px-1 py-0.5 rounded ml-3 inline-flex items-center gap-1"
           >

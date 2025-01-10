@@ -1,4 +1,4 @@
-FROM rust:alpine as backend
+FROM rust:alpine AS backend
 WORKDIR /home/rust/src
 RUN apk --no-cache add musl-dev openssl-dev protoc
 RUN rustup component add rustfmt
@@ -8,7 +8,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
     cargo build --release --bin sshx-server && \
     cp target/release/sshx-server /usr/local/bin
 
-FROM node:lts-alpine as frontend
+FROM node:lts-alpine AS frontend
 RUN apk --no-cache add git
 WORKDIR /usr/src/app
 COPY . .

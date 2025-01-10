@@ -31,6 +31,14 @@ struct Args {
     /// editors.
     #[clap(long)]
     enable_readers: bool,
+
+    /// Optional custom session ID.
+    #[clap(long)]
+    session_id: Option<String>,
+
+    /// Optional encryption key.
+    #[clap(long)]
+    secret: Option<String>,
 }
 
 fn print_greeting(shell: &str, controller: &Controller) {
@@ -90,7 +98,15 @@ async fn start(args: Args) -> Result<()> {
     });
 
     let runner = Runner::Shell(shell.clone());
-    let mut controller = Controller::new(&args.server, &name, runner, args.enable_readers).await?;
+    let mut controller = Controller::new(
+        &args.server,
+        &name,
+        runner,
+        args.enable_readers,
+        args.session_id,
+        args.secret,
+    )
+    .await?;
     if args.quiet {
         println!("{}", controller.url());
     } else {

@@ -16,6 +16,7 @@ async fn test_rpc() -> Result<()> {
         encrypted_zeros: Encrypt::new("").zeros().into(),
         name: String::new(),
         write_password_hash: None,
+        session_id: None,
     };
     let resp = client.open(req).await?;
     assert!(!resp.into_inner().name.is_empty());

@@ -42,6 +42,7 @@ message OpenRequest {
   bytes encrypted_zeros = 2;              // Encrypted zero block, for client verification.
   string name = 3;                        // Name of the session (user@hostname).
   optional bytes write_password_hash = 4; // Hashed write password, if read-only mode is enabled.
+  optional string session_id = 5;         // Add this field
 }
 
 // Details of a newly-created sshx session.

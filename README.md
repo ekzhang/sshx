@@ -38,6 +38,12 @@ curl -sSf https://sshx.io/get | sh -s run
 
 Inspect the script for additional options.
 
+You can also install it with homebrew.
+
+```shell
+brew install sshx
+```
+
 ### CI/CD
 
 You can run sshx in continuous integration workflows to help debug tricky

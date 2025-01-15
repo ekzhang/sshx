@@ -12,6 +12,7 @@ FROM node:lts-alpine AS frontend
 RUN apk --no-cache add git
 WORKDIR /usr/src/app
 COPY . .
+RUN npm i @sphereon/isomorphic-argon2@1.0.1
 RUN npm ci
 RUN npm run build
 

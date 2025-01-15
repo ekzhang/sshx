@@ -8,13 +8,12 @@
 const SALT: string =
   "This is a non-random salt for sshx.io, since we want to stretch the security of 83-bit keys!";
 
+import { Argon2, Argon2Mode } from "@sphereon/isomorphic-argon2";
+
 export class Encrypt {
   private constructor(private aesKey: CryptoKey) {}
 
   static async new(key: string): Promise<Encrypt> {
-    const { Argon2, Argon2Mode } = await import(
-      "https://esm.sh/@sphereon/isomorphic-argon2@1.0.1" as any
-    );
     const result = await Argon2.hash(key, SALT, {
       mode: Argon2Mode.Argon2id,
       memory: 19 * 1024,

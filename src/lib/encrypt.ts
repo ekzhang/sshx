@@ -12,20 +12,24 @@ export class Encrypt {
   private constructor(private aesKey: CryptoKey) {}
 
   static async new(key: string): Promise<Encrypt> {
-    const { Argon2, Argon2Mode } = await import(
-      "https://esm.sh/@sphereon/isomorphic-argon2@1.0.1" as any
+    const argon2 = await import(
+      "argon2-browser/dist/argon2-bundled.min.js" as any
     );
-    const result = await Argon2.hash(key, SALT, {
-      mode: Argon2Mode.Argon2id,
-      memory: 19 * 1024,
-      iterations: 2,
+    const result = await argon2.hash({
+      pass: key,
+      salt: SALT,
+      type: argon2.ArgonType.Argon2id,
+      mem: 19 * 1024, // Memory cost in KiB
+      time: 2, // Number of iterations
       parallelism: 1,
-      hashLength: 16,
+      hashLen: 16, // Hash length in bytes
     });
     const aesKey = await crypto.subtle.importKey(
       "raw",
       Uint8Array.from(
-        result.hex.match(/.{1,2}/g).map((byte: string) => parseInt(byte, 16)),
+        result.hashHex
+          .match(/.{1,2}/g)
+          .map((byte: string) => parseInt(byte, 16)),
       ),
       { name: "AES-CTR" },
       false,

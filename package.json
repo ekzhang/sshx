@@ -16,6 +16,7 @@
     "@rgossiaux/svelte-headlessui": "^2.0.0",
     "@tldraw/vec": "^1.9.2",
     "@use-gesture/vanilla": "^10.2.27",
+    "argon2-browser": "^1.18.0",
     "buffer": "^6.0.3",
     "cbor-x": "^1.6.0",
     "firacode": "^6.2.0",

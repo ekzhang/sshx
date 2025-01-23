@@ -5,7 +5,7 @@
 //! using a hybrid Hyper service, split between a Tonic gRPC handler and an Axum
 //! web listener.
 //!
-//! Most web requests are routed directly to static files located in the `dist/`
+//! Most web requests are routed directly to static files located in the `build/`
 //! folder relative to where this binary is running, allowing the frontend to be
 //! separately developed from the server.
 

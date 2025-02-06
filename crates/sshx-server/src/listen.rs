@@ -38,7 +38,7 @@ pub(crate) async fn start_server(
         .add_service(
             tonic_reflection::server::Builder::configure()
                 .register_encoded_file_descriptor_set(FILE_DESCRIPTOR_SET)
-                .build()?,
+                .build_v1()?,
         )
         .into_service();
 

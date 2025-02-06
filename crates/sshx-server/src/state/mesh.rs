@@ -19,7 +19,7 @@ const STORAGE_EXPIRY: Duration = Duration::from_secs(300);
 
 fn set_opts() -> redis::SetOptions {
     redis::SetOptions::default()
-        .with_expiration(redis::SetExpiry::PX(STORAGE_EXPIRY.as_millis() as usize))
+        .with_expiration(redis::SetExpiry::PX(STORAGE_EXPIRY.as_millis() as u64))
 }
 
 /// Communication with a distributed mesh of sshx server nodes.

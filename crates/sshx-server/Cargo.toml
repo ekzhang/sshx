@@ -13,7 +13,7 @@ edition = "2021"
 anyhow.workspace = true
 async-channel = "1.9.0"
 async-stream = "0.3.5"
-axum = { version = "0.7.9", features = ["ws"] }
+axum = { version = "0.8.1", features = ["http2", "ws"] }
 base64 = "0.21.4"
 bytes = { version = "1.5.0", features = ["serde"] }
 ciborium = "0.2.1"
@@ -23,6 +23,7 @@ deadpool = "0.12.2"
 deadpool-redis = "0.18.0"
 futures-util = { version = "0.3.28", features = ["sink"] }
 hmac = "0.12.1"
+http-body-util = "0.1.2"
 hyper = { version = "1.6.0", features = ["full"] }
 parking_lot = "0.12.1"
 prost.workspace = true
@@ -34,7 +35,7 @@ sshx-core.workspace = true
 subtle = "2.5.0"
 tokio.workspace = true
 tokio-stream.workspace = true
-tokio-tungstenite = "0.24.0"
+tokio-tungstenite = "0.26.1"
 tonic.workspace = true
 tonic-reflection = "0.12.3"
 tower = { version = "0.4.13", features = ["steer"] }

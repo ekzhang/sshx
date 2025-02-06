@@ -1,16 +1,13 @@
 use std::{error::Error as StdError, future::Future, sync::Arc};
 
 use anyhow::Result;
-use axum::body::HttpBody;
-use hyper::{
-    header::CONTENT_TYPE,
-    server::{conn::AddrIncoming, Server as HyperServer},
-    service::make_service_fn,
-    Body, Request,
-};
+use axum::body::Body;
+use axum::serve::Listener;
+use http_body_util::BodyExt;
+use hyper::{header::CONTENT_TYPE, Request};
 use sshx_core::proto::{sshx_service_server::SshxServiceServer, FILE_DESCRIPTOR_SET};
 use tonic::transport::Server as TonicServer;
-use tower::{steer::Steer, ServiceBuilder, ServiceExt};
+use tower::{make::Shared, steer::Steer, ServiceBuilder, ServiceExt};
 use tower_http::trace::TraceLayer;
 
 use crate::{grpc::GrpcServer, web, ServerState};
@@ -21,7 +18,7 @@ use crate::{grpc::GrpcServer, web, ServerState};
 /// servers onto a single, consolidated `hyper` service.
 pub(crate) async fn start_server(
     state: Arc<ServerState>,
-    incoming: AddrIncoming,
+    listener: impl Listener,
     signal: impl Future<Output = ()>,
 ) -> Result<()> {
     type BoxError = Box<dyn StdError + Send + Sync>;
@@ -58,14 +55,9 @@ pub(crate) async fn start_server(
             }
         },
     );
-    let make_svc = make_service_fn(move |_| {
-        let svc = svc.clone();
-        async { Ok::<_, std::convert::Infallible>(svc) }
-    });
+    let make_svc = Shared::new(svc);
 
-    HyperServer::builder(incoming)
-        .tcp_nodelay(true)
-        .serve(make_svc)
+    axum::serve(listener, make_svc)
         .with_graceful_shutdown(signal)
         .await?;
 

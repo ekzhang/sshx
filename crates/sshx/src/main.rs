@@ -92,7 +92,11 @@ async fn start(args: Args) -> Result<()> {
     let runner = Runner::Shell(shell.clone());
     let mut controller = Controller::new(&args.server, &name, runner, args.enable_readers).await?;
     if args.quiet {
-        println!("{}", controller.url());
+        if let Some(write_url) = controller.write_url() {
+            println!("{}", write_url);
+        } else {
+            println!("{}", controller.url());
+        }
     } else {
         print_greeting(&shell, &controller);
     }

@@ -127,7 +127,7 @@ impl ClientSocket {
     pub async fn send(&mut self, msg: WsClient) {
         let mut buf = Vec::new();
         ciborium::ser::into_writer(&msg, &mut buf).unwrap();
-        self.inner.send(Message::Binary(buf)).await.unwrap();
+        self.inner.send(Message::Binary(buf.into())).await.unwrap();
     }
 
     pub async fn send_input(&mut self, id: Sid, data: &[u8]) {

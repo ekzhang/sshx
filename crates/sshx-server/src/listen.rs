@@ -1,4 +1,4 @@
-use std::{error::Error as StdError, fmt::Debug, future::Future, sync::Arc};
+use std::{fmt::Debug, future::Future, sync::Arc};
 
 use anyhow::Result;
 use axum::body::Body;
@@ -24,8 +24,6 @@ where
     L: Listener,
     L::Addr: Debug,
 {
-    type BoxError = Box<dyn StdError + Send + Sync>;
-
     let http_service = web::app()
         .with_state(state.clone())
         .layer(TraceLayer::new_for_http())

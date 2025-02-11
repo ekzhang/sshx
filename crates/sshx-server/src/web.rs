@@ -30,5 +30,5 @@ pub fn app() -> Router<Arc<ServerState>> {
 
 /// Routes for the backend web API server.
 fn backend() -> Router<Arc<ServerState>> {
-    Router::new().route("/s/:name", get(socket::get_session_ws))
+    Router::new().route("/s/{name}", get(socket::get_session_ws))
 }

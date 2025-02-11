@@ -12,7 +12,7 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
-use std::{net::SocketAddr, sync::Arc};
+use std::{fmt::Debug, net::SocketAddr, sync::Arc};
 
 use anyhow::Result;
 use axum::serve::{Listener, ListenerExt};
@@ -67,7 +67,11 @@ impl Server {
     }
 
     /// Run the application server, listening on a stream of connections.
-    pub async fn listen(&self, listener: impl Listener) -> Result<()> {
+    pub async fn listen<L>(&self, listener: L) -> Result<()>
+    where
+        L: Listener,
+        L::Addr: Debug,
+    {
         let state = self.state.clone();
         let terminated = self.shutdown.wait();
         tokio::spawn(async move {

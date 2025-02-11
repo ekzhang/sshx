@@ -1,13 +1,12 @@
-use std::{error::Error as StdError, future::Future, sync::Arc};
+use std::{error::Error as StdError, fmt::Debug, future::Future, sync::Arc};
 
 use anyhow::Result;
 use axum::body::Body;
 use axum::serve::Listener;
-use http_body_util::BodyExt;
 use hyper::{header::CONTENT_TYPE, Request};
 use sshx_core::proto::{sshx_service_server::SshxServiceServer, FILE_DESCRIPTOR_SET};
-use tonic::transport::Server as TonicServer;
-use tower::{make::Shared, steer::Steer, ServiceBuilder, ServiceExt};
+use tonic::service::Routes as TonicRoutes;
+use tower::{make::Shared, steer::Steer, ServiceExt};
 use tower_http::trace::TraceLayer;
 
 use crate::{grpc::GrpcServer, web, ServerState};
@@ -16,33 +15,36 @@ use crate::{grpc::GrpcServer, web, ServerState};
 ///
 /// This internal method is responsible for multiplexing the HTTP and gRPC
 /// servers onto a single, consolidated `hyper` service.
-pub(crate) async fn start_server(
+pub(crate) async fn start_server<L>(
     state: Arc<ServerState>,
-    listener: impl Listener,
-    signal: impl Future<Output = ()>,
-) -> Result<()> {
+    listener: L,
+    signal: impl Future<Output = ()> + Send + 'static,
+) -> Result<()>
+where
+    L: Listener,
+    L::Addr: Debug,
+{
     type BoxError = Box<dyn StdError + Send + Sync>;
 
     let http_service = web::app()
         .with_state(state.clone())
         .layer(TraceLayer::new_for_http())
-        .map_response(|r| r.map(|b| b.map_err(BoxError::from).boxed_unsync()))
-        .map_err(BoxError::from)
+        .into_service()
         .boxed_clone();
 
-    let grpc_service = TonicServer::builder()
+    let grpc_service = TonicRoutes::default()
         .add_service(SshxServiceServer::new(GrpcServer::new(state)))
         .add_service(
             tonic_reflection::server::Builder::configure()
                 .register_encoded_file_descriptor_set(FILE_DESCRIPTOR_SET)
                 .build_v1()?,
         )
-        .into_service();
-
-    let grpc_service = ServiceBuilder::new()
+        .into_axum_router()
         .layer(TraceLayer::new_for_grpc())
-        .service(grpc_service)
-        .map_response(|r| r.map(|b| b.map_err(BoxError::from).boxed_unsync()))
+        .into_service()
+        // This type conversion is necessary because Tonic 0.12 uses Axum 0.7, so its `axum::Router`
+        // and `axum::Body` are based on an older `axum_core` version.
+        .map_response(|r| r.map(Body::new))
         .boxed_clone();
 
     let svc = Steer::new(

@@ -23,7 +23,6 @@ deadpool = "0.12.2"
 deadpool-redis = "0.18.0"
 futures-util = { version = "0.3.28", features = ["sink"] }
 hmac = "0.12.1"
-http-body-util = "0.1.2"
 hyper = { version = "1.6.0", features = ["full"] }
 parking_lot = "0.12.1"
 prost.workspace = true

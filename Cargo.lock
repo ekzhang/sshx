@@ -1946,7 +1946,6 @@ dependencies = [
  "deadpool-redis",
  "futures-util",
  "hmac",
- "http-body-util",
  "hyper",
  "parking_lot",
  "prost",

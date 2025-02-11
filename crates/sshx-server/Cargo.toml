@@ -13,36 +13,36 @@ edition = "2021"
 anyhow.workspace = true
 async-channel = "1.9.0"
 async-stream = "0.3.5"
-axum = { version = "0.6.20", features = ["ws"] }
+axum = { version = "0.8.1", features = ["http2", "ws"] }
 base64 = "0.21.4"
 bytes = { version = "1.5.0", features = ["serde"] }
 ciborium = "0.2.1"
 clap.workspace = true
 dashmap = "5.5.3"
-deadpool = "0.10.0"
-deadpool-redis = "0.13.0"
+deadpool = "0.12.2"
+deadpool-redis = "0.18.0"
 futures-util = { version = "0.3.28", features = ["sink"] }
 hmac = "0.12.1"
-hyper = { version = "0.14.27", features = ["full"] }
+hyper = { version = "1.6.0", features = ["full"] }
 parking_lot = "0.12.1"
 prost.workspace = true
 rand.workspace = true
-redis = { version = "0.23.3", features = ["tokio-rustls-comp", "tls-rustls-webpki-roots"] }
+redis = { version = "0.27.6", features = ["tokio-rustls-comp", "tls-rustls-webpki-roots"] }
 serde.workspace = true
 sha2 = "0.10.7"
 sshx-core.workspace = true
 subtle = "2.5.0"
 tokio.workspace = true
 tokio-stream.workspace = true
-tokio-tungstenite = "0.20.0"
+tokio-tungstenite = "0.26.1"
 tonic.workspace = true
-tonic-reflection = "0.11.0"
+tonic-reflection = "0.12.3"
 tower = { version = "0.4.13", features = ["steer"] }
-tower-http = { version = "0.4.4", features = ["fs", "redirect", "trace"] }
+tower-http = { version = "0.6.2", features = ["fs", "redirect", "trace"] }
 tracing.workspace = true
 tracing-subscriber.workspace = true
 zstd = "0.12.4"
 
 [dev-dependencies]
-reqwest = { version = "0.11.20", default-features = false, features = ["rustls-tls"] }
+reqwest = { version = "0.12.12", default-features = false, features = ["rustls-tls"] }
 sshx = { path = "../sshx" }

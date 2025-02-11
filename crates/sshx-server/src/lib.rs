@@ -12,10 +12,12 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
-use std::{net::SocketAddr, sync::Arc};
+use std::{fmt::Debug, net::SocketAddr, sync::Arc};
 
 use anyhow::Result;
-use hyper::server::conn::AddrIncoming;
+use axum::serve::{Listener, ListenerExt};
+use tokio::net::TcpListener;
+use tracing::debug;
 use utils::Shutdown;
 
 use crate::state::ServerState;
@@ -65,7 +67,11 @@ impl Server {
     }
 
     /// Run the application server, listening on a stream of connections.
-    pub async fn listen(&self, incoming: AddrIncoming) -> Result<()> {
+    pub async fn listen<L>(&self, listener: L) -> Result<()>
+    where
+        L: Listener,
+        L::Addr: Debug,
+    {
         let state = self.state.clone();
         let terminated = self.shutdown.wait();
         tokio::spawn(async move {
@@ -79,12 +85,20 @@ impl Server {
             }
         });
 
-        listen::start_server(self.state(), incoming, self.shutdown.wait()).await
+        listen::start_server(self.state(), listener, self.shutdown.wait()).await
     }
 
     /// Convenience function to call [`Server::listen`] bound to a TCP address.
+    ///
+    /// This also sets `TCP_NODELAY` on the incoming connections for performance
+    /// reasons, as a reasonable default.
     pub async fn bind(&self, addr: &SocketAddr) -> Result<()> {
-        self.listen(AddrIncoming::bind(addr)?).await
+        let listener = TcpListener::bind(addr).await?.tap_io(|tcp_stream| {
+            if let Err(err) = tcp_stream.set_nodelay(true) {
+                debug!("failed to set TCP_NODELAY on incoming connection: {err:#}");
+            }
+        });
+        self.listen(listener).await
     }
 
     /// Send a graceful shutdown signal to the server.

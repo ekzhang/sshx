@@ -5,6 +5,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     tonic_build::configure()
         .file_descriptor_set_path(descriptor_path)
         .bytes(["."])
-        .compile(&["proto/sshx.proto"], &["proto/"])?;
+        .compile_protos(&["proto/sshx.proto"], &["proto/"])?;
     Ok(())
 }

@@ -4,8 +4,9 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::{ensure, Result};
+use axum::serve::ListenerExt;
 use futures_util::{SinkExt, StreamExt};
-use hyper::{server::conn::AddrIncoming, StatusCode};
+use hyper::StatusCode;
 use sshx::encrypt::Encrypt;
 use sshx_core::proto::sshx_service_client::SshxServiceClient;
 use sshx_core::{Sid, Uid};
@@ -34,12 +35,14 @@ impl TestServer {
         let listener = TcpListener::bind("[::1]:0").await.unwrap();
         let local_addr = listener.local_addr().unwrap();
 
-        let incoming = AddrIncoming::from_listener(listener).unwrap();
         let server = Arc::new(Server::new(Default::default()).unwrap());
         {
             let server = Arc::clone(&server);
+            let listener = listener.tap_io(|tcp_stream| {
+                _ = tcp_stream.set_nodelay(true);
+            });
             tokio::spawn(async move {
-                server.listen(incoming).await.unwrap();
+                server.listen(listener).await.unwrap();
             });
         }
 
@@ -124,7 +127,7 @@ impl ClientSocket {
     pub async fn send(&mut self, msg: WsClient) {
         let mut buf = Vec::new();
         ciborium::ser::into_writer(&msg, &mut buf).unwrap();
-        self.inner.send(Message::Binary(buf)).await.unwrap();
+        self.inner.send(Message::Binary(buf.into())).await.unwrap();
     }
 
     pub async fn send_input(&mut self, id: Sid, data: &[u8]) {

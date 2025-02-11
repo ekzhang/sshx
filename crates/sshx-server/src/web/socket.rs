@@ -75,7 +75,7 @@ async fn handle_socket(socket: &mut WebSocket, session: Arc<Session>) -> Result<
     async fn send(socket: &mut WebSocket, msg: WsServer) -> Result<()> {
         let mut buf = Vec::new();
         ciborium::ser::into_writer(&msg, &mut buf)?;
-        socket.send(Message::Binary(buf)).await?;
+        socket.send(Message::Binary(Bytes::from(buf))).await?;
         Ok(())
     }
 
@@ -265,12 +265,12 @@ async fn proxy_redirect(socket: &mut WebSocket, host: &str, name: &str) -> Resul
         tokio::select! {
             Some(client_msg) = socket.recv() => {
                 let msg = match client_msg {
-                    Ok(Message::Text(s)) => Some(TMessage::Text(s)),
+                    Ok(Message::Text(s)) => Some(TMessage::Text(s.as_str().into())),
                     Ok(Message::Binary(b)) => Some(TMessage::Binary(b)),
                     Ok(Message::Close(frame)) => {
                         let frame = frame.map(|frame| TCloseFrame {
                             code: frame.code.into(),
-                            reason: frame.reason,
+                            reason: frame.reason.as_str().into(),
                         });
                         Some(TMessage::Close(frame))
                     }
@@ -285,12 +285,12 @@ async fn proxy_redirect(socket: &mut WebSocket, host: &str, name: &str) -> Resul
             }
             Some(server_msg) = upstream.next() => {
                 let msg = match server_msg {
-                    Ok(TMessage::Text(s)) => Some(Message::Text(s)),
+                    Ok(TMessage::Text(s)) => Some(Message::Text(s.as_str().into())),
                     Ok(TMessage::Binary(b)) => Some(Message::Binary(b)),
                     Ok(TMessage::Close(frame)) => {
                         let frame = frame.map(|frame| CloseFrame {
                             code: frame.code.into(),
-                            reason: frame.reason,
+                            reason: frame.reason.as_str().into(),
                         });
                         Some(Message::Close(frame))
                     }

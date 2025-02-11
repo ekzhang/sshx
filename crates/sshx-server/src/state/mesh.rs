@@ -3,7 +3,6 @@
 use std::{pin::pin, sync::Arc, time::Duration};
 
 use anyhow::Result;
-use deadpool::managed::Manager;
 use redis::AsyncCommands;
 use tokio::time;
 use tokio_stream::{Stream, StreamExt};
@@ -19,7 +18,7 @@ const STORAGE_EXPIRY: Duration = Duration::from_secs(300);
 
 fn set_opts() -> redis::SetOptions {
     redis::SetOptions::default()
-        .with_expiration(redis::SetExpiry::PX(STORAGE_EXPIRY.as_millis() as usize))
+        .with_expiration(redis::SetExpiry::PX(STORAGE_EXPIRY.as_millis() as u64))
 }
 
 /// Communication with a distributed mesh of sshx server nodes.
@@ -33,6 +32,7 @@ fn set_opts() -> redis::SetOptions {
 #[derive(Clone)]
 pub struct StorageMesh {
     redis: deadpool_redis::Pool,
+    redis_pubsub: redis::Client,
     host: Option<String>,
 }
 
@@ -46,8 +46,18 @@ impl StorageMesh {
             .runtime(deadpool_redis::Runtime::Tokio1)
             .build()?;
 
+        // Separate `redis::Client` just for pub/sub connections.
+        //
+        // At time of writing, deadpool-redis has not been updated to support the new
+        // pub/sub client APIs in Rust. This is a temporary workaround that creates a
+        // new Redis client on the side, bypassing the connection pool.
+        //
+        // Reference: https://github.com/deadpool-rs/deadpool/issues/226
+        let redis_pubsub = redis::Client::open(redis_url)?;
+
         Ok(Self {
             redis,
+            redis_pubsub,
             host: host.map(|s| s.to_string()),
         })
     }
@@ -161,15 +171,14 @@ impl StorageMesh {
 
             loop {
                 // Requires an owned, non-pool connection for ownership reasons.
-                let conn = match self.redis.manager().create().await {
-                    Ok(conn) => conn,
+                let mut pubsub = match self.redis_pubsub.get_async_pubsub().await {
+                    Ok(pubsub) => pubsub,
                     Err(err) => {
                         error!(?err, "failed to connect to redis for pub/sub");
                         time::sleep(Duration::from_secs(5)).await;
                         continue;
                     }
                 };
-                let mut pubsub = conn.into_pubsub();
                 if let Err(err) = pubsub.subscribe(format!("transfers:{host}")).await {
                     error!(?err, "failed to subscribe to transfers");
                     time::sleep(Duration::from_secs(1)).await;

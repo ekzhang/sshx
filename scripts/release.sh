@@ -41,8 +41,7 @@ cross build --release --target x86_64-unknown-freebsd
 # *-pc-windows-msvc: for Windows, requires cargo-xwin
 XWIN_ARCH=x86,x86_64,aarch64 cargo xwin build -p sshx --release --target x86_64-pc-windows-msvc
 XWIN_ARCH=x86,x86_64,aarch64 cargo xwin build -p sshx --release --target i686-pc-windows-msvc
-# Does not work, see https://github.com/rust-cross/cargo-xwin/issues/76
-# XWIN_ARCH=x86,x86_64,aarch64 cargo xwin build -p sshx --release --target aarch64-pc-windows-msvc
+XWIN_ARCH=x86,x86_64,aarch64 cargo xwin build -p sshx --release --target aarch64-pc-windows-msvc --cross-compiler clang
 
 temp=$(mktemp)
 targets=(
@@ -55,7 +54,7 @@ targets=(
   x86_64-unknown-freebsd
   x86_64-pc-windows-msvc
   i686-pc-windows-msvc
-  # aarch64-pc-windows-msvc
+  aarch64-pc-windows-msvc
 )
 for target in "${targets[@]}"
 do

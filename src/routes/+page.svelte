@@ -223,10 +223,10 @@
           href="https://sshx.s3.amazonaws.com/sshx-i686-pc-windows-msvc.zip"
           >Windows x86</DownloadLink
         >
-        <!-- <DownloadLink
+        <DownloadLink
           href="https://sshx.s3.amazonaws.com/sshx-aarch64-pc-windows-msvc.zip"
           >Windows ARM64</DownloadLink
-        > -->
+        >
       </div>
     </div>
   </section>

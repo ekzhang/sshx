@@ -3,7 +3,7 @@ use std::{fmt::Debug, future::Future, sync::Arc};
 use anyhow::Result;
 use axum::body::Body;
 use axum::serve::Listener;
-use hyper::{header::CONTENT_TYPE, Request};
+use http::{header::CONTENT_TYPE, Request};
 use sshx_core::proto::{sshx_service_server::SshxServiceServer, FILE_DESCRIPTOR_SET};
 use tonic::service::Routes as TonicRoutes;
 use tower::{make::Shared, steer::Steer, ServiceExt};

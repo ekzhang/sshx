@@ -6,7 +6,7 @@ use std::time::Duration;
 use anyhow::{ensure, Result};
 use axum::serve::ListenerExt;
 use futures_util::{SinkExt, StreamExt};
-use hyper::StatusCode;
+use http::StatusCode;
 use sshx::encrypt::Encrypt;
 use sshx_core::proto::sshx_service_client::SshxServiceClient;
 use sshx_core::{Sid, Uid};

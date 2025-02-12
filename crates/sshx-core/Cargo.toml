@@ -16,4 +16,4 @@ serde.workspace = true
 tonic.workspace = true
 
 [build-dependencies]
-tonic-build = "0.12.3"
+tonic-build.workspace = true

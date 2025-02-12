@@ -23,7 +23,7 @@ deadpool = "0.12.2"
 deadpool-redis = "0.18.0"
 futures-util = { version = "0.3.28", features = ["sink"] }
 hmac = "0.12.1"
-hyper = { version = "1.6.0", features = ["full"] }
+http = "1.2.0"
 parking_lot = "0.12.1"
 prost.workspace = true
 rand.workspace = true
@@ -36,7 +36,7 @@ tokio.workspace = true
 tokio-stream.workspace = true
 tokio-tungstenite = "0.26.1"
 tonic.workspace = true
-tonic-reflection = "0.12.3"
+tonic-reflection.workspace = true
 tower = { version = "0.4.13", features = ["steer"] }
 tower-http = { version = "0.6.2", features = ["fs", "redirect", "trace"] }
 tracing.workspace = true

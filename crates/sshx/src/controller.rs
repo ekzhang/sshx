@@ -148,19 +148,23 @@ impl Controller {
             if let Err(err) = self.try_channel().await {
                 if let Some(status) = err.downcast_ref::<tonic::Status>() {
                     // server not found this session id
-                    if status.code() == tonic::Code::NotFound && status.message() == "session not found" {
+                    if status.code() == tonic::Code::NotFound
+                        && status.message() == "session not found"
+                    {
                         match Controller::new(
                             &self.origin,
                             &self.name,
                             self.runner.clone(),
                             self.write_url.is_some(),
-                        ).await {
+                        )
+                        .await
+                        {
                             Ok(new_controller) => {
                                 // successfully rebuilt the connection
                                 // replaced controller
                                 *self = new_controller;
                                 info!("recreate session success");
-                                continue;  // 直接进入下一次循环
+                                continue;
                             }
                             Err(e) => {
                                 error!(error = ?e, "failed to recreate session");

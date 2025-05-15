@@ -14,7 +14,7 @@ use tokio::task;
 use tokio::time::{self, Duration, Instant, MissedTickBehavior};
 use tokio_stream::{wrappers::ReceiverStream, StreamExt};
 use tonic::transport::Channel;
-use tracing::{debug, error, warn};
+use tracing::{debug, error, info, warn};
 
 use crate::encrypt::Encrypt;
 use crate::runner::{Runner, ShellData};
@@ -146,6 +146,28 @@ impl Controller {
         let mut retries = 0;
         loop {
             if let Err(err) = self.try_channel().await {
+                if let Some(status) = err.downcast_ref::<tonic::Status>() {
+                    // server not found this session id
+                    if status.code() == tonic::Code::NotFound && status.message() == "session not found" {
+                        match Controller::new(
+                            &self.origin,
+                            &self.name,
+                            self.runner.clone(),
+                            self.write_url.is_some(),
+                        ).await {
+                            Ok(new_controller) => {
+                                // successfully rebuilt the connection
+                                // replaced controller
+                                *self = new_controller;
+                                info!("recreate session success");
+                                continue;  // 直接进入下一次循环
+                            }
+                            Err(e) => {
+                                error!(error = ?e, "failed to recreate session");
+                            }
+                        }
+                    }
+                }
                 if last_retry.elapsed() >= Duration::from_secs(10) {
                     retries = 0;
                 }

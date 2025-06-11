@@ -117,7 +117,7 @@ async fn shell_task(
             let data = encrypt.segment(
                 0x100000000 | id.0 as u64, // stream number
                 (content_offset + start) as u64,
-                content[start..end].as_bytes(),
+                &content.as_bytes()[start..end],
             );
             let data = TerminalData {
                 id: id.0,

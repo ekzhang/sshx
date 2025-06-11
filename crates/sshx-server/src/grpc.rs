@@ -122,7 +122,8 @@ impl SshxService for GrpcServer {
 }
 
 /// Validate the client token for a session.
-fn validate_token(mac: impl Mac, name: &str, token: &str) -> Result<(), Status> {
+#[allow(clippy::result_large_err)]
+fn validate_token(mac: impl Mac, name: &str, token: &str) -> tonic::Result<()> {
     if let Ok(token) = BASE64_STANDARD.decode(token) {
         if mac.chain_update(name).verify_slice(&token).is_ok() {
             return Ok(());

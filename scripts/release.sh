@@ -28,8 +28,8 @@ CARGO_TARGET_ARMV7_UNKNOWN_LINUX_MUSLEABIHF_LINKER=armv7-unknown-linux-musleabih
 cargo build --release --target armv7-unknown-linux-musleabihf
 
 # x86_64-apple-darwin: for macOS on Intel
-SDKROOT=$(xcrun -sdk macosx15.2 --show-sdk-path) \
-MACOSX_DEPLOYMENT_TARGET=$(xcrun -sdk macosx15.2 --show-sdk-platform-version) \
+SDKROOT=$(xcrun --show-sdk-path) \
+MACOSX_DEPLOYMENT_TARGET=$(xcrun --show-sdk-platform-version) \
 cargo build --release --target x86_64-apple-darwin
 
 # aarch64-apple-darwin: for macOS on Apple Silicon
@@ -60,15 +60,15 @@ for target in "${targets[@]}"
 do
   if [[ ! $target == *"windows"* ]]; then
     echo "compress: target/$target/release/sshx"
-    tar czf $temp -C target/$target/release sshx
+    tar --no-xattrs -czf $temp -C target/$target/release sshx
     aws s3 cp $temp s3://sshx/sshx-$target.tar.gz
 
     echo "compress: target/$target/release/sshx-server"
-    tar czf $temp -C target/$target/release sshx-server
+    tar --no-xattrs -czf $temp -C target/$target/release sshx-server
     aws s3 cp $temp s3://sshx/sshx-server-$target.tar.gz
   else
     echo "compress: target/$target/release/sshx.exe"
-    rm $temp && zip -j $temp target/$target/release/sshx.exe
+    rm $temp && zip -X -j $temp target/$target/release/sshx.exe
     aws s3 cp $temp s3://sshx/sshx-$target.zip
   fi
 done

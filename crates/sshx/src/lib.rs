@@ -10,3 +10,5 @@ pub mod controller;
 pub mod encrypt;
 pub mod runner;
 pub mod terminal;
+/// Cloudflare tunnel provider for self-hosted mode.
+pub mod tunnel;

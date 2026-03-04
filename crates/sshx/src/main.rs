@@ -3,7 +3,7 @@ use std::process::ExitCode;
 use ansi_term::Color::{Cyan, Fixed, Green};
 use anyhow::Result;
 use clap::Parser;
-use sshx::{controller::Controller, runner::Runner, terminal::get_default_shell};
+use sshx::{controller::Controller, runner::Runner, terminal::get_default_shell, tunnel};
 use tokio::signal;
 use tracing::error;
 
@@ -31,6 +31,15 @@ struct Args {
     /// editors.
     #[clap(long)]
     enable_readers: bool,
+
+    /// Tunnel provider to expose the local server publicly (bypasses --server).
+    #[clap(long, value_enum)]
+    tunnel: Option<TunnelProvider>,
+}
+
+#[derive(clap::ValueEnum, Clone, Debug)]
+enum TunnelProvider {
+    Cloudflare,
 }
 
 fn print_greeting(shell: &str, controller: &Controller) {
@@ -89,8 +98,21 @@ async fn start(args: Args) -> Result<()> {
         name
     });
 
+    let _tunnel_guard = if let Some(TunnelProvider::Cloudflare) = args.tunnel {
+        let guard = tunnel::start_cloudflare_tunnel().await?;
+        Some(guard)
+    } else {
+        None
+    };
+
+    let server_addr = if let Some(guard) = &_tunnel_guard {
+        guard.local_endpoint.clone()
+    } else {
+        args.server.clone()
+    };
+
     let runner = Runner::Shell(shell.clone());
-    let mut controller = Controller::new(&args.server, &name, runner, args.enable_readers).await?;
+    let mut controller = Controller::new(&server_addr, &name, runner, args.enable_readers).await?;
     if args.quiet {
         if let Some(write_url) = controller.write_url() {
             println!("{}", write_url);

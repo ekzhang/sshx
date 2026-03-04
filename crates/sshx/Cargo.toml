@@ -26,6 +26,7 @@ tonic.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
 whoami = { version = "1.5.1", default-features = false }
+sshx-server = { path = "../sshx-server" }
 
 [target.'cfg(unix)'.dependencies]
 close_fds = "0.3.2"

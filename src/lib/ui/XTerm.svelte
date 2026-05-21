@@ -204,9 +204,11 @@
 
     const utf8 = new TextEncoder();
     term.onData((data: string) => {
+      if (!focused) return;
       dispatch("data", utf8.encode(data));
     });
     term.onBinary((data: string) => {
+      if (!focused) return;
       dispatch("data", Buffer.from(data, "binary"));
     });
   });

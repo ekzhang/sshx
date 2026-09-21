@@ -3,4 +3,5 @@ group_imports = "StdExternalCrate"
 wrap_comments = true
 format_strings = true
 normalize_comments = true
+comment_width = 100
 reorder_impl_items = true

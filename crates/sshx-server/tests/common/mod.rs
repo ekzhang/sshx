@@ -190,6 +190,9 @@ impl ClientSocket {
                     WsServer::ShellLatency(_) => {}
                     WsServer::Pong(_) => {}
                     WsServer::Error(err) => self.errors.push(err),
+                    WsServer::FileList(_, _) => {}
+                    WsServer::FileChanged(_, _) => {}
+                    WsServer::FileError(_, _) => {}
                 }
             }
         };

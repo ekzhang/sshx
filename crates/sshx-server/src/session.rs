@@ -7,6 +7,7 @@ use std::sync::Arc;
 use anyhow::{bail, Context, Result};
 use bytes::Bytes;
 use parking_lot::{Mutex, RwLock, RwLockWriteGuard};
+use tokio::sync::mpsc;
 use sshx_core::{
     proto::{server_update::ServerMessage, SequenceNumbers},
     IdCounter, Sid, Uid,
@@ -18,7 +19,7 @@ use tokio_stream::Stream;
 use tracing::{debug, warn};
 
 use crate::utils::Shutdown;
-use crate::web::protocol::{WsServer, WsUser, WsWinsize};
+use crate::web::protocol::{WsFileEntry, WsServer, WsUser, WsWinsize};
 
 mod snapshot;
 
@@ -77,6 +78,9 @@ pub struct Session {
 
     /// Set when this session has been closed and removed.
     shutdown: Shutdown,
+
+    /// Pending download channels keyed by file operation ID.
+    pending_downloads: Mutex<HashMap<u32, mpsc::Sender<Bytes>>>,
 }
 
 /// Internal state for each shell.
@@ -118,6 +122,7 @@ impl Session {
             update_rx,
             sync_notify: Notify::new(),
             shutdown: Shutdown::new(),
+            pending_downloads: Mutex::new(HashMap::new()),
         }
     }
 
@@ -371,6 +376,37 @@ impl Session {
     /// Send a measurement of the shell latency.
     pub fn send_latency_measurement(&self, latency: u64) {
         self.broadcast.send(WsServer::ShellLatency(latency)).ok();
+    }
+
+    /// Send a file listing to all WebSocket clients.
+    pub fn send_file_list(&self, path: String, entries: Vec<WsFileEntry>) {
+        self.broadcast.send(WsServer::FileList(path, entries)).ok();
+    }
+
+    /// Send a file change notification to all WebSocket clients.
+    pub fn send_file_changed(&self, path: String, kind: String) {
+        self.broadcast.send(WsServer::FileChanged(path, kind)).ok();
+    }
+
+    /// Send a file operation error to all WebSocket clients.
+    pub fn send_file_error(&self, path: String, error: String) {
+        self.broadcast.send(WsServer::FileError(path, error)).ok();
+    }
+
+    /// Register a channel to receive download chunks for a file operation.
+    pub fn register_download(&self, id: u32, tx: mpsc::Sender<Bytes>) {
+        self.pending_downloads.lock().insert(id, tx);
+    }
+
+    /// Forward a file chunk to the registered download channel.
+    pub fn forward_chunk(&self, id: u32, data: Bytes, done: bool) {
+        let mut pending = self.pending_downloads.lock();
+        if let Some(tx) = pending.get(&id) {
+            let removed = tx.try_send(data).is_err() || done;
+            if removed {
+                pending.remove(&id);
+            }
+        }
     }
 
     /// Register a backend client heartbeat, refreshing the timestamp.

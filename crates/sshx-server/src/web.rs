@@ -2,12 +2,13 @@
 
 use std::sync::Arc;
 
-use axum::routing::{any, get_service};
+use axum::routing::{any, get, get_service};
 use axum::Router;
 use tower_http::services::{ServeDir, ServeFile};
 
 use crate::ServerState;
 
+pub mod files;
 pub mod protocol;
 mod socket;
 
@@ -30,5 +31,10 @@ pub fn app() -> Router<Arc<ServerState>> {
 
 /// Routes for the backend web API server.
 fn backend() -> Router<Arc<ServerState>> {
-    Router::new().route("/s/{name}", any(socket::get_session_ws))
+    Router::new()
+        .route("/s/{name}", any(socket::get_session_ws))
+        .route(
+            "/s/{name}/files",
+            get(files::download_file).post(files::upload_file),
+        )
 }

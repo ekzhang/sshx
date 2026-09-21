@@ -17,6 +17,14 @@ export type WsUser = {
   canWrite: boolean;
 };
 
+/** File entry for directory listing. */
+export type FileEntry = {
+  name: string;
+  isDir: boolean;
+  size: number;
+  modified: number; // Unix timestamp in milliseconds
+};
+
 /** Server message type, see the Rust version. */
 export type WsServer = {
   hello?: [Uid, string];
@@ -28,6 +36,9 @@ export type WsServer = {
   hear?: [Uid, string, string];
   shellLatency?: number | bigint;
   pong?: number | bigint;
+  fileList?: [string, FileEntry[]];
+  fileChanged?: [string, string]; // [path, "created" | "deleted" | "renamed"]
+  fileError?: [string, string]; // [path, errorMessage]
   error?: string;
 };
 
@@ -43,5 +54,8 @@ export type WsClient = {
   data?: [Sid, Uint8Array, bigint];
   subscribe?: [Sid, number];
   chat?: string;
+  listFiles?: string;
+  deleteFile?: string;
+  renameFile?: [string, string];
   ping?: bigint;
 };

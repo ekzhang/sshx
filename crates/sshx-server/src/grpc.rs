@@ -17,6 +17,7 @@ use tonic::{Request, Response, Status, Streaming};
 use tracing::{error, info, warn};
 
 use crate::session::{Metadata, Session};
+use crate::web::protocol::WsFileEntry;
 use crate::ServerState;
 
 /// Interval for synchronizing sequence numbers with the client.
@@ -217,6 +218,32 @@ async fn handle_update(tx: &ServerTx, session: &Session, update: ClientUpdate) -
         Some(ClientMessage::Error(err)) => {
             // TODO: Propagate these errors to listeners on the web interface?
             error!(?err, "error received from client");
+        }
+        Some(ClientMessage::FileList(resp)) => {
+            let entries: Vec<WsFileEntry> = resp.entries.into_iter().map(|e| WsFileEntry {
+                name: e.name,
+                is_dir: e.is_dir,
+                size: e.size,
+                modified: e.modified,
+            }).collect();
+            session.send_file_list(resp.path, entries);
+        }
+        Some(ClientMessage::FileChunk(resp)) => {
+            session.forward_chunk(resp.id, resp.data, resp.done);
+        }
+        Some(ClientMessage::FileDeleted(resp)) => {
+            if resp.error.is_empty() {
+                session.send_file_changed(resp.path, "deleted".into());
+            } else {
+                session.send_file_error(resp.path, resp.error);
+            }
+        }
+        Some(ClientMessage::FileRenamed(resp)) => {
+            if resp.error.is_empty() {
+                session.send_file_changed(resp.new_path, "renamed".into());
+            } else {
+                session.send_file_error(resp.new_path, resp.error);
+            }
         }
         None => (), // Heartbeat message, ignored.
     }

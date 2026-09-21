@@ -9,7 +9,10 @@ use axum::extract::{
 use axum::response::IntoResponse;
 use bytes::Bytes;
 use futures_util::SinkExt;
-use sshx_core::proto::{server_update::ServerMessage, NewShell, TerminalInput, TerminalSize};
+use sshx_core::proto::{
+    server_update::ServerMessage, FileDeleteRequest, FileListRequest, FileRenameRequest, NewShell,
+    TerminalInput, TerminalSize,
+};
 use sshx_core::Sid;
 use subtle::ConstantTimeEq;
 use tokio::sync::mpsc;
@@ -242,6 +245,36 @@ async fn handle_socket(socket: &mut WebSocket, session: Arc<Session>) -> Result<
             }
             WsClient::Chat(msg) => {
                 session.send_chat(user_id, &msg)?;
+            }
+            WsClient::ListFiles(path) => {
+                let id = session.counter().next_sid().0;
+                update_tx
+                    .send(ServerMessage::ListFiles(FileListRequest { id, path }))
+                    .await?;
+            }
+            WsClient::DeleteFile(path) => {
+                if let Err(e) = session.check_write_permission(user_id) {
+                    send(socket, WsServer::Error(e.to_string())).await?;
+                    continue;
+                }
+                let id = session.counter().next_sid().0;
+                update_tx
+                    .send(ServerMessage::DeleteFile(FileDeleteRequest { id, path }))
+                    .await?;
+            }
+            WsClient::RenameFile(path, new_name) => {
+                if let Err(e) = session.check_write_permission(user_id) {
+                    send(socket, WsServer::Error(e.to_string())).await?;
+                    continue;
+                }
+                let id = session.counter().next_sid().0;
+                update_tx
+                    .send(ServerMessage::RenameFile(FileRenameRequest {
+                        id,
+                        path,
+                        new_name,
+                    }))
+                    .await?;
             }
             WsClient::Ping(ts) => {
                 send(socket, WsServer::Pong(ts)).await?;

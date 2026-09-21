@@ -72,6 +72,10 @@ message ClientUpdate {
     uint32 closed_shell = 4;    // Acknowledge that a shell was closed.
     fixed64 pong = 14;          // Response for latency measurement.
     string error = 15;
+    FileListResponse file_list = 16;
+    FileChunkResponse file_chunk = 17;
+    FileDeletedResponse file_deleted = 18;
+    FileRenamedResponse file_renamed = 19;
   }
 }
 
@@ -85,6 +89,11 @@ message ServerUpdate {
     TerminalSize resize = 5;   // Resize a terminal window.
     fixed64 ping = 14;         // Request a pong, with the timestamp.
     string error = 15;
+    FileListRequest list_files = 16;
+    FileDownloadRequest download_file = 17;
+    FileUploadRequest upload_file = 18;
+    FileDeleteRequest delete_file = 19;
+    FileRenameRequest rename_file = 20;
   }
 }
 
@@ -117,4 +126,64 @@ message SerializedShell {
   int32 winsize_y = 7;
   uint32 winsize_rows = 8;
   uint32 winsize_cols = 9;
+}
+
+message FileEntry {
+  string name = 1;
+  bool is_dir = 2;
+  uint64 size = 3;
+  int64 modified = 4;
+}
+
+message FileListRequest {
+  uint32 id = 1;
+  string path = 2;
+}
+
+message FileDownloadRequest {
+  uint32 id = 1;
+  string path = 2;
+}
+
+message FileUploadRequest {
+  uint32 id = 1;
+  string path = 2;
+  bytes data = 3;
+  bool done = 4;
+}
+
+message FileDeleteRequest {
+  uint32 id = 1;
+  string path = 2;
+}
+
+message FileRenameRequest {
+  uint32 id = 1;
+  string path = 2;
+  string new_name = 3;
+}
+
+message FileListResponse {
+  uint32 id = 1;
+  repeated FileEntry entries = 2;
+  string path = 3;
+}
+
+message FileChunkResponse {
+  uint32 id = 1;
+  bytes data = 2;
+  bool done = 3;
+  uint64 size = 4;
+}
+
+message FileDeletedResponse {
+  uint32 id = 1;
+  string error = 2;
+  string path = 3;
+}
+
+message FileRenamedResponse {
+  uint32 id = 1;
+  string new_path = 2;
+  string error = 3;
 }

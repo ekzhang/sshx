@@ -29,6 +29,20 @@ impl Default for WsWinsize {
     }
 }
 
+/// Information about a file entry for directory listing.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct WsFileEntry {
+    /// The name of the file or directory.
+    pub name: String,
+    /// Whether this entry is a directory.
+    pub is_dir: bool,
+    /// Size of the file in bytes (0 for directories).
+    pub size: u64,
+    /// Last modification timestamp (Unix epoch in seconds).
+    pub modified: i64,
+}
+
 /// Real-time message providing information about a user.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -65,6 +79,12 @@ pub enum WsServer {
     ShellLatency(u64),
     /// Echo back a timestamp, for the the client's own latency measurement.
     Pong(u64),
+    /// Directory listing result.
+    FileList(String, Vec<WsFileEntry>),
+    /// Notification of a file change (path, kind).
+    FileChanged(String, String),
+    /// File operation error (path, error).
+    FileError(String, String),
     /// Alert the client of an application error.
     Error(String),
 }
@@ -94,6 +114,12 @@ pub enum WsClient {
     Subscribe(Sid, u64),
     /// Send a a chat message to the room.
     Chat(String),
+    /// Request directory listing.
+    ListFiles(String),
+    /// Delete a file or directory.
+    DeleteFile(String),
+    /// Rename a file or directory.
+    RenameFile(String, String),
     /// Send a ping to the server, for latency measurement.
     Ping(u64),
 }

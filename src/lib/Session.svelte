@@ -16,6 +16,8 @@
   import type { WsClient, WsServer, WsUser, WsWinsize } from "./protocol";
   import { makeToast } from "./toast";
   import Chat, { type ChatMessage } from "./ui/Chat.svelte";
+  import FileManager from "./ui/FileManager.svelte";
+  import type { FileEntry } from "./protocol";
   import ChooseName from "./ui/ChooseName.svelte";
   import NameList from "./ui/NameList.svelte";
   import NetworkInfo from "./ui/NetworkInfo.svelte";
@@ -63,6 +65,11 @@
   let settingsOpen = false; // @hmr:keep
   let showNetworkInfo = false; // @hmr:keep
 
+  let showFileManager = false; // @hmr:keep
+  let fileEntries: FileEntry[] = [];
+  let fileEntriesMap: Record<string, FileEntry[]> = { "/": [] };
+  let currentFilePath = "/";
+
   onMount(() => {
     touchZoom = new TouchZoom(fabricEl);
     touchZoom.onMove(() => {
@@ -95,6 +102,7 @@
 
   let encrypt: Encrypt;
   let srocket: Srocket<WsServer, WsClient> | null = null;
+  let encryptedZerosB64 = "";
 
   let connected = false;
   let exitReason: string | null = null;
@@ -136,6 +144,9 @@
 
     encrypt = await Encrypt.new(key);
     const encryptedZeros = await encrypt.zeros();
+    encryptedZerosB64 = btoa(
+      String.fromCharCode(...new Uint8Array(encryptedZeros)),
+    );
 
     const writeEncryptedZeros = writePassword
       ? await (await Encrypt.new(writePassword)).zeros()
@@ -202,6 +213,21 @@
         } else if (message.pong !== undefined) {
           const serverLatency = Date.now() - Number(message.pong);
           serverLatencies = [...serverLatencies, serverLatency].slice(-10);
+        } else if (message.fileList) {
+          const [path, entries] = message.fileList;
+          fileEntriesMap[path] = entries;
+          fileEntriesMap = fileEntriesMap; // trigger Svelte reactivity
+          if (path === currentFilePath) {
+            fileEntries = entries;
+          }
+        } else if (message.fileChanged) {
+          const [_path, _kind] = message.fileChanged;
+          const parent =
+            _path.substring(0, _path.lastIndexOf("/")) || "/";
+          srocket?.send({ listFiles: parent });
+        } else if (message.fileError) {
+          const [_path, error] = message.fileError;
+          makeToast({ kind: "error", message: `File error: ${error}` });
         } else if (message.error) {
           console.warn("Server error: " + message.error);
         }
@@ -261,6 +287,22 @@
   }
 
   let counter = 0n;
+
+  function handleListFiles(path: string) {
+    currentFilePath = path;
+    if (fileEntriesMap[path]) {
+      fileEntries = fileEntriesMap[path];
+    }
+    srocket?.send({ listFiles: path });
+  }
+
+  function handleDeleteFile(path: string) {
+    srocket?.send({ deleteFile: path });
+  }
+
+  function handleRenameFile(event: { path: string; newName: string }) {
+    srocket?.send({ renameFile: [event.path, event.newName] });
+  }
 
   async function handleCreate() {
     if (hasWriteAccess === false) {
@@ -404,6 +446,13 @@
       {newMessages}
       {hasWriteAccess}
       on:create={handleCreate}
+      on:files={() => {
+        showFileManager = !showFileManager;
+        if (showFileManager) {
+          showChat = false;
+          handleListFiles("/");
+        }
+      }}
       on:chat={() => {
         showChat = !showChat;
         newMessages = false;
@@ -443,6 +492,19 @@
       />
     </div>
   {/if}
+
+  <FileManager
+    open={showFileManager}
+    entries={fileEntries}
+    entriesMap={fileEntriesMap}
+    currentPath={currentFilePath}
+    sessionId={id}
+    encryptedZerosB64={encryptedZerosB64}
+    on:close={() => (showFileManager = false)}
+    on:listFiles={(e) => handleListFiles(e.detail)}
+    on:deleteFile={(e) => handleDeleteFile(e.detail)}
+    on:renameFile={(e) => handleRenameFile(e.detail)}
+  />
 
   <Settings open={settingsOpen} on:close={() => (settingsOpen = false)} />
 

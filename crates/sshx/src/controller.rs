@@ -241,6 +241,81 @@ impl Controller {
                 ServerMessage::Error(err) => {
                     error!(?err, "error received from server");
                 }
+                ServerMessage::ListFiles(req) => {
+                    let sender = self.output_tx.clone();
+                    let root = std::env::current_dir().unwrap_or_default();
+                    tokio::spawn(async move {
+                        if let Err(err) = crate::files::handle_file_operation(
+                            ServerMessage::ListFiles(req),
+                            &root,
+                            &sender,
+                        )
+                        .await
+                        {
+                            error!(?err, "list files failed");
+                        }
+                    });
+                }
+                ServerMessage::DownloadFile(req) => {
+                    let sender = self.output_tx.clone();
+                    let root = std::env::current_dir().unwrap_or_default();
+                    tokio::spawn(async move {
+                        if let Err(err) = crate::files::handle_file_operation(
+                            ServerMessage::DownloadFile(req),
+                            &root,
+                            &sender,
+                        )
+                        .await
+                        {
+                            error!(?err, "download file failed");
+                        }
+                    });
+                }
+                ServerMessage::UploadFile(req) => {
+                    let sender = self.output_tx.clone();
+                    let root = std::env::current_dir().unwrap_or_default();
+                    tokio::spawn(async move {
+                        if let Err(err) = crate::files::handle_file_operation(
+                            ServerMessage::UploadFile(req),
+                            &root,
+                            &sender,
+                        )
+                        .await
+                        {
+                            error!(?err, "upload file failed");
+                        }
+                    });
+                }
+                ServerMessage::DeleteFile(req) => {
+                    let sender = self.output_tx.clone();
+                    let root = std::env::current_dir().unwrap_or_default();
+                    tokio::spawn(async move {
+                        if let Err(err) = crate::files::handle_file_operation(
+                            ServerMessage::DeleteFile(req),
+                            &root,
+                            &sender,
+                        )
+                        .await
+                        {
+                            error!(?err, "delete file failed");
+                        }
+                    });
+                }
+                ServerMessage::RenameFile(req) => {
+                    let sender = self.output_tx.clone();
+                    let root = std::env::current_dir().unwrap_or_default();
+                    tokio::spawn(async move {
+                        if let Err(err) = crate::files::handle_file_operation(
+                            ServerMessage::RenameFile(req),
+                            &root,
+                            &sender,
+                        )
+                        .await
+                        {
+                            error!(?err, "rename file failed");
+                        }
+                    });
+                }
             }
         }
     }

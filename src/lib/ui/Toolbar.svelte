@@ -1,6 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from "svelte";
   import {
+    FolderIcon,
     MessageSquareIcon,
     PlusCircleIcon,
     SettingsIcon,
@@ -16,6 +17,7 @@
   const dispatch = createEventDispatcher<{
     create: void;
     chat: void;
+    files: void;
     settings: void;
     networkInfo: void;
   }>();
@@ -42,6 +44,9 @@
           : "Create new terminal"}
       >
         <PlusCircleIcon strokeWidth={1.5} class="p-0.5" />
+      </button>
+      <button class="icon-button" on:click={() => dispatch("files")}>
+        <FolderIcon strokeWidth={1.5} class="p-0.5" />
       </button>
       <button class="icon-button" on:click={() => dispatch("chat")}>
         <MessageSquareIcon strokeWidth={1.5} class="p-0.5" />

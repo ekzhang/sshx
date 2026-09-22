@@ -1,6 +1,7 @@
 //! Network gRPC client allowing server control of terminals.
 
 use std::collections::HashMap;
+use std::convert::TryFrom;
 use std::pin::pin;
 
 use anyhow::{Context, Result};
@@ -43,6 +44,21 @@ pub struct Controller {
     output_tx: mpsc::Sender<ClientMessage>,
     /// Owned receiving end of the `output_tx` channel.
     output_rx: mpsc::Receiver<ClientMessage>,
+    auth_token: Option<String>,
+}
+
+fn add_auth_header_to_request<T>(
+    mut req: tonic::Request<T>,
+    auth_token: &Option<String>,
+) -> tonic::Request<T> {
+    if let Some(token) = auth_token {
+        if let Ok(auth_value) =
+            tonic::metadata::MetadataValue::try_from(format!("Bearer {}", token))
+        {
+            req.metadata_mut().insert("authorization", auth_value);
+        }
+    }
+    req
 }
 
 impl Controller {
@@ -52,6 +68,7 @@ impl Controller {
         name: &str,
         runner: Runner,
         enable_readers: bool,
+        auth_token: &Option<String>,
     ) -> Result<Self> {
         debug!(%origin, "connecting to server");
         let encryption_key = rand_alphanumeric(14); // 83.3 bits of entropy
@@ -86,6 +103,7 @@ impl Controller {
             name: name.into(),
             write_password_hash,
         };
+        let req = add_auth_header_to_request(tonic::Request::new(req), auth_token);
         let mut resp = client.open(req).await?.into_inner();
         resp.url = resp.url + "#" + &encryption_key;
 
@@ -108,6 +126,7 @@ impl Controller {
             shells_tx: HashMap::new(),
             output_tx,
             output_rx,
+            auth_token: auth_token.clone(),
         })
     }
 
@@ -280,6 +299,7 @@ impl Controller {
             name: self.name.clone(),
             token: self.token.clone(),
         };
+        let req = add_auth_header_to_request(tonic::Request::new(req), &self.auth_token);
         let mut client = Self::connect(&self.origin).await?;
         client.close(req).await?;
         Ok(())

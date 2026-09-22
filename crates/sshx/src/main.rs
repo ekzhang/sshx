@@ -31,6 +31,10 @@ struct Args {
     /// editors.
     #[clap(long)]
     enable_readers: bool,
+
+    /// Authentication token (sent as Authorization header)
+    #[arg(long, env = "SSHX_AUTH_TOKEN")]
+    pub auth_token: Option<String>,
 }
 
 fn print_greeting(shell: &str, controller: &Controller) {
@@ -90,7 +94,14 @@ async fn start(args: Args) -> Result<()> {
     });
 
     let runner = Runner::Shell(shell.clone());
-    let mut controller = Controller::new(&args.server, &name, runner, args.enable_readers).await?;
+    let mut controller = Controller::new(
+        &args.server,
+        &name,
+        runner,
+        args.enable_readers,
+        &args.auth_token,
+    )
+    .await?;
     if args.quiet {
         if let Some(write_url) = controller.write_url() {
             println!("{}", write_url);

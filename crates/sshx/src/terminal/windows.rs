@@ -19,6 +19,7 @@ use tracing::instrument;
 /// for Powershell to launch. This is why I don't typically use Windows!
 pub async fn get_default_shell() -> String {
     for shell in [
+        "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
         "C:\\Program Files\\Git\\bin\\bash.exe",
         "C:\\Windows\\System32\\cmd.exe",
     ] {
@@ -45,6 +46,12 @@ impl Terminal {
     #[instrument]
     pub async fn new(shell: &str) -> Result<Terminal> {
         let mut command = Command::new(shell);
+
+        // Inherit all environment variables from the current process.
+        // This ensures PATH and other important variables are preserved.
+        for (key, value) in std::env::vars() {
+            command.env(key, value);
+        }
 
         // Set terminal environment variables appropriately.
         command.env("TERM", "xterm-256color");

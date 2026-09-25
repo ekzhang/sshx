@@ -10,7 +10,7 @@ use axum::response::IntoResponse;
 use bytes::Bytes;
 use futures_util::SinkExt;
 use sshx_core::proto::{server_update::ServerMessage, NewShell, TerminalInput, TerminalSize};
-use sshx_core::Sid;
+use sshx_core::{SafeName, Sid};
 use subtle::ConstantTimeEq;
 use tokio::sync::mpsc;
 use tokio_stream::StreamExt;
@@ -21,7 +21,7 @@ use crate::web::protocol::{WsClient, WsServer};
 use crate::ServerState;
 
 pub async fn get_session_ws(
-    Path(name): Path<String>,
+    Path(name): Path<SafeName>,
     ws: WebSocketUpgrade,
     State(state): State<Arc<ServerState>>,
 ) -> impl IntoResponse {
@@ -93,7 +93,6 @@ async fn handle_socket(socket: &mut WebSocket, session: Arc<Session>) -> Result<
 
     let metadata = session.metadata();
     let user_id = session.counter().next_uid();
-    session.sync_now();
     send(socket, WsServer::Hello(user_id, metadata.name.clone())).await?;
 
     let can_write = match recv(socket).await? {
@@ -128,6 +127,10 @@ async fn handle_socket(socket: &mut WebSocket, session: Arc<Session>) -> Result<
     };
 
     let _user_guard = session.user_scope(user_id, can_write)?;
+    // Persist the allocated ID counter, but only once the client is actually
+    // authenticated, so that unauthenticated connections cannot force the
+    // session to be snapshotted and written to storage.
+    session.sync_now();
 
     let update_tx = session.update_tx(); // start listening for updates before any state reads
     let mut broadcast_stream = session.subscribe_broadcast();

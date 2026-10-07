@@ -24,6 +24,7 @@
   import XTerm from "./ui/XTerm.svelte";
   import Avatars from "./ui/Avatars.svelte";
   import LiveCursor from "./ui/LiveCursor.svelte";
+  import TouchKeys from "./ui/TouchKeys.svelte";
   import { slide } from "./action/slide";
   import { TouchZoom, INITIAL_ZOOM } from "./action/touchZoom";
   import { arrangeNewTerminal } from "./arrange";
@@ -54,6 +55,9 @@
     ];
   }
 
+  /** Screens narrower than this zoom terminals out to fit their width. */
+  const NARROW_SCREEN_WIDTH = 640;
+
   let fabricEl: HTMLElement;
   let touchZoom: TouchZoom;
   let center = [0, 0];
@@ -63,7 +67,11 @@
   let settingsOpen = false; // @hmr:keep
   let showNetworkInfo = false; // @hmr:keep
 
+  let isTouchDevice = false;
+  let ctrlKey = false; // Sticky Ctrl modifier from the touch keys.
+
   onMount(() => {
+    isTouchDevice = window.matchMedia("(pointer: coarse)").matches;
     touchZoom = new TouchZoom(fabricEl);
     touchZoom.onMove(() => {
       center = touchZoom.center;
@@ -109,6 +117,8 @@
   let users: [number, WsUser][] = [];
   let shells: [number, WsWinsize][] = [];
   let subscriptions = new Set<number>();
+  let initialFitDone = false; // Whether a terminal was fit on narrow screens.
+  let fitCreatedTerminal = false; // Fit the next terminal created by this user.
 
   // May be undefined before `users` is first populated.
   $: hasWriteAccess = users.find(([uid]) => uid === userId)?.[1]?.canWrite;
@@ -179,7 +189,9 @@
             users = [...users, [id, update]];
           }
         } else if (message.shells) {
+          const previousIds = new Set(shells.map(([id]) => id));
           shells = message.shells;
+          fitNewTerminal(shells.filter(([id]) => !previousIds.has(id)));
           if (movingIsDone) {
             moving = -1;
           }
@@ -285,7 +297,59 @@
     }));
     const { x, y } = arrangeNewTerminal(existing);
     srocket?.send({ create: [x, y] });
-    touchZoom.moveTo([x, y], INITIAL_ZOOM);
+    if (window.innerWidth < NARROW_SCREEN_WIDTH) {
+      fitCreatedTerminal = true; // Fit once the server reports its size.
+    } else {
+      touchZoom.moveTo([x, y], INITIAL_ZOOM);
+    }
+  }
+
+  /** On narrow screens, bring the relevant terminal into view after shells change. */
+  function fitNewTerminal(added: [number, WsWinsize][]) {
+    if (window.innerWidth >= NARROW_SCREEN_WIDTH) return;
+    let target: number | undefined;
+    if (fitCreatedTerminal && added.length) {
+      target = added[added.length - 1][0];
+    } else if (!initialFitDone && shells.length) {
+      target = shells[shells.length - 1][0]; // Frontmost terminal.
+    }
+    if (target === undefined) return;
+    fitCreatedTerminal = false;
+    initialFitDone = true;
+    fitTerminal(target);
+  }
+
+  /** Pan and zoom so a terminal spans the screen width, below the toolbar. */
+  async function fitTerminal(id: number) {
+    // Wait for xterm.js to render, so the terminal has its final size.
+    for (let i = 0; i < 120; i++) {
+      if (termElements[id]?.querySelector(".xterm-screen")) break;
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+    }
+    const wrapper = termWrappers[id];
+    const winsize = shells.find(([sid]) => sid === id)?.[1];
+    if (!wrapper || !winsize) return;
+
+    const margin = 8;
+    const top = 104; // Below the toolbar.
+    const fitZoom = Math.min(
+      INITIAL_ZOOM,
+      (window.innerWidth - 2 * margin) / wrapper.offsetWidth,
+    );
+    // Screen position of a terminal is `zoom * (offset + pos - center)`.
+    const [ox, oy] = getConstantOffset();
+    touchZoom.moveTo(
+      [ox + winsize.x - margin / fitZoom, oy + winsize.y - top / fitZoom],
+      fitZoom,
+    );
+  }
+
+  /** Applies the sticky Ctrl modifier from the touch keys to typed input. */
+  function applyCtrlKey(data: Uint8Array): Uint8Array {
+    if (!ctrlKey || data.length !== 1) return data;
+    ctrlKey = false;
+    // Letters and @[\]^_ map to control codes 0x00-0x1f.
+    return data[0] >= 0x40 ? new Uint8Array([data[0] & 0x1f]) : data;
   }
 
   async function handleInput(id: number, data: Uint8Array) {
@@ -444,6 +508,14 @@
     </div>
   {/if}
 
+  {#if isTouchDevice && focused.length > 0}
+    <TouchKeys
+      bind:ctrl={ctrlKey}
+      on:data={({ detail: data }) =>
+        handleInput(focused[0], new TextEncoder().encode(data))}
+    />
+  {/if}
+
   <Settings open={settingsOpen} on:close={() => (settingsOpen = false)} />
 
   <ChooseName />
@@ -459,7 +531,8 @@
     style:background-position="{-zoom * center[0]}px {-zoom * center[1]}px"
   />
 
-  <div class="py-2">
+  <!-- On narrow screens, this sits below the centered toolbar. -->
+  <div class="py-2 mt-16 md:mt-0">
     {#if exitReason !== null}
       <div class="text-red-400">{exitReason}</div>
     {:else if connected}
@@ -501,7 +574,7 @@
           bind:write={writers[id]}
           bind:termEl={termElements[id]}
           on:data={({ detail: data }) =>
-            hasWriteAccess && handleInput(id, data)}
+            hasWriteAccess && handleInput(id, applyCtrlKey(data))}
           on:close={() => srocket?.send({ close: id })}
           on:shrink={() => {
             if (!hasWriteAccess) return;

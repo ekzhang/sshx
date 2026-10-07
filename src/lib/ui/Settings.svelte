@@ -4,11 +4,13 @@
   import { settings, updateSettings } from "$lib/settings";
   import OverlayMenu from "./OverlayMenu.svelte";
   import themes, { type ThemeName } from "./themes";
+  import fonts, { type FontName } from "./fonts";
 
   export let open: boolean;
 
   let inputName: string;
   let inputTheme: ThemeName;
+  let inputFont: FontName;
   let inputScrollback: number;
 
   let initialized = false;
@@ -17,6 +19,7 @@
     initialized = true;
     inputName = $settings.name;
     inputTheme = $settings.theme;
+    inputFont = $settings.font;
     inputScrollback = $settings.scrollback;
   }
 </script>
@@ -64,6 +67,28 @@
         >
           {#each Object.keys(themes) as themeName (themeName)}
             <option value={themeName}>{themeName}</option>
+          {/each}
+        </select>
+      </div>
+    </div>
+    <div class="item">
+      <div>
+        <p class="item-title">Font</p>
+        <p class="item-subtitle">Font family for text in terminals.</p>
+      </div>
+      <div class="relative">
+        <ChevronDownIcon
+          class="absolute top-[11px] right-2.5 w-4 h-4 text-zinc-400"
+        />
+        <select
+          class="input-common !pr-5"
+          bind:value={inputFont}
+          on:change={() => updateSettings({ font: inputFont })}
+        >
+          {#each Object.entries(fonts) as [fontName, fontFamily] (fontName)}
+            <option value={fontName} style:font-family={fontFamily}
+              >{fontName}</option
+            >
           {/each}
         </select>
       </div>

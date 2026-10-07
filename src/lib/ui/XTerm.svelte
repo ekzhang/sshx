@@ -40,6 +40,7 @@
   import { Buffer } from "buffer";
 
   import themes from "./themes";
+  import fonts from "./fonts";
   import CircleButton from "./CircleButton.svelte";
   import CircleButtons from "./CircleButtons.svelte";
   import { settings } from "$lib/settings";
@@ -68,10 +69,12 @@
   let term: Terminal | null = null;
 
   $: theme = themes[$settings.theme];
+  $: fontFamily = fonts[$settings.font];
 
   $: if (term) {
     // If the theme changes, update existing terminals' appearance.
     term.options.theme = theme;
+    term.options.fontFamily = fontFamily;
     term.options.scrollback = $settings.scrollback;
   }
 
@@ -132,9 +135,7 @@
       allowTransparency: false,
       cursorBlink: false,
       cursorStyle: "block",
-      // This is the monospace font family configured in Tailwind.
-      fontFamily:
-        '"Fira Code VF", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+      fontFamily,
       fontSize: 14,
       fontWeight: 400,
       fontWeightBold: 500,

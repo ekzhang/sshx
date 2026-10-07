@@ -1,10 +1,12 @@
 import { persisted } from "svelte-persisted-store";
 import themes, { type ThemeName, defaultTheme } from "./ui/themes";
+import fonts, { type FontName, defaultFont } from "./ui/fonts";
 import { derived, type Readable } from "svelte/store";
 
 export type Settings = {
   name: string;
   theme: ThemeName;
+  font: FontName;
   scrollback: number;
 };
 
@@ -22,6 +24,11 @@ export const settings: Readable<Settings> = derived(
       theme = defaultTheme;
     }
 
+    let font = $storedSettings.font;
+    if (!font || !Object.hasOwn(fonts, font)) {
+      font = defaultFont;
+    }
+
     let scrollback = $storedSettings.scrollback;
     if (typeof scrollback !== "number" || scrollback < 0) {
       scrollback = 5000;
@@ -30,6 +37,7 @@ export const settings: Readable<Settings> = derived(
     return {
       name,
       theme,
+      font,
       scrollback,
     };
   },

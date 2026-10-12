@@ -8,5 +8,6 @@
 
 pub mod controller;
 pub mod encrypt;
+pub mod qr;
 pub mod runner;
 pub mod terminal;

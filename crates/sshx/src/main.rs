@@ -3,7 +3,7 @@ use std::process::ExitCode;
 use ansi_term::Color::{Cyan, Fixed, Green};
 use anyhow::Result;
 use clap::Parser;
-use sshx::{controller::Controller, runner::Runner, terminal::get_default_shell};
+use sshx::{controller::Controller, qr::render_qr, runner::Runner, terminal::get_default_shell};
 use tokio::signal;
 use tracing::error;
 
@@ -31,9 +31,17 @@ struct Args {
     /// editors.
     #[clap(long)]
     enable_readers: bool,
+
+    /// Print a QR code for the session link in the terminal.
+    #[clap(long)]
+    qr: bool,
+
+    /// Print a QR code for the writable link when --enable-readers is active.
+    #[clap(long)]
+    qr_write: bool,
 }
 
-fn print_greeting(shell: &str, controller: &Controller) {
+fn print_greeting(shell: &str, controller: &Controller, qr: bool, qr_write: bool) {
     let version_str = match option_env!("CARGO_PKG_VERSION") {
         Some(version) => format!("v{version}"),
         None => String::from("[dev]"),
@@ -54,6 +62,21 @@ fn print_greeting(shell: &str, controller: &Controller) {
             link_e = Cyan.underline().paint(write_url),
             shell_v = Fixed(8).paint(shell),
         );
+        if qr {
+            println!(
+                "  {arr}  Scan for read-only link:\n",
+                arr = Green.paint("➜")
+            );
+            if let Some(code) = render_qr(controller.url()) {
+                println!("{code}\n");
+            }
+        }
+        if qr_write {
+            println!("  {arr}  Scan for writable link:\n", arr = Green.paint("➜"));
+            if let Some(code) = render_qr(write_url) {
+                println!("{code}\n");
+            }
+        }
     } else {
         println!(
             r#"
@@ -68,6 +91,12 @@ fn print_greeting(shell: &str, controller: &Controller) {
             link_v = Cyan.underline().paint(controller.url()),
             shell_v = Fixed(8).paint(shell),
         );
+        if qr || qr_write {
+            println!("  {arr}  Scan for link:\n", arr = Green.paint("➜"));
+            if let Some(code) = render_qr(controller.url()) {
+                println!("{code}\n");
+            }
+        }
     }
 }
 
@@ -98,7 +127,7 @@ async fn start(args: Args) -> Result<()> {
             println!("{}", controller.url());
         }
     } else {
-        print_greeting(&shell, &controller);
+        print_greeting(&shell, &controller, args.qr, args.qr_write);
     }
 
     let exit_signal = signal::ctrl_c();

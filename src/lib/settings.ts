@@ -1,6 +1,6 @@
 import { persisted } from "svelte-persisted-store";
 import themes, { type ThemeName, defaultTheme } from "./ui/themes";
-import { derived, type Readable } from "svelte/store";
+import { derived, writable, type Readable } from "svelte/store";
 
 export type Settings = {
   name: string;
@@ -8,7 +8,21 @@ export type Settings = {
   scrollback: number;
 };
 
-const storedSettings = persisted<Partial<Settings>>("sshx-settings-store", {});
+/**
+ * Accessing `localStorage` throws a SecurityError when storage is blocked, for
+ * example in a cross-origin iframe with third-party storage disabled.
+ */
+function localStorageAvailable(): boolean {
+  try {
+    return typeof localStorage !== "undefined";
+  } catch {
+    return false;
+  }
+}
+
+const storedSettings = localStorageAvailable()
+  ? persisted<Partial<Settings>>("sshx-settings-store", {})
+  : writable<Partial<Settings>>({});
 
 /** A persisted store for settings of the current user. */
 export const settings: Readable<Settings> = derived(
